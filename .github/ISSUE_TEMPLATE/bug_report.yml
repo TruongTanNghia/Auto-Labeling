@@ -1,0 +1,54 @@
+name: "🐛 Báo lỗi (Bug report)"
+description: "Báo cáo một lỗi để giúp dự án tốt hơn"
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Cảm ơn bạn đã dành thời gian báo lỗi! Hãy điền càng chi tiết càng tốt.
+  - type: textarea
+    id: description
+    attributes:
+      label: Mô tả lỗi
+      description: Lỗi gì xảy ra? Bạn mong đợi điều gì?
+      placeholder: "Ví dụ: Khi bấm 'Bắt đầu cắt frame' với video .mkv thì ứng dụng đứng im..."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Các bước tái hiện
+      description: Liệt kê từng bước để tái hiện lỗi
+      placeholder: |
+        1. Mở trang Import
+        2. Kéo thả file video ...
+        3. Bấm nút ...
+        4. Thấy lỗi ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log / Ảnh chụp màn hình
+      description: "Dán log từ `%LOCALAPPDATA%\\AutoLabelStudioAI\\logs\\` hoặc ảnh chụp màn hình (nếu có)"
+      render: shell
+  - type: input
+    id: os
+    attributes:
+      label: Hệ điều hành
+      placeholder: "Windows 11 / Ubuntu 24.04 ..."
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Phiên bản Python
+      placeholder: "3.12.4"
+    validations:
+      required: true
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU / CUDA (nếu liên quan)
+      placeholder: "RTX 3060, CUDA 12.4 / Chỉ CPU"

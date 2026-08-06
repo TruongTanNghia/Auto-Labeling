@@ -1,0 +1,24 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Trong so tai ve / ket qua train
+*.pt
+*.onnx
+*.engine
+runs/
+weights/
+
+# Project va dataset sinh ra
+*.alsdb
+*.alsdb-wal
+*.alsdb-shm
+exports/
+frames/
+backups/
+
+# Log
+*.log
+logs/

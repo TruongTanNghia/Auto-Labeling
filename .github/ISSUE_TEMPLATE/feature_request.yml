@@ -1,0 +1,41 @@
+name: "✨ Đề xuất tính năng (Feature request)"
+description: "Đề xuất một ý tưởng hoặc cải tiến cho dự án"
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Vấn đề bạn muốn giải quyết
+      description: Tính năng này giải quyết khó khăn gì khi dùng ứng dụng?
+      placeholder: "Ví dụ: Mỗi lần gán nhãn video dài, tôi phải sửa tay từng frame vì..."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Giải pháp mong muốn
+      description: Mô tả cách bạn muốn tính năng hoạt động
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Phương án thay thế đã cân nhắc
+      description: Bạn đã thử cách nào khác chưa? Công cụ nào khác làm được điều này?
+  - type: dropdown
+    id: area
+    attributes:
+      label: Khu vực liên quan
+      options:
+        - Import / Frame Extractor
+        - Auto Label / Inference
+        - Annotation Editor
+        - Dataset Manager
+        - Statistics / Export
+        - Train Model
+        - Plugin
+        - UI / UX
+        - Khác
+    validations:
+      required: true

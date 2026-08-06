@@ -1,0 +1,113 @@
+"""Plugin FastSAM - segment toan anh, nhanh hon SAM nhieu lan."""
+from __future__ import annotations
+
+import numpy as np
+
+from app.constants import SHAPE_POLYGON
+from app.core.inference import Detection, mask_to_polygons, resolve_device
+from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo
+
+
+class FastSamPlugin(AnnotatorPlugin):
+    info = PluginInfo(
+        key="fastsam",
+        name="FastSAM",
+        version="1.0",
+        author="AutoLabel Studio AI",
+        description=(
+            "Segment toan bo doi tuong trong anh bang FastSAM (nhanh gap ~50 lan SAM). "
+            "Co the dung o che do 'refine' (bam theo box YOLO) hoac 'generate' "
+            "(sinh moi mask cho toan anh de ban gan class thu cong)."
+        ),
+        requires=["ultralytics", "torch"],
+        kind="refine",
+        accepts_prompt=True,
+        homepage="https://docs.ultralytics.com/models/fast-sam/",
+    )
+
+    WEIGHTS = "FastSAM-s.pt"
+
+    def default_config(self) -> dict:
+        return {"weights": self.WEIGHTS, "imgsz": 1024, "min_area": 60,
+                "simplify": 0.002, "mode": "refine"}
+
+    def load(self, ctx: PluginContext | None = None, log_cb=None) -> None:
+        if self._model is not None:
+            self._loaded = True
+            return
+        import os
+
+        from ultralytics import FastSAM
+
+        from app.utils.paths import weights_dir
+
+        prev = os.getcwd()
+        try:
+            os.chdir(weights_dir())
+            if log_cb:
+                log_cb(f"[FastSAM] Dang nap {self.config('weights', self.WEIGHTS)} ...")
+            self._model = FastSAM(self.config("weights", self.WEIGHTS))
+        finally:
+            os.chdir(prev)
+        device = resolve_device(ctx.device if ctx else "auto")
+        try:
+            self._model.to("cpu" if device == "cpu" else f"cuda:{device}")
+        except Exception:
+            pass
+        self._loaded = True
+
+    def annotate(self, ctx: PluginContext) -> list[Detection]:
+        if self._model is None:
+            self.load(ctx)
+        source = ctx.image if ctx.image is not None else ctx.image_path
+        kwargs = dict(imgsz=int(self.config("imgsz", 1024)), conf=ctx.confidence,
+                      verbose=False, retina_masks=True)
+        mode = self.config("mode", "refine")
+
+        if mode == "refine" and ctx.detections:
+            kwargs["bboxes"] = [d.bbox for d in ctx.detections]
+        elif ctx.prompt:
+            kwargs["texts"] = ctx.prompt
+
+        results = self._model.predict(source, **kwargs)
+        if not results:
+            return ctx.detections
+
+        masks = getattr(results[0], "masks", None)
+        if masks is None or masks.data is None:
+            return ctx.detections
+        data = masks.data.cpu().numpy()
+        min_area = float(self.config("min_area", 60))
+        simplify = float(self.config("simplify", 0.002))
+
+        if mode == "refine" and ctx.detections:
+            out = []
+            for i, det in enumerate(ctx.detections):
+                new_det = Detection(class_id=det.class_id, class_name=det.class_name,
+                                    confidence=det.confidence, bbox=list(det.bbox),
+                                    shape=det.shape)
+                if i < len(data):
+                    polys = mask_to_polygons((data[i] > 0.5).astype(np.uint8),
+                                             min_area, simplify)
+                    if polys:
+                        big = max(polys, key=len)
+                        new_det.polygon = [float(v) for v in np.asarray(big).flatten()]
+                        new_det.shape = SHAPE_POLYGON
+                out.append(new_det)
+            return out
+
+        # Che do generate: moi mask thanh mot doi tuong chua gan class
+        out = []
+        name = ctx.class_names[0] if ctx.class_names else "object"
+        for m in data:
+            polys = mask_to_polygons((m > 0.5).astype(np.uint8), min_area, simplify)
+            for p in polys:
+                arr = np.asarray(p, dtype=np.float32)
+                det = Detection(
+                    class_id=0, class_name=name, confidence=0.5,
+                    polygon=[float(v) for v in arr.flatten()], shape=SHAPE_POLYGON,
+                    bbox=[float(arr[:, 0].min()), float(arr[:, 1].min()),
+                          float(arr[:, 0].max()), float(arr[:, 1].max())],
+                )
+                out.append(det)
+        return out

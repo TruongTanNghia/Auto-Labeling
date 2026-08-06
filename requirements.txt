@@ -1,0 +1,17 @@
+# AutoLabel Studio AI - dependencies
+PySide6>=6.6
+numpy>=1.24
+opencv-python>=4.8
+Pillow>=10.0
+scikit-image>=0.22
+shapely>=2.0
+PyYAML>=6.0
+
+# Inference / training (ban GPU cua torch nen cai rieng theo huong dan tren pytorch.org)
+ultralytics>=8.3
+torch>=2.1
+torchvision>=0.16
+
+# Tuy chon - dung cho cac plugin nang cao
+# transformers
+# segment-anything-2
