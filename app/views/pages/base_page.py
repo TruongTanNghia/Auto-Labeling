@@ -53,12 +53,12 @@ class BasePage(QWidget):
             host_layout.addWidget(self.content)
 
         # Man hinh yeu cau mo project - PHAI co loi thoat that su
+        from app.i18n import tr
         self.no_project = EmptyState(
-            "folder_open", "Chưa mở project nào",
-            "Mọi thao tác đều nằm trong một project. Hãy tạo project mới "
-            "hoặc mở project có sẵn để bắt đầu.",
-            action_text="Tạo project mới",
-            action2_text="Mở project có sẵn",
+            "folder_open", tr("main.no_project", "Chưa mở project nào"),
+            tr("page.no_project_desc", "Mọi thao tác đều nằm trong một project. Hãy tạo project mới hoặc mở project có sẵn để bắt đầu."),
+            action_text=tr("main.new_project", "Tạo project mới"),
+            action2_text=tr("main.open_project", "Mở project có sẵn"),
         )
         self.no_project.action.connect(self._request_new_project)
         self.no_project.action2.connect(self._request_open_project)
@@ -101,9 +101,10 @@ class BasePage(QWidget):
         if self.ctrl.has_project:
             return True
         from PySide6.QtWidgets import QMessageBox
+        from app.i18n import tr
         ret = QMessageBox.question(
-            self, "Chưa có project",
-            "Mọi dữ liệu đều nằm trong một project. Tạo project mới ngay bây giờ?",
+            self, tr("main.no_project", "Chưa có project"),
+            tr("page.create_project_prompt", "Mọi dữ liệu đều nằm trong một project. Tạo project mới ngay bây giờ?"),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if ret != QMessageBox.Yes:
             return False
