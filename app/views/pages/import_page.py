@@ -7,9 +7,11 @@ from PySide6.QtCore import QEvent, QSize, Qt, Signal
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QComboBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QSizePolicy,
@@ -19,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from app.constants import COLORS, PAGE_EXTRACT, VIDEO_EXTS
 from app.core.frame_extractor import ExtractConfig, VideoInfo, probe_video
+from app.core.importers import DatasetImporter, ImportConfig
 from app.i18n import tr
 from app.theme import icons
 from app.utils.paths import human_duration, human_size, is_image, is_video, scan_images
@@ -35,6 +38,7 @@ from app.views.widgets.common import (
     primary_button,
 )
 from app.workers.extract_worker import ScanFolderWorker
+from app.workers.import_worker import ImportWorker
 
 ROLE_KIND = Qt.UserRole
 ROLE_VALUE = Qt.UserRole + 1
@@ -166,7 +170,65 @@ class ImportPage(BasePage):
             opt.addLayout(r)
         action_card.add(opt)
         lay.addWidget(action_card)
+
+        # --- Nhập dataset có nhãn ---
+        lay.addWidget(self._build_dataset_import_card())
         return wrap
+
+    def _build_dataset_import_card(self) -> QWidget:
+        self._ds_dir: str = ""
+        card = Card(
+            tr("import.dataset_card", "Nhập dataset có nhãn"),
+            tr("import.dataset_card_sub", "YOLO hoặc COCO đã xuất từ Roboflow, CVAT, labelImg ..."),
+            "layers",
+        )
+
+        # Dòng chọn thư mục
+        dir_row = QHBoxLayout()
+        self._ds_path_edit = QLineEdit()
+        self._ds_path_edit.setReadOnly(True)
+        self._ds_path_edit.setPlaceholderText(
+            tr("import.dataset_dir_placeholder", "Chưa chọn thư mục dataset"))
+        self._ds_path_edit.setStyleSheet(
+            f"background:{COLORS['bg']}; border:1px solid {COLORS['border']};"
+            f"border-radius:6px; padding:4px 8px; color:{COLORS['text_dim']}; font-size:12px;")
+        dir_btn = ghost_button(tr("import.choose_dataset_dir", "Chọn thư mục"), "folder_open")
+        dir_btn.clicked.connect(self._choose_dataset_dir)
+        dir_row.addWidget(self._ds_path_edit, 1)
+        dir_row.addWidget(dir_btn)
+        card.add(dir_row)
+
+        # Dropdown định dạng
+        fmt_row = QHBoxLayout()
+        fmt_row.addWidget(label(tr("import.dataset_fmt", "Định dạng:"), size=12,
+                                color=COLORS["text_dim"]))
+        self._ds_fmt_combo = QComboBox()
+        self._ds_fmt_combo.addItem("YOLO Segmentation", "yolo_seg")
+        self._ds_fmt_combo.addItem("YOLO Detection", "yolo_det")
+        self._ds_fmt_combo.addItem("COCO JSON", "coco")
+        self._ds_fmt_combo.setStyleSheet(
+            f"background:{COLORS['bg']}; border:1px solid {COLORS['border']};"
+            f"border-radius:6px; padding:3px 8px; color:{COLORS['text']}; font-size:12px;")
+        fmt_row.addWidget(self._ds_fmt_combo)
+        fmt_row.addStretch(1)
+        card.add(fmt_row)
+
+        # Vùng kết quả xem trước
+        self._ds_preview_label = label("", size=12, color=COLORS["text_mute"], wrap=True)
+        self._ds_preview_label.setVisible(False)
+        card.add(self._ds_preview_label)
+
+        # Nút hành động
+        btn_row = QHBoxLayout()
+        self._ds_preview_btn = ghost_button(tr("import.dataset_preview", "Xem trước"), "eye")
+        self._ds_preview_btn.clicked.connect(self._preview_dataset)
+        self._ds_import_btn = primary_button(tr("import.dataset_import", "Nhập vào project"), "import")
+        self._ds_import_btn.clicked.connect(self._import_dataset)
+        btn_row.addWidget(self._ds_preview_btn)
+        btn_row.addWidget(self._ds_import_btn)
+        btn_row.addStretch(1)
+        card.add(btn_row)
+        return card
 
     # ================================================================= DND ==
     def _enable_drop_everywhere(self) -> None:
@@ -475,6 +537,87 @@ class ImportPage(BasePage):
                 self.source_list.takeItem(i)
         self._update_counts()
         self.ctrl.notify_images_changed()
+
+    # ======================================================= DATASET IMPORT ==
+    def _choose_dataset_dir(self) -> None:
+        d = QFileDialog.getExistingDirectory(
+            self, tr("import.choose_dataset_dir_title", "Chọn thư mục dataset"))
+        if d:
+            self._ds_dir = d
+            self._ds_path_edit.setText(d)
+            self._ds_preview_label.setVisible(False)
+
+    def _preview_dataset(self) -> None:
+        if not self._ds_dir:
+            self.toast(tr("import.dataset_no_dir", "Hãy chọn thư mục dataset trước."), "warning")
+            return
+        fmt = self._ds_fmt_combo.currentData()
+        cfg = ImportConfig(fmt=fmt, dataset_dir=self._ds_dir)
+        info = DatasetImporter(None, cfg).preview()  # type: ignore[arg-type]
+        if "error" in info:
+            _danger = COLORS["danger"]
+            self._ds_preview_label.setText(
+                f"<span style='color:{_danger}'>{info['error']}</span>")
+            self._ds_preview_label.setVisible(True)
+            return
+        lines = [
+            tr("import.dataset_preview_images", "Số ảnh phát hiện: <b>{n}</b>",
+               n=info.get("n_images", 0)),
+            tr("import.dataset_preview_anns", "Số vùng nhãn: <b>{n}</b>",
+               n=info.get("n_annotations", 0)),
+            tr("import.dataset_preview_cls_new",
+               "Class mới sẽ thêm: <b>{n}</b> &nbsp;·&nbsp; Gộp vào class cũ: <b>{m}</b>",
+               n=info.get("n_classes_new", 0), m=info.get("n_classes_merge", 0)),
+        ]
+        self._ds_preview_label.setText("<br>".join(lines))
+        self._ds_preview_label.setVisible(True)
+
+    def _import_dataset(self) -> None:
+        if not self._ds_dir:
+            self.toast(tr("import.dataset_no_dir", "Hãy chọn thư mục dataset trước."), "warning")
+            return
+        if not self._ensure_project():
+            return
+        if self.ctrl.is_running("dataset_import"):
+            self.toast(tr("import.loading_wait", "Đang nạp ảnh, vui lòng đợi."), "warning")
+            return
+
+        fmt = self._ds_fmt_combo.currentData()
+        cfg = ImportConfig(
+            fmt=fmt,
+            dataset_dir=self._ds_dir,
+            copy_images=True,
+        )
+        worker = ImportWorker(self.ctrl.repo, cfg)
+        self.progress.start(
+            tr("import.dataset_loading", "Đang nhập dataset {fmt} ...",
+               fmt=self._ds_fmt_combo.currentText()))
+        self._ds_import_btn.setEnabled(False)
+        self.ctrl.run_worker(
+            "dataset_import", worker,
+            on_progress=self.progress.set_progress,
+            on_stage=self.progress.set_stage,
+            on_done=self._on_dataset_import_done,
+            on_fail=lambda _m: self._ds_import_btn.setEnabled(True),
+        )
+
+    def _on_dataset_import_done(self, result) -> None:
+        self._ds_import_btn.setEnabled(True)
+        self.progress.finish(tr("import.dataset_done", "Nhập dataset hoàn tất"))
+        if result is None:
+            return
+        msg = tr(
+            "import.dataset_result",
+            "Đã nhập <b>{n_img} ảnh</b>, <b>{n_ann} vùng nhãn</b>, "
+            "{n_cls} class mới. Bỏ qua: {n_skip} ảnh không tìm thấy.",
+            n_img=result.n_images,
+            n_ann=result.n_annotations,
+            n_cls=result.n_classes_added,
+            n_skip=result.n_skipped,
+        )
+        self.toast(msg, "success")
+        self.ctrl.notify_images_changed()
+        self.ctrl.notify_classes_changed()
 
     def refresh(self) -> None:
         self._update_counts()

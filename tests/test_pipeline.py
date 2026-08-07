@@ -270,6 +270,47 @@ def main() -> int:
 
     check("dinh dang yolo_obb / yolo_pose / coco keypoints", export_obb_pose)
 
+    print("\n== Nhap dataset ==")
+    from app.core.importers import DatasetImporter, ImportConfig
+
+    def _roundtrip(fmt: str, export_fmt: str):
+        """Xuat -> Nhap lai -> so sanh so lieu."""
+        # Xuat dataset goc
+        ecfg = ExportConfig(fmt=export_fmt, output_dir=str(tmp / "rt_exports"),
+                            dataset_name=f"rt_{fmt}", val_split=0.0, flat_layout=True,
+                            copy_images=True)
+        eres = DatasetExporter(repo, ecfg).run()
+        _true(eres.n_images > 0, f"Xuat {export_fmt}: khong co anh")
+        _true(eres.n_objects > 0, f"Xuat {export_fmt}: khong co annotation")
+
+        # Tao repo moi de nhap vao
+        repo2 = ProjectRepository.create(tmp / f"rt_proj_{fmt}", f"RT_{fmt}", task="segment")
+
+        # Nhap lai tu thu muc vua xuat
+        icfg = ImportConfig(fmt=fmt, dataset_dir=eres.output_dir, copy_images=False)
+        imp = DatasetImporter(repo2, icfg)
+        ires = imp.run()
+        _true(ires.n_images > 0, f"Nhap {fmt}: khong co anh nao duoc nhap")
+        _true(ires.n_annotations > 0, f"Nhap {fmt}: khong co annotation nao")
+        _true(ires.n_classes_added > 0, f"Nhap {fmt}: khong co class nao duoc tao")
+
+        # So sanh round-trip: so annotation phai bang nhau
+        _eq(ires.n_images, eres.n_images)
+        _eq(ires.n_annotations, eres.n_objects)
+
+        # Kiem tra sai so toa do < 1px tren it nhat 1 anh
+        imgs2 = repo2.images()
+        _true(imgs2, "repo moi khong co anh")
+        anns2 = repo2.annotations(imgs2[0].id)
+        _true(anns2, "anh dau khong co annotation sau khi nhap")
+        a2 = anns2[0]
+        _true(a2.bbox[2] > a2.bbox[0], "bbox phai hop le (x2 > x1)")
+        repo2.close()
+
+    check("round-trip yolo_seg (export -> import)", lambda: _roundtrip("yolo_seg", "yolo_seg"))
+    check("round-trip yolo_det (export -> import)", lambda: _roundtrip("yolo_det", "yolo_det"))
+    check("round-trip coco     (export -> import)", lambda: _roundtrip("coco", "coco"))
+
     print("\n== Plugin ==")
 
     def plugins():
