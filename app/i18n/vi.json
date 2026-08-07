@@ -65,6 +65,8 @@
   "settings.plugins.available": "San sang",
   "plugins.missing_packages": "Thieu goi: ",
   "plugins.available": "San sang",
+  "settings.plugins.reset_plugin": "Khôi phục mặc định plugin",
+  "settings.plugins.reset_plugin_confirm": "Khôi phục plugin {plugin} về mặc định?",
 
   "settings.shortcuts.navigation": "Điều hướng",
   "settings.shortcuts.navigation_desc": "Điều hướng",

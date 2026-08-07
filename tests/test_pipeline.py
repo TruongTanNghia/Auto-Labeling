@@ -341,6 +341,36 @@ def main() -> int:
 
     check("goi plugin (round-trip)", plugin_roundtrip)
 
+    def plugin_config_lifecycle():
+        """Kiem tra vong doi cau hinh: doi config -> plugin nhan dung gia tri."""
+        from app.config import cfg
+        from app.plugins.base import registry
+
+        florence = registry.get("florence2")
+        _true(florence is not None, "khong lay duoc florence2")
+        _eq(florence.config("model_id"), "microsoft/Florence-2-base")
+
+        cfg.set("plugins.config.florence2.model_id", "microsoft/Florence-2-large")
+        cfg.save()
+        florence_updated = registry.get("florence2")
+        _eq(florence_updated.config("model_id"), "microsoft/Florence-2-large")
+
+        fastsam = registry.get("fastsam")
+        _eq(fastsam.config("imgsz"), 1024)
+        cfg.set("plugins.config.fastsam.imgsz", 640)
+        cfg.set("plugins.config.fastsam.mode", "generate")
+        fastsam_updated = registry.get("fastsam")
+        _eq(fastsam_updated.config("imgsz"), 640)
+        _eq(fastsam_updated.config("mode"), "generate")
+
+        cfg.set("plugins.config.florence2", {})
+        cfg.set("plugins.config.fastsam", {})
+        cfg.save()
+        _eq(registry.get("florence2").config("model_id"), "microsoft/Florence-2-base")
+        _eq(registry.get("fastsam").config("imgsz"), 1024)
+
+    check("vong doi cau hinh plugin (config lifecycle)", plugin_config_lifecycle)
+
     def plugin_in_worker():
         """Diem tich hop that: AutoLabelWorker goi plugin va ghi annotation."""
         from app.core.inference import Detection, InferenceConfig

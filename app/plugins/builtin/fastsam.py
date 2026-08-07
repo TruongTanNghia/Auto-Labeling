@@ -5,7 +5,7 @@ import numpy as np
 
 from app.constants import SHAPE_POLYGON
 from app.core.inference import Detection, mask_to_polygons, resolve_device
-from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo
+from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo, PluginParam
 
 
 class FastSamPlugin(AnnotatorPlugin):
@@ -27,9 +27,55 @@ class FastSamPlugin(AnnotatorPlugin):
 
     WEIGHTS = "FastSAM-s.pt"
 
+    def config_schema(self) -> list[PluginParam]:
+        return [
+            PluginParam(
+                key="weights",
+                label="Trọng số FastSAM",
+                type="choice",
+                default=self.WEIGHTS,
+                options=["FastSAM-s.pt", "FastSAM-x.pt"],
+                description="Tên file trọng số FastSAM",
+            ),
+            PluginParam(
+                key="imgsz",
+                label="Cỡ ảnh vào",
+                type="int",
+                default=1024,
+                min_value=320,
+                max_value=2048,
+                description="Kích thước ảnh đưa vào FastSAM",
+            ),
+            PluginParam(
+                key="min_area",
+                label="Diện tích tối thiểu (px)",
+                type="float",
+                default=60.0,
+                min_value=0.0,
+                max_value=5000.0,
+                description="Bỏ qua các mask nhỏ hơn ngưỡng này",
+            ),
+            PluginParam(
+                key="simplify",
+                label="Độ giản lược polygon",
+                type="float",
+                default=0.002,
+                min_value=0.0,
+                max_value=0.05,
+                description="Tỷ lệ làm mịn đường viền polygon",
+            ),
+            PluginParam(
+                key="mode",
+                label="Chế độ hoạt động",
+                type="choice",
+                default="refine",
+                options=["refine", "generate"],
+                description="Refine: tinh chỉnh box YOLO. Generate: tự tạo mask toàn ảnh",
+            ),
+        ]
+
     def default_config(self) -> dict:
-        return {"weights": self.WEIGHTS, "imgsz": 1024, "min_area": 60,
-                "simplify": 0.002, "mode": "refine"}
+        return {p.key: p.default for p in self.config_schema()}
 
     def load(self, ctx: PluginContext | None = None, log_cb=None) -> None:
         if self._model is not None:

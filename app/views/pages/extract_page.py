@@ -447,6 +447,8 @@ class ExtractPage(BasePage):
             self.log_view.verticalScrollBar().maximum())
 
     def _on_preview(self, path: str) -> None:
+        if not path:
+            return
         pm = QPixmap(path)
         if pm.isNull():
             return

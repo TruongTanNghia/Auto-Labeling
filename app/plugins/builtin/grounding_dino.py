@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from app.constants import SHAPE_BBOX
 from app.core.inference import Detection, resolve_device
-from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo
+from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo, PluginParam
 
 
 class GroundingDinoPlugin(AnnotatorPlugin):
@@ -28,8 +28,41 @@ class GroundingDinoPlugin(AnnotatorPlugin):
 
     MODEL_ID = "IDEA-Research/grounding-dino-tiny"
 
+    def config_schema(self) -> list[PluginParam]:
+        return [
+            PluginParam(
+                key="model_id",
+                label="Model ID",
+                type="choice",
+                default=self.MODEL_ID,
+                options=[
+                    "IDEA-Research/grounding-dino-tiny",
+                    "IDEA-Research/grounding-dino-base",
+                ],
+                description="Mô hình Grounding DINO trên Hugging Face",
+            ),
+            PluginParam(
+                key="box_threshold",
+                label="Ngưỡng Bounding Box",
+                type="float",
+                default=0.30,
+                min_value=0.05,
+                max_value=0.95,
+                description="Ngưỡng lọc bounding box dự đoán",
+            ),
+            PluginParam(
+                key="text_threshold",
+                label="Ngưỡng khớp văn bản",
+                type="float",
+                default=0.25,
+                min_value=0.05,
+                max_value=0.95,
+                description="Ngưỡng khớp văn bản mô tả với vùng ảnh",
+            ),
+        ]
+
     def default_config(self) -> dict:
-        return {"model_id": self.MODEL_ID, "box_threshold": 0.30, "text_threshold": 0.25}
+        return {p.key: p.default for p in self.config_schema()}
 
     def load(self, ctx: PluginContext | None = None, log_cb=None) -> None:
         if self._model is not None:

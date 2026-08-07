@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from app.constants import SHAPE_BBOX, SHAPE_POLYGON
 from app.core.inference import Detection, resolve_device
-from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo
+from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo, PluginParam
 
 
 class Florence2Plugin(AnnotatorPlugin):
@@ -29,8 +29,42 @@ class Florence2Plugin(AnnotatorPlugin):
 
     MODEL_ID = "microsoft/Florence-2-base"
 
+    def config_schema(self) -> list[PluginParam]:
+        return [
+            PluginParam(
+                key="model_id",
+                label="Model ID",
+                type="choice",
+                default=self.MODEL_ID,
+                options=["microsoft/Florence-2-base", "microsoft/Florence-2-large"],
+                description="Mô hình Florence-2 trên Hugging Face",
+            ),
+            PluginParam(
+                key="task",
+                label="Nhiệm vụ mặc định",
+                type="choice",
+                default="<OD>",
+                options=[
+                    "<OD>",
+                    "<DENSE_REGION_CAPTION>",
+                    "<CAPTION_TO_PHRASE_GROUNDING>",
+                    "<REFERRING_EXPRESSION_SEGMENTATION>",
+                ],
+                description="Tác vụ mặc định khi không nhập prompt",
+            ),
+            PluginParam(
+                key="max_new_tokens",
+                label="Số token tối đa",
+                type="int",
+                default=1024,
+                min_value=128,
+                max_value=4096,
+                description="Độ dài tối đa chuỗi sinh ra",
+            ),
+        ]
+
     def default_config(self) -> dict:
-        return {"model_id": self.MODEL_ID, "task": "<OD>", "max_new_tokens": 1024}
+        return {p.key: p.default for p in self.config_schema()}
 
     def load(self, ctx: PluginContext | None = None, log_cb=None) -> None:
         if self._model is not None:

@@ -101,6 +101,7 @@ class _CompactDelegate(QStyledItemDelegate):
         name = index.data(Qt.DisplayRole) or ""
         painter.setPen(QPen(QColor(COLORS["text"] if selected else COLORS["text_dim"])))
         f = painter.font()
+        f.setPixelSize(0)
         f.setPointSize(9)
         painter.setFont(f)
         text_rect = QRect(r.left() + 26, r.top(), r.width() - 76, r.height())
@@ -183,6 +184,7 @@ class _GalleryDelegate(QStyledItemDelegate):
             painter.drawRoundedRect(badge, 5, 5)
             painter.setPen(QPen(QColor("#FFFFFF")))
             f = painter.font()
+            f.setPixelSize(0)
             f.setPointSize(7)
             f.setBold(True)
             painter.setFont(f)
@@ -190,6 +192,7 @@ class _GalleryDelegate(QStyledItemDelegate):
 
         painter.setPen(QPen(QColor(COLORS["text"] if selected else COLORS["text_dim"])))
         f = painter.font()
+        f.setPixelSize(0)
         f.setPointSize(8)
         f.setBold(False)
         painter.setFont(f)

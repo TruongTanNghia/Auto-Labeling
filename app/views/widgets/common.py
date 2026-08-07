@@ -866,5 +866,6 @@ def font_mono(size: int = 11) -> QFont:
     f = QFont("Cascadia Mono")
     if not f.exactMatch():
         f = QFont("Consolas")
+    f.setPixelSize(0)
     f.setPointSize(size)
     return f

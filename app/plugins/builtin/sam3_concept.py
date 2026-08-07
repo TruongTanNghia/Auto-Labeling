@@ -15,7 +15,7 @@ import numpy as np
 
 from app.constants import SHAPE_BBOX, SHAPE_POLYGON
 from app.core.inference import Detection, mask_to_polygons, resolve_device
-from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo
+from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo, PluginParam
 from app.plugins.builtin.sam_refiner import ultralytics_version
 
 MIN_VERSION = (8, 3, 237)
@@ -41,8 +41,37 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
 
     WEIGHTS = "sam3.pt"
 
+    def config_schema(self) -> list[PluginParam]:
+        return [
+            PluginParam(
+                key="weights",
+                label="Trọng số SAM 3",
+                type="str",
+                default=self.WEIGHTS,
+                description="Tên file trọng số SAM 3 trong thư mục weights",
+            ),
+            PluginParam(
+                key="min_area",
+                label="Diện tích tối thiểu (px)",
+                type="float",
+                default=40.0,
+                min_value=0.0,
+                max_value=5000.0,
+                description="Ngưỡng diện tích nhỏ nhất của polygon",
+            ),
+            PluginParam(
+                key="simplify",
+                label="Độ giản lược polygon",
+                type="float",
+                default=0.002,
+                min_value=0.0,
+                max_value=0.05,
+                description="Mức độ làm mịn đường viền polygon",
+            ),
+        ]
+
     def default_config(self) -> dict:
-        return {"weights": self.WEIGHTS, "min_area": 40, "simplify": 0.002}
+        return {p.key: p.default for p in self.config_schema()}
 
     # -------------------------------------------------------------- trang thai --
     def is_available(self) -> tuple[bool, str]:
