@@ -10,6 +10,75 @@ from app.core.inference import Detection, resolve_device
 from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo, PluginParam
 
 
+def _ensure_transformers_compatibility() -> None:
+    """Tương thích ngược với các phiên bản transformers mới (>= 4.45)."""
+    try:
+        import torch
+        import transformers.cache_utils
+        import transformers.configuration_utils
+        import transformers.modeling_utils
+        import transformers.tokenization_utils_base
+
+        if not hasattr(transformers.configuration_utils.PretrainedConfig, "forced_bos_token_id"):
+            setattr(transformers.configuration_utils.PretrainedConfig, "forced_bos_token_id", None)
+        if not hasattr(transformers.tokenization_utils_base.PreTrainedTokenizerBase, "additional_special_tokens"):
+            transformers.tokenization_utils_base.PreTrainedTokenizerBase.additional_special_tokens = property(
+                lambda self: getattr(self, "special_tokens_map", {}).get("additional_special_tokens", [])
+            )
+        transformers.modeling_utils.PreTrainedModel._sdpa_can_dispatch = lambda self, *a, **kw: getattr(self, "_supports_sdpa", False)
+
+        def _cache_getitem(self, idx):
+            target = getattr(self, "self_attention_cache", self)
+            layers = getattr(target, "layers", [])
+            if idx < len(layers):
+                layer = layers[idx]
+                if hasattr(layer, "keys") and hasattr(layer, "values"):
+                    return (layer.keys, layer.values)
+                if isinstance(layer, (tuple, list)):
+                    return layer
+            seq_len = self.get_seq_length() if hasattr(self, "get_seq_length") else 0
+            dummy = torch.zeros(1, 1, seq_len, 1)
+            return (dummy, dummy, dummy, dummy)
+
+        if not hasattr(transformers.cache_utils.Cache, "__getitem__"):
+            transformers.cache_utils.Cache.__getitem__ = _cache_getitem
+    except Exception:
+        pass
+
+
+def _safe_prepare_inputs_for_generation(self, decoder_input_ids, past_key_values=None, **kwargs):
+    if past_key_values is not None:
+        try:
+            if isinstance(past_key_values, (tuple, list)) and len(past_key_values) > 0 and past_key_values[0] is not None and past_key_values[0][0] is not None:
+                past_length = past_key_values[0][0].shape[2]
+            elif hasattr(past_key_values, "get_seq_length"):
+                past_length = past_key_values.get_seq_length()
+            else:
+                past_length = 0
+        except Exception:
+            past_length = 0
+
+        if decoder_input_ids.shape[1] > past_length:
+            remove_prefix_length = past_length
+        else:
+            remove_prefix_length = max(0, decoder_input_ids.shape[1] - 1)
+
+        decoder_input_ids = decoder_input_ids[:, remove_prefix_length:]
+
+    return {
+        "input_ids": None,
+        "encoder_outputs": kwargs.get("encoder_outputs"),
+        "past_key_values": past_key_values,
+        "decoder_input_ids": decoder_input_ids,
+        "attention_mask": kwargs.get("attention_mask"),
+        "decoder_attention_mask": kwargs.get("decoder_attention_mask"),
+        "head_mask": kwargs.get("head_mask"),
+        "decoder_head_mask": kwargs.get("decoder_head_mask"),
+        "cross_attn_head_mask": kwargs.get("cross_attn_head_mask"),
+        "use_cache": kwargs.get("use_cache"),
+    }
+
+
 class Florence2Plugin(AnnotatorPlugin):
     info = PluginInfo(
         key="florence2",
@@ -21,7 +90,7 @@ class Florence2Plugin(AnnotatorPlugin):
             "(<DENSE_REGION_CAPTION>), hoac mask theo cau mo ta "
             "(<REFERRING_EXPRESSION_SEGMENTATION>). Prompt de trong se dung <OD>."
         ),
-        requires=["transformers", "torch"],
+        requires=["transformers", "torch", "einops", "timm"],
         kind="generate",
         accepts_prompt=True,
         homepage="https://huggingface.co/microsoft/Florence-2-base",
@@ -73,6 +142,8 @@ class Florence2Plugin(AnnotatorPlugin):
         import torch
         from transformers import AutoModelForCausalLM, AutoProcessor
 
+        _ensure_transformers_compatibility()
+
         model_id = self.config("model_id", self.MODEL_ID)
         if log_cb:
             log_cb(f"[Florence-2] Dang tai {model_id} ...")
@@ -85,6 +156,40 @@ class Florence2Plugin(AnnotatorPlugin):
         self._torch = torch
         self._dtype = dtype
         self._loaded = True
+        if hasattr(self._model, "language_model"):
+            type(self._model.language_model).prepare_inputs_for_generation = _safe_prepare_inputs_for_generation
+            decoder_cls = type(self._model.language_model.model.decoder)
+            if not getattr(decoder_cls, "_patched", False):
+                orig_decoder_forward = decoder_cls.forward
+
+                def _safe_decoder_forward(self, *args, **kwargs):
+                    args_list = list(args)
+                    pkv = args_list[6] if len(args_list) > 6 else kwargs.get("past_key_values")
+                    if pkv is not None:
+                        is_valid = False
+                        try:
+                            if isinstance(pkv, (tuple, list)) and len(pkv) > 0:
+                                first_layer = pkv[0]
+                                if isinstance(first_layer, (tuple, list)) and len(first_layer) > 0:
+                                    first_tensor = first_layer[0]
+                                    if hasattr(first_tensor, "shape"):
+                                        is_valid = True
+                        except Exception:
+                            pass
+                        if not is_valid:
+                            if len(args_list) > 6:
+                                args_list[6] = None
+                            kwargs["past_key_values"] = None
+                    return orig_decoder_forward(self, *args_list, **kwargs)
+
+                decoder_cls.forward = _safe_decoder_forward
+                decoder_cls._patched = True
+
+        if hasattr(self._model, "generation_config"):
+            self._model.generation_config.return_legacy_cache = True
+        if hasattr(self._model, "language_model") and hasattr(self._model.language_model, "generation_config"):
+            self._model.language_model.generation_config.return_legacy_cache = True
+
         if log_cb:
             log_cb("[Florence-2] San sang.")
 
@@ -111,7 +216,9 @@ class Florence2Plugin(AnnotatorPlugin):
             task = self.config("task", "<OD>")
             text = ""
 
-        inputs = self._processor(text=task + text, images=pil, return_tensors="pt")
+        # Florence-2 yeu cau anh dau vao vuong de ma hoa feature map (768x768)
+        pil_input = pil if pil.width == pil.height else pil.resize((768, 768), Image.Resampling.LANCZOS)
+        inputs = self._processor(text=task + text, images=pil_input, return_tensors="pt")
         inputs = {k: (v.to(self._device, self._dtype) if v.dtype.is_floating_point
                       else v.to(self._device)) for k, v in inputs.items()}
         with self._torch.no_grad():

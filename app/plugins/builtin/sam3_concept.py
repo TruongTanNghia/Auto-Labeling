@@ -73,6 +73,25 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
     def default_config(self) -> dict:
         return {p.key: p.default for p in self.config_schema()}
 
+    def _resolve_weights_path(self):
+        from pathlib import Path
+
+        from app.utils.paths import app_root, weights_dir
+
+        val = str(self.config("weights", self.WEIGHTS)).strip()
+        if not val:
+            val = self.WEIGHTS
+        p = Path(val)
+        if p.is_absolute() and p.exists():
+            return p
+        w_dir_path = weights_dir() / val
+        if w_dir_path.exists():
+            return w_dir_path
+        app_models_path = app_root() / "app" / "models" / val
+        if app_models_path.exists():
+            return app_models_path
+        return None
+
     # -------------------------------------------------------------- trang thai --
     def is_available(self) -> tuple[bool, str]:
         ok, msg = super().is_available()
@@ -90,9 +109,9 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
         except Exception:
             return False, "Ban ultralytics nay khong co SAM3SemanticPredictor"
 
-        from app.utils.paths import weights_dir
-        if not (weights_dir() / self.config("weights", self.WEIGHTS)).exists():
-            return False, (f"Chua co {self.WEIGHTS} trong {weights_dir()} - "
+        if not self._resolve_weights_path():
+            from app.utils.paths import weights_dir
+            return False, (f"Chua co {self.WEIGHTS} trong {weights_dir()} hoac app/models/ - "
                            f"Meta yeu cau xin quyen tren Hugging Face roi tai thu cong")
         return True, "San sang"
 
@@ -107,9 +126,10 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
 
         from ultralytics.models.sam import SAM3SemanticPredictor
 
-        from app.utils.paths import weights_dir
+        path = self._resolve_weights_path()
+        if path is None:
+            raise RuntimeError(f"Khong tim thay tep trong so {self.WEIGHTS}")
 
-        path = weights_dir() / self.config("weights", self.WEIGHTS)
         device = resolve_device(ctx.device if ctx else "auto")
         if log_cb:
             log_cb(f"[SAM3] Dang nap {path.name} ...")
