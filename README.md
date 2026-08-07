@@ -1,5 +1,10 @@
 # AutoLabel Studio AI
 
+[![CI](https://github.com/TruongTanNghia/Auto-Labeling/actions/workflows/ci.yml/badge.svg)](https://github.com/TruongTanNghia/Auto-Labeling/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)](https://github.com/TruongTanNghia/Auto-Labeling)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+
 **Phần mềm Desktop tự động tạo dataset Computer Vision từ video bằng AI.**
 
 Python + PySide6 · Dark Fluent UI · YOLOv8 / YOLO11 / YOLO12 · Kiến trúc MVC + đa luồng.
