@@ -20,7 +20,7 @@ def build_ico(output_path: str = "app.ico") -> None:
     renderer = QSvgRenderer(QByteArray(LOGO_SVG.encode("utf-8")))
     sizes = [16, 32, 48, 64, 128, 256]
     images = []
-
+    
     for s in sizes:
         px = QPixmap(s, s)
         px.fill(Qt.transparent)

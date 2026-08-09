@@ -127,8 +127,16 @@ python main.py "path/to/project.alsdb"
 
 ## Running Tests
 
+Run the full test suite with `pytest`:
+
 ```bash
-python tests/test_pipeline.py
+pytest -v --cov=app
+```
+
+Or run a single test module:
+
+```bash
+pytest tests/test_exporters.py
 ```
 
 ---

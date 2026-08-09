@@ -27,3 +27,9 @@ logs/
 build/
 dist/
 
+# Pytest & Coverage
+.pytest_cache/
+.coverage
+coverage.xml
+
+

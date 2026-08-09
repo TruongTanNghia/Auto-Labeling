@@ -179,8 +179,16 @@ python main.py "duong/dan/project.alsdb"
 
 ## Kiểm thử
 
+Chạy toàn bộ bộ test bằng `pytest`:
+
 ```bash
-python tests/test_pipeline.py
+pytest -v --cov=app
+```
+
+Hoặc chạy một module test đơn lẻ:
+
+```bash
+pytest tests/test_exporters.py
 ```
 
 Chạy không cần màn hình và không cần GPU. Kiểm tra: SQLite, 5 chế độ cắt frame,

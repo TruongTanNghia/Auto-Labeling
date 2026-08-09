@@ -16,7 +16,7 @@ source .venv/bin/activate
 
 # Torch bản CPU là đủ để phát triển (bản CUDA cài riêng nếu cần GPU)
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 
 python main.py
 ```
@@ -24,10 +24,16 @@ python main.py
 ## Chạy kiểm thử
 
 ```bash
-python tests/test_pipeline.py
+pytest -v --cov=app
 ```
 
-Bộ test chạy **offscreen** (không cần màn hình) và **không cần GPU**. CI sẽ chạy đúng lệnh này trên Ubuntu + Windows với Python 3.10 và 3.12 — hãy đảm bảo nó đạt trước khi mở PR.
+Hoặc chạy một file test đơn lẻ:
+
+```bash
+pytest tests/test_exporters.py
+```
+
+Bộ test chạy **offscreen** (không cần màn hình) và **không cần GPU**. CI sẽ tự động chạy `pytest` và đo coverage trên Ubuntu + Windows với Python 3.10 và 3.12 — hãy đảm bảo các test đều qua trước khi mở PR.
 
 ## Quy trình đóng góp
 
