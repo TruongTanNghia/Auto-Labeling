@@ -22,3 +22,8 @@ backups/
 # Log
 *.log
 logs/
+
+# PyInstaller build outputs
+build/
+dist/
+

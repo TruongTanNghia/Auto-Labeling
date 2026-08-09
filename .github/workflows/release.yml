@@ -38,14 +38,7 @@ jobs:
         run: python tests/test_pipeline.py
 
       - name: Build with PyInstaller
-        run: >
-          pyinstaller main.py
-          --name AutoLabelStudioAI
-          --windowed
-          --noconfirm
-          --collect-all ultralytics
-          --collect-all shapely
-          --hidden-import app
+        run: pyinstaller AutoLabelStudioAI.spec --noconfirm
 
       - name: Zip build output
         run: Compress-Archive -Path dist/AutoLabelStudioAI -DestinationPath AutoLabelStudioAI-windows-x64.zip

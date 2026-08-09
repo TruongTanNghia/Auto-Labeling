@@ -138,7 +138,17 @@ và train đều nằm trong `QThread` riêng, có tiến độ, log trực ti�
 
 ---
 
-## Cài đặt
+## Cài đặt & Sử dụng
+
+### Cách 1: Sử dụng file thực thi .exe (Dành cho người dùng cuối)
+
+1. Truy cập trang **Releases** trên GitHub và tải file `AutoLabelStudioAI-windows-x64.zip`.
+2. Giải nén file zip vào một thư mục bất kỳ.
+3. Nháy đúp file `AutoLabelStudioAI.exe` để chạy ứng dụng ngay (không cần cài đặt Python).
+
+> **Ghi chú về GPU / PyTorch**: Bản đóng gói `.exe` đính kèm PyTorch bản CPU để đảm bảo tương thích và chạy ngay trên mọi máy Windows sạch. Nếu bạn muốn sử dụng GPU CUDA để tăng tốc suy luận và huấn luyện, hãy sử dụng **Cách 2** với môi trường Python và cài đặt PyTorch CUDA.
+
+### Cách 2: Chạy từ mã nguồn Python
 
 ```bash
 pip install -r requirements.txt
@@ -153,7 +163,7 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
 > Ứng dụng đặt `YOLO_AUTOINSTALL=false` để Ultralytics **không** tự `pip install` đè lên
 > môi trường của bạn — đây là nguyên nhân phổ biến khiến bản torch CUDA bị thay bằng bản CPU.
 
-## Chạy
+## Chạy từ mã nguồn
 
 ```bash
 python main.py

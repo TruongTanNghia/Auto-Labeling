@@ -91,7 +91,17 @@ General · Model · Inference · Annotation · Plugins · Shortcuts · About.
 
 ---
 
-## Installation
+## Installation & Usage
+
+### Option 1: Standalone Executable (.exe for Windows)
+
+1. Go to the **Releases** page on GitHub and download `AutoLabelStudioAI-windows-x64.zip`.
+2. Extract the zip file to any directory.
+3. Double-click `AutoLabelStudioAI.exe` to run the application directly (no Python installation required).
+
+> **Note on GPU / PyTorch**: The bundled `.exe` includes PyTorch CPU for out-of-the-box compatibility on any Windows machine. If you require CUDA GPU acceleration for faster inference and training, please use **Option 2** with a Python environment and PyTorch CUDA.
+
+### Option 2: Run from Source Code
 
 ```bash
 pip install -r requirements.txt
@@ -103,7 +113,7 @@ For **GPU Acceleration**, install PyTorch with CUDA:
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
 ```
 
-## Running the Application
+## Running the Application from Source
 
 ```bash
 python main.py
