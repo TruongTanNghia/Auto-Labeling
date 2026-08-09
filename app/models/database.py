@@ -98,7 +98,6 @@ CREATE TABLE IF NOT EXISTS train_run (
 
 CREATE INDEX IF NOT EXISTS ix_ann_image ON annotation(image_id);
 CREATE INDEX IF NOT EXISTS ix_ann_class ON annotation(class_id);
-CREATE INDEX IF NOT EXISTS ix_ann_track ON annotation(track_id);
 CREATE INDEX IF NOT EXISTS ix_img_status ON image(status);
 CREATE INDEX IF NOT EXISTS ix_img_dup ON image(is_duplicate);
 """
@@ -125,7 +124,7 @@ class Database:
                 cols = [r[1] for r in self._conn.execute("PRAGMA table_info(annotation)").fetchall()]
                 if "track_id" not in cols:
                     self._conn.execute("ALTER TABLE annotation ADD COLUMN track_id INTEGER DEFAULT NULL")
-                    self._conn.execute("CREATE INDEX IF NOT EXISTS ix_ann_track ON annotation(track_id)")
+                self._conn.execute("CREATE INDEX IF NOT EXISTS ix_ann_track ON annotation(track_id)")
             except Exception as exc:
                 log.warning("Loi migration DB (track_id): %s", exc)
 
