@@ -65,7 +65,9 @@ class AutoLabelWorker(BaseWorker):
                  infer_cfg: InferenceConfig, review_threshold: float = 0.6,
                  low_conf_threshold: float = 0.35, overwrite: bool = True,
                  plugin_key: str = "", plugin_prompt: str = "",
-                 class_name_map: dict | None = None, parent=None) -> None:
+                 class_name_map: dict | None = None,
+                 use_tracking: bool = False, tracker_type: str = "botsort.yaml",
+                 parent=None) -> None:
         super().__init__(parent)
         self.repo = repo
         self.engine = engine
@@ -77,6 +79,8 @@ class AutoLabelWorker(BaseWorker):
         self.plugin_key = plugin_key
         self.plugin_prompt = plugin_prompt
         self.class_name_map = class_name_map or {}
+        self.use_tracking = use_tracking
+        self.tracker_type = tracker_type
 
     # -------------------------------------------------------------- chay ---
     def execute(self) -> AutoLabelResult:
@@ -86,6 +90,15 @@ class AutoLabelWorker(BaseWorker):
         if total == 0:
             self.emit_log("Khong co anh nao de gan nhan.")
             return res
+
+        if self.use_tracking:
+            self.stage.emit("Sap xep anh theo thu tu frame ...")
+            # Lay danh sach record de sap xep theo frame_index neu co
+            records = [self.repo.image(iid) for iid in self.image_ids]
+            records = [r for r in records if r is not None]
+            records.sort(key=lambda r: (r.frame_index if r.frame_index >= 0 else 99999999, r.id))
+            self.image_ids = [r.id for r in records]
+            self.engine.reset_tracker()
 
         plugin = None
         if self.plugin_key:
@@ -107,7 +120,8 @@ class AutoLabelWorker(BaseWorker):
         class_lookup = self._sync_classes()
 
         self.stage.emit("Dang suy luan ...")
-        self.emit_log(f"Bat dau auto label {total} anh | {self.engine.describe()}")
+        mode_str = f"tracking ({self.tracker_type})" if self.use_tracking else "detect"
+        self.emit_log(f"Bat dau auto label {total} anh [{mode_str}] | {self.engine.describe()}")
 
         for i, image_id in enumerate(self.image_ids):
             if self.cancelled:
@@ -121,7 +135,10 @@ class AutoLabelWorker(BaseWorker):
                 continue
 
             try:
-                dets = self.engine.predict(rec.path, self.cfg)
+                if self.use_tracking:
+                    dets = self.engine.track(rec.path, tracker=self.tracker_type, config=self.cfg, persist=True)
+                else:
+                    dets = self.engine.predict(rec.path, self.cfg)
             except Exception as exc:
                 self.emit_log(f"Loi suy luan {rec.filename}: {exc}")
                 continue
@@ -221,6 +238,7 @@ class AutoLabelWorker(BaseWorker):
                 shape=SHAPE_POLYGON if len(d.polygon) >= 6 else d.shape,
                 bbox=list(d.bbox), polygon=list(d.polygon), keypoints=list(d.keypoints),
                 confidence=float(d.confidence), status=status, area=d.area, source="yolo",
+                track_id=d.track_id,
             )
             anns.append(ann)
 

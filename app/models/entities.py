@@ -85,6 +85,7 @@ class Annotation:
     status: str = ANN_AUTO
     area: float = 0.0
     source: str = "manual"
+    track_id: int | None = None
 
     # ------------------------------------------------------------ tien ich --
     @property
@@ -137,6 +138,7 @@ class Annotation:
             class_index=self.class_index, class_name=self.class_name, shape=self.shape,
             bbox=list(self.bbox), polygon=list(self.polygon), keypoints=list(self.keypoints),
             confidence=self.confidence, status=self.status, area=self.area, source=self.source,
+            track_id=self.track_id,
         )
 
     @staticmethod
@@ -152,6 +154,7 @@ class Annotation:
             keypoints=json.loads(row["keypoints"]) if row["keypoints"] else [],
             confidence=row["confidence"], status=row["status"],
             area=row["area"] or 0.0, source=row["source"] or "",
+            track_id=row["track_id"] if "track_id" in keys and row["track_id"] is not None else None,
         )
 
 

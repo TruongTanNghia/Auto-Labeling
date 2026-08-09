@@ -327,6 +327,25 @@ class AutoLabelPage(BasePage):
         ow.addStretch(1)
         ow.addWidget(self.overwrite_toggle)
         infer_card.add(ow)
+
+        infer_card.add(hline())
+        self.tracking_toggle = ToggleSwitch(cfg.get("inference.use_tracking", False))
+        self.tracking_toggle.toggled.connect(self._on_tracking_toggled)
+        tr_row = QHBoxLayout()
+        tr_row.addWidget(label(tr("autolabel.use_tracking", "Theo dõi đối tượng qua frame"), size=12, color=COLORS["text_dim"]))
+        tr_row.addStretch(1)
+        tr_row.addWidget(self.tracking_toggle)
+        infer_card.add(tr_row)
+
+        self.tracker_combo = combo([
+            ("botsort.yaml", "BoT-SORT"),
+            ("bytetrack.yaml", "ByteTrack"),
+        ], current=cfg.get("inference.tracker_type", "botsort.yaml"))
+        infer_card.add(Field(tr("autolabel.tracker_alg", "Thuật toán tracker"), self.tracker_combo, label_width=LABEL_W_NARROW))
+
+        self.tracking_warning = label("", size=11, color=COLORS["warning"], wrap=True)
+        infer_card.add(self.tracking_warning)
+
         lay.addWidget(infer_card)
 
         plugin_card = Card(tr("autolabel.refine_plugin", "Plugin tinh chỉnh"),
@@ -529,12 +548,17 @@ class AutoLabelPage(BasePage):
             min_area_px=self.minarea_spin.value(),
             retina_masks=cfg.get("inference.retina_masks", True),
         )
+        use_tracking = self.tracking_toggle.isChecked() and self.tracking_toggle.isEnabled()
+        tracker_type = self.tracker_combo.currentData() or "botsort.yaml"
+
         cfg.update_section("inference", {
             "confidence": icfg.confidence, "iou": icfg.iou, "max_det": icfg.max_det,
             "review_threshold": self.review_slider.value(),
             "polygon_simplify": icfg.polygon_simplify,
             "min_area_px": icfg.min_area_px,
             "overwrite_existing": self.overwrite_toggle.isChecked(),
+            "use_tracking": use_tracking,
+            "tracker_type": tracker_type,
         })
         cfg.save()
 
@@ -549,6 +573,8 @@ class AutoLabelPage(BasePage):
             overwrite=self.overwrite_toggle.isChecked(),
             plugin_key=self.plugin_combo.currentData() or "",
             plugin_prompt=self.plugin_prompt.text().strip(),
+            use_tracking=use_tracking,
+            tracker_type=tracker_type,
         )
         worker.preview.connect(self.preview.set_result)
         worker.image_done.connect(self._on_image_done)
@@ -588,6 +614,42 @@ class AutoLabelPage(BasePage):
         self.log_view.verticalScrollBar().setValue(
             self.log_view.verticalScrollBar().maximum())
 
+    def _on_tracking_toggled(self, checked: bool) -> None:
+        self.tracker_combo.setEnabled(checked)
+        self._update_tracking_warning()
+
+    def _update_tracking_warning(self) -> None:
+        if not hasattr(self, "tracking_toggle"):
+            return
+        has_frames = any(im.frame_index >= 0 for im in self._images) if self._images else False
+        self.tracking_toggle.setEnabled(has_frames)
+        if not has_frames:
+            self.tracking_toggle.setChecked(False)
+            self.tracker_combo.setEnabled(False)
+            self.tracking_warning.setText(
+                tr("autolabel.no_frame_indices", "Chỉ bật theo dõi khi ảnh có thứ tự frame (từ Frame Extractor).")
+            )
+            return
+
+        self.tracker_combo.setEnabled(self.tracking_toggle.isChecked())
+        if self.tracking_toggle.isChecked():
+            frame_indices = sorted([im.frame_index for im in self._images if im.frame_index >= 0])
+            if len(frame_indices) >= 2:
+                gaps = [frame_indices[i+1] - frame_indices[i] for i in range(len(frame_indices)-1)]
+                avg_gap = sum(gaps) / len(gaps)
+                if avg_gap > 3:
+                    self.tracking_warning.setText(
+                        tr("autolabel.sparse_frame_warn", "Cảnh báo: Khoảng cách frame trung bình ({gap:.1f}) khá thưa, có thể làm giảm độ chính xác của tracking.", gap=avg_gap)
+                    )
+                else:
+                    self.tracking_warning.setText(
+                        tr("autolabel.tracking_active_hint", "Đã bật theo dõi đối tượng qua frame.")
+                    )
+            else:
+                self.tracking_warning.setText("")
+        else:
+            self.tracking_warning.setText("")
+
     # =============================================================== REFRESH ==
     def refresh(self) -> None:
         if not self.repo:
@@ -609,3 +671,4 @@ class AutoLabelPage(BasePage):
             self.model_status.setText(self.ctrl.engine.describe())
             self.model_status.setStyleSheet(
                 f"font-size: 11.5px; color: {COLORS['success']};")
+        self._update_tracking_warning()

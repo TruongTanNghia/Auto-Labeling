@@ -486,6 +486,7 @@ class StatsPage(BasePage):
             if n:
                 segments.append((n, color))
         self.ov_bar.set_segments(segments)
+        t_stats = repo.track_stats()
         self.ov_info.set_pairs([
             ("Tên project", info.name),
             ("Thư mục", info.root_dir),
@@ -494,6 +495,8 @@ class StatsPage(BasePage):
             ("Cập nhật", info.updated_at),
             ("Số lớp", str(info.n_classes)),
             ("Tổng diện tích mask", f"{repo.total_mask_area():,.0f} px²"),
+            ("Số track", f"{t_stats['n_tracks']:,}"),
+            ("Độ dài track trung bình", f"{t_stats['avg_track_len']:.1f} nhãn/track"),
         ])
 
         # --- classes ---

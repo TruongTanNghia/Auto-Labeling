@@ -384,11 +384,11 @@ class ProjectRepository:
         ts = _now()
         cur = self.db.execute(
             "INSERT INTO annotation(image_id, class_id, shape, bbox, polygon, keypoints, "
-            "confidence, status, area, source, created_at, updated_at) "
-            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            "confidence, status, area, source, track_id, created_at, updated_at) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (ann.image_id, ann.class_id, ann.shape, json.dumps(ann.bbox),
              json.dumps(ann.polygon), json.dumps(ann.keypoints), ann.confidence,
-             ann.status, ann.area, ann.source, ts, ts),
+             ann.status, ann.area, ann.source, ann.track_id, ts, ts),
         )
         self.db.commit()
         ann.id = cur.lastrowid
@@ -398,10 +398,10 @@ class ProjectRepository:
     def update_annotation(self, ann: Annotation) -> None:
         self.db.execute(
             "UPDATE annotation SET class_id=?, shape=?, bbox=?, polygon=?, keypoints=?, "
-            "confidence=?, status=?, area=?, source=?, updated_at=? WHERE id=?",
+            "confidence=?, status=?, area=?, source=?, track_id=?, updated_at=? WHERE id=?",
             (ann.class_id, ann.shape, json.dumps(ann.bbox), json.dumps(ann.polygon),
              json.dumps(ann.keypoints), ann.confidence, ann.status, ann.area,
-             ann.source, _now(), ann.id),
+             ann.source, ann.track_id, _now(), ann.id),
         )
         self.db.commit()
 
@@ -423,14 +423,14 @@ class ProjectRepository:
         ts = _now()
         rows = [
             (image_id, a.class_id, a.shape, json.dumps(a.bbox), json.dumps(a.polygon),
-             json.dumps(a.keypoints), a.confidence, a.status, a.area, a.source, ts, ts)
+             json.dumps(a.keypoints), a.confidence, a.status, a.area, a.source, a.track_id, ts, ts)
             for a in anns
         ]
         if rows:
             self.db.executemany(
                 "INSERT INTO annotation(image_id, class_id, shape, bbox, polygon, keypoints, "
-                "confidence, status, area, source, created_at, updated_at) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                "confidence, status, area, source, track_id, created_at, updated_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 rows,
             )
         self.db.commit()
@@ -580,6 +580,26 @@ class ProjectRepository:
 
     def total_mask_area(self) -> float:
         return float(self.db.scalar("SELECT COALESCE(SUM(area),0) FROM annotation"))
+
+    def update_track_class(self, track_id: int, new_class_id: int) -> int:
+        """Doi class cua tat ca annotation co cung track_id."""
+        cur = self.db.execute(
+            "UPDATE annotation SET class_id=?, updated_at=? WHERE track_id=?",
+            (new_class_id, _now(), track_id),
+        )
+        self.db.commit()
+        return cur.rowcount if cur else 0
+
+    def track_stats(self) -> dict:
+        """Thong ke so track va do dai track trung binh."""
+        n_tracks = int(self.db.scalar(
+            "SELECT COUNT(DISTINCT track_id) FROM annotation WHERE track_id IS NOT NULL AND track_id > 0"
+        ))
+        avg_len = float(self.db.scalar(
+            "SELECT COALESCE(AVG(cnt), 0) FROM (SELECT COUNT(*) AS cnt FROM annotation "
+            "WHERE track_id IS NOT NULL AND track_id > 0 GROUP BY track_id)"
+        ))
+        return {"n_tracks": n_tracks, "avg_track_len": round(avg_len, 1)}
 
     # ============================================================= LICH SU ==
     def log_history(self, action: str, detail: str = "") -> None:

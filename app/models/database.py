@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS annotation (
     status      TEXT DEFAULT 'auto',
     area        REAL DEFAULT 0,
     source      TEXT DEFAULT 'manual',
+    track_id    INTEGER DEFAULT NULL,
     created_at  TEXT,
     updated_at  TEXT
 );
@@ -97,6 +98,7 @@ CREATE TABLE IF NOT EXISTS train_run (
 
 CREATE INDEX IF NOT EXISTS ix_ann_image ON annotation(image_id);
 CREATE INDEX IF NOT EXISTS ix_ann_class ON annotation(class_id);
+CREATE INDEX IF NOT EXISTS ix_ann_track ON annotation(track_id);
 CREATE INDEX IF NOT EXISTS ix_img_status ON image(status);
 CREATE INDEX IF NOT EXISTS ix_img_dup ON image(is_duplicate);
 """
@@ -118,6 +120,15 @@ class Database:
     def _init_schema(self) -> None:
         with self._lock:
             self._conn.executescript(_SCHEMA)
+            # Migration check: Dam bao column track_id co trong table annotation
+            try:
+                cols = [r[1] for r in self._conn.execute("PRAGMA table_info(annotation)").fetchall()]
+                if "track_id" not in cols:
+                    self._conn.execute("ALTER TABLE annotation ADD COLUMN track_id INTEGER DEFAULT NULL")
+                    self._conn.execute("CREATE INDEX IF NOT EXISTS ix_ann_track ON annotation(track_id)")
+            except Exception as exc:
+                log.warning("Loi migration DB (track_id): %s", exc)
+
             cur = self._conn.execute("SELECT value FROM meta WHERE key='schema_version'")
             row = cur.fetchone()
             if row is None:

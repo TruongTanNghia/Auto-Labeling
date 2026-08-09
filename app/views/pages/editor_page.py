@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMenu,
+    QMessageBox,
     QVBoxLayout,
     QWidget,
 )
@@ -305,6 +306,11 @@ class EditorPage(BasePage):
         self.obj_info = label(tr("editor.no_object_selected", "Chưa chọn đối tượng nào"), size=11.5,
                               color=COLORS["text_mute"], wrap=True)
         info_card.add(self.obj_info)
+        self.apply_track_btn = ghost_button(tr("editor.apply_track", "Áp dụng sửa đổi cho track"), "layers")
+        self.apply_track_btn.setToolTip(tr("editor.apply_track_tip", "Đổi lớp của tất cả các đối tượng thuộc cùng track trong dự án"))
+        self.apply_track_btn.clicked.connect(self._apply_class_to_track)
+        self.apply_track_btn.setVisible(False)
+        info_card.add(self.apply_track_btn)
         info_card.add(hline())
 
         self.status_row = QHBoxLayout()
@@ -553,7 +559,8 @@ class EditorPage(BasePage):
         for i, a in enumerate(self.canvas.annotations):
             name = a.class_name or self.canvas.class_names.get(a.class_id, "?")
             conf = f"{a.confidence:.2f}" if a.confidence < 1.0 else "manual"
-            item = QListWidgetItem(f"  #{i + 1}  {name}   ·   {conf}")
+            track_str = f" [T#{a.track_id}]" if a.track_id is not None else ""
+            item = QListWidgetItem(f"  #{i + 1}  {name}{track_str}   ·   {conf}")
             item.setIcon(_color_icon(self.canvas.class_colors.get(
                 a.class_id, COLORS["accent"])))
             item.setData(OBJ_ROLE, i)
@@ -577,6 +584,7 @@ class EditorPage(BasePage):
             self.obj_info.setText("Chưa chọn đối tượng nào")
             self.obj_class_combo.setEnabled(False)
             self.obj_conf.setEnabled(False)
+            self.apply_track_btn.setVisible(False)
             return
         self.obj_class_combo.setEnabled(True)
         self.obj_conf.setEnabled(True)
@@ -591,14 +599,17 @@ class EditorPage(BasePage):
         self.obj_conf.blockSignals(False)
 
         if len(anns) == 1:
+            track_text = f"   ·   Track: #{a.track_id}" if a.track_id is not None else ""
             self.obj_info.setText(
-                f"Mã: {a.id or 'mới'}   ·   {len(a.points()) or 4} đỉnh\n"
+                f"Mã: {a.id or 'mới'}{track_text}   ·   {len(a.points()) or 4} đỉnh\n"
                 f"Kích thước: {a.width:.0f} × {a.height:.0f} px\n"
                 f"Diện tích: {a.area:,.0f} px²")
+            self.apply_track_btn.setVisible(a.track_id is not None)
         else:
             total = sum(x.area for x in anns)
             self.obj_info.setText(
                 f"Đang chọn {len(anns)} đối tượng\nTổng diện tích: {total:,.0f} px²")
+            self.apply_track_btn.setVisible(False)
 
     def _object_menu(self, pos) -> None:
         if not self.object_list.selectedItems():
@@ -610,6 +621,12 @@ class EditorPage(BasePage):
                                       "Giản lược")
         act_topoly = menu.addAction(icons.icon("polygon", COLORS["text_dim"], 16),
                                     "Chuyển thành polygon")
+        selected_anns = self.canvas.selected_annotations()
+        act_track = None
+        if selected_anns and selected_anns[0].track_id is not None:
+            menu.addSeparator()
+            act_track = menu.addAction(icons.icon("layers", COLORS["accent"], 16), "Áp dụng sửa đổi cho track")
+
         chosen = menu.exec(self.object_list.mapToGlobal(pos))
         if chosen == act_del:
             self.canvas.delete_selected()
@@ -619,6 +636,52 @@ class EditorPage(BasePage):
             self.canvas.simplify_selected(1.8)
         elif chosen == act_topoly:
             self.canvas.convert_selected_to_polygon()
+        elif chosen == act_track:
+            self._apply_class_to_track()
+
+    def _apply_class_to_track(self) -> None:
+        if not self.canvas.selected or not self.repo:
+            return
+        selected_anns = self.canvas.selected_annotations()
+        if not selected_anns:
+            return
+        target_ann = selected_anns[0]
+        track_id = target_ann.track_id
+        if track_id is None:
+            self.toast("Đối tượng được chọn không thuộc chuỗi theo dõi nào.", "warning")
+            return
+
+        cid = self.obj_class_combo.currentData()
+        if cid is None:
+            return
+        class_def = self.repo.class_by_id(int(cid))
+        class_name = class_def.name if class_def else f"ID {cid}"
+
+        reply = QMessageBox.question(
+            self,
+            "Xác nhận áp dụng sửa đổi cho track",
+            f"Bạn có chắc chắn muốn đổi lớp đối tượng của tất cả nhãn thuộc Track #{track_id} thành '{class_name}'?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply != QMessageBox.Yes:
+            return
+
+        updated_count = self.repo.update_track_class(track_id, int(cid))
+
+        for a in self.canvas.annotations:
+            if a.track_id == track_id:
+                a.class_id = int(cid)
+                a.class_name = class_name
+                a.status = ANN_MANUAL
+
+        self.save_current()
+        self.canvas.update()
+        self._refresh_object_list()
+        self.toast(
+            f"Đã cập nhật {updated_count} nhãn thuộc Track #{track_id} thành lớp '{class_name}'.",
+            "success"
+        )
 
     def _apply_class_combo(self) -> None:
         cid = self.obj_class_combo.currentData()

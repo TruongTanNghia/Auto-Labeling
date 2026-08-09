@@ -175,6 +175,7 @@ class Detection:
     polygon: list[float] = field(default_factory=list)   # [x1,y1,x2,y2,...] pixel
     keypoints: list[float] = field(default_factory=list) # [x,y,v, ...]
     shape: str = SHAPE_BBOX
+    track_id: int | None = None
 
     @property
     def area(self) -> float:
@@ -235,6 +236,12 @@ class YoloEngine:
             return "Chua nap model"
         return (f"{Path(self.weights).name} | task={self.task} | "
                 f"device={self.device} | {len(self.names)} class")
+
+    def reset_tracker(self) -> None:
+        """Reset trang thai theo doi truoc khi chay chuoi frame moi."""
+        if self.loaded and hasattr(self.model, "predictor") and self.model.predictor:
+            if hasattr(self.model.predictor, "trackers"):
+                self.model.predictor.trackers = None
 
     # ------------------------------------------------------------------ nap --
     def load(self, weights: str, task: str = "detect", device: str = "auto",
@@ -361,6 +368,30 @@ class YoloEngine:
             return []
         return self._parse(results[0], cfg)
 
+    def track(self, source, tracker: str = "botsort.yaml", config: InferenceConfig | None = None,
+              persist: bool = True) -> list[Detection]:
+        """Suy luan ket hop tracking doi tuong qua frame."""
+        if not self.loaded:
+            raise RuntimeError("Model chua duoc nap.")
+        cfg = config or InferenceConfig()
+
+        kwargs = dict(
+            conf=float(cfg.confidence), iou=float(cfg.iou), max_det=int(cfg.max_det),
+            imgsz=int(cfg.imgsz), verbose=False, device=self.device,
+            agnostic_nms=bool(cfg.agnostic_nms), tracker=tracker, persist=persist,
+        )
+        if cfg.half and self.device != "cpu":
+            kwargs["half"] = True
+        if cfg.class_filter:
+            kwargs["classes"] = list(cfg.class_filter)
+        if self.task == "segment":
+            kwargs["retina_masks"] = bool(cfg.retina_masks)
+
+        results = self.model.track(source, **kwargs)
+        if not results:
+            return []
+        return self._parse(results[0], cfg)
+
     def predict_batch(self, sources: list, config: InferenceConfig | None = None
                       ) -> list[list[Detection]]:
         if not self.loaded:
@@ -388,14 +419,23 @@ class YoloEngine:
             polys = obb.xyxyxyxy.cpu().numpy()
             confs = obb.conf.cpu().numpy()
             clss = obb.cls.cpu().numpy().astype(int)
-            for poly, conf, cid in zip(polys, confs, clss):
+            obb_track_ids = None
+            if getattr(obb, "id", None) is not None:
+                try:
+                    obb_track_ids = obb.id.int().cpu().numpy()
+                except Exception:
+                    pass
+
+            for i, (poly, conf, cid) in enumerate(zip(polys, confs, clss)):
                 pts = poly.reshape(-1, 2)
                 flat = [float(v) for v in pts.flatten()]
                 xs, ys = pts[:, 0], pts[:, 1]
+                t_id = int(obb_track_ids[i]) if obb_track_ids is not None and i < len(obb_track_ids) else None
                 det = Detection(
                     class_id=int(cid), class_name=self.names.get(int(cid), str(cid)),
                     confidence=float(conf), shape=SHAPE_OBB, polygon=flat,
                     bbox=[float(xs.min()), float(ys.min()), float(xs.max()), float(ys.max())],
+                    track_id=t_id,
                 )
                 if det.area >= cfg.min_area_px:
                     out.append(det)
@@ -409,6 +449,13 @@ class YoloEngine:
         confs = boxes.conf.cpu().numpy()
         clss = boxes.cls.cpu().numpy().astype(int)
 
+        track_ids = None
+        if getattr(boxes, "id", None) is not None:
+            try:
+                track_ids = boxes.id.int().cpu().numpy()
+            except Exception:
+                pass
+
         masks = getattr(res, "masks", None)
         polygons = None
         if masks is not None and getattr(masks, "xy", None) is not None:
@@ -421,11 +468,13 @@ class YoloEngine:
 
         for i in range(len(xyxy)):
             cid = int(clss[i])
+            t_id = int(track_ids[i]) if track_ids is not None and i < len(track_ids) else None
             det = Detection(
                 class_id=cid, class_name=self.names.get(cid, str(cid)),
                 confidence=float(confs[i]),
                 bbox=[float(v) for v in xyxy[i]],
                 shape=SHAPE_BBOX,
+                track_id=t_id,
             )
             if polygons is not None and i < len(polygons):
                 poly = np.asarray(polygons[i], dtype=np.float32)
