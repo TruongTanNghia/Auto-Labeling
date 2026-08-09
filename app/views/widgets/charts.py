@@ -35,7 +35,6 @@ class _ChartBase(QWidget):
         self._grid_color = QColor(COLORS["border"])
         self._text_color = QColor(COLORS["text_mute"])
         self._font = QFont()
-        self._font.setPixelSize(0)
         self._font.setPointSize(8)
 
     def _painter(self) -> QPainter:
@@ -256,7 +255,6 @@ class DonutChart(_ChartBase):
         title = self.center_title or _fmt(total)
         sub = self.center_sub
         f = QFont(self._font)
-        f.setPixelSize(0)
         f.setPointSize(max(10, int(hole_size / 7)))
         f.setBold(True)
         p.setFont(f)
@@ -265,7 +263,6 @@ class DonutChart(_ChartBase):
                    Qt.AlignCenter, title)
         if sub:
             f2 = QFont(self._font)
-            f2.setPixelSize(0)
             f2.setPointSize(8)
             p.setFont(f2)
             p.setPen(QPen(QColor(COLORS["text_mute"])))
@@ -586,7 +583,6 @@ class ProgressRing(QWidget):
         p.drawArc(rect, 90 * 16, int(-360 * 16 * self._value))
 
         f = QFont()
-        f.setPixelSize(0)
         f.setBold(True)
         f.setPointSize(max(9, int(self.width() / 6)))
         p.setFont(f)

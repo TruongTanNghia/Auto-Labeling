@@ -90,7 +90,6 @@ class DetectionPreview(QWidget):
         p.drawPixmap(QRectF(ox, oy, w, h), self._pixmap, QRectF(self._pixmap.rect()))
 
         f = QFont()
-        f.setPixelSize(0)
         f.setPointSize(8)
         f.setBold(True)
         p.setFont(f)

@@ -545,7 +545,6 @@ class AnnotationCanvas(QWidget):
         if self.style.show_confidence and ann.confidence < 1.0:
             text += f" {ann.confidence:.2f}"
         f = QFont()
-        f.setPixelSize(0)
         f.setPointSize(8)
         f.setBold(True)
         p.setFont(f)

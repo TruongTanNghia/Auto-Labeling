@@ -152,7 +152,7 @@ class Florence2Plugin(AnnotatorPlugin):
         dtype = torch.float16 if self._device != "cpu" else torch.float32
         self._processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
         self._model = AutoModelForCausalLM.from_pretrained(
-            model_id, torch_dtype=dtype, trust_remote_code=True).to(self._device).eval()
+            model_id, dtype=dtype, trust_remote_code=True).to(self._device).eval()
         self._torch = torch
         self._dtype = dtype
         self._loaded = True
