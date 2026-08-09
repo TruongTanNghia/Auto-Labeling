@@ -107,3 +107,25 @@ def test_i18n():
 
     set_language("vi")
     assert get_language() == "vi"
+
+
+def test_editor_page_initialization_on_show(qapp, tmp_dir: Path):
+    ctrl = AppController()
+    win = MainWindow(ctrl)
+    win.show()
+    qapp.processEvents()
+    try:
+        proj = tmp_dir / "editor_proj"
+        r = ProjectRepository.create(proj, "EditorProj")
+        r.close()
+        ctrl.open_project(proj / "project.alsdb")
+        qapp.processEvents()
+
+        win.go_to_page("editor")
+        qapp.processEvents()
+        assert win.pages["editor"]._image_id == 0
+    finally:
+        ctrl.shutdown()
+        win.deleteLater()
+        qapp.processEvents()
+

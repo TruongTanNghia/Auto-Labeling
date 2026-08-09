@@ -77,6 +77,7 @@ class EditorPage(BasePage):
     def __init__(self, controller, parent=None) -> None:
         super().__init__(controller, parent, scrollable=False)
         self._images: list[ImageRecord] = []
+        self._image_id: int = 0
         self.current_idx: int = -1
         self._dirty = False
         self._loading = False
