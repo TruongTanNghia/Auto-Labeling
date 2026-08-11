@@ -203,6 +203,10 @@ class InferenceConfig:
     polygon_simplify: float = 0.0025    # ti le so voi chu vi (0 = khong don gian hoa)
     min_area_px: float = 24.0
     class_filter: list[int] = field(default_factory=list)
+    # --- Suy luan cat lat (SAHI) ---
+    sahi_enabled: bool = False
+    sahi_slice_size: int = 640          # chieu rong/cao moi o (px)
+    sahi_overlap: float = 0.2           # ti le chong lan giua cac o (0.0 - 0.5)
 
     @classmethod
     def from_dict(cls, data: dict) -> "InferenceConfig":
@@ -488,6 +492,280 @@ class YoloEngine:
             if det.area >= cfg.min_area_px:
                 out.append(det)
         return out
+
+    # -------------------------------------------------------- SAHI helpers --
+    @staticmethod
+    def _cross_tile_nms(dets: list["Detection"], iou_thr: float,
+                        task: str) -> list["Detection"]:
+        """Greedy NMS xuyen o: loai box/polygon trung lap tu nhieu o khac nhau."""
+        if len(dets) <= 1:
+            return dets
+
+        # Nhom theo class_id de chi so sanh cung class
+        from collections import defaultdict
+        by_class: dict[int, list] = defaultdict(list)
+        for d in dets:
+            by_class[d.class_id].append(d)
+
+        kept: list["Detection"] = []
+        use_poly = (task == "segment")
+
+        for cls_dets in by_class.values():
+            cls_dets = sorted(cls_dets, key=lambda d: d.confidence, reverse=True)
+            suppressed = [False] * len(cls_dets)
+
+            # Cache shapely polygons neu can
+            if use_poly:
+                try:
+                    from shapely.geometry import Polygon as ShPoly
+                    sh_polys = []
+                    for d in cls_dets:
+                        if len(d.polygon) >= 6:
+                            pts = [(d.polygon[i], d.polygon[i+1])
+                                   for i in range(0, len(d.polygon) - 1, 2)]
+                            try:
+                                sh_polys.append(ShPoly(pts).buffer(0))
+                            except Exception:
+                                sh_polys.append(None)
+                        else:
+                            sh_polys.append(None)
+                    _shapely_ok = True
+                except ImportError:
+                    _shapely_ok = False
+                    sh_polys = [None] * len(cls_dets)
+            else:
+                _shapely_ok = False
+                sh_polys = [None] * len(cls_dets)
+
+            for i in range(len(cls_dets)):
+                if suppressed[i]:
+                    continue
+                kept.append(cls_dets[i])
+                bx1, by1, bx2, by2 = cls_dets[i].bbox
+                ba = max(0.0, bx2 - bx1) * max(0.0, by2 - by1)
+
+                for j in range(i + 1, len(cls_dets)):
+                    if suppressed[j]:
+                        continue
+                    cx1, cy1, cx2, cy2 = cls_dets[j].bbox
+
+                    # Tinh IoU bang polygon Shapely neu co
+                    iou = 0.0
+                    if _shapely_ok and sh_polys[i] is not None and sh_polys[j] is not None:
+                        try:
+                            inter = sh_polys[i].intersection(sh_polys[j]).area
+                            union = sh_polys[i].area + sh_polys[j].area - inter
+                            iou = inter / union if union > 0 else 0.0
+                        except Exception:
+                            iou = 0.0
+                    else:
+                        # Fallback: IoU box
+                        ca = max(0.0, cx2 - cx1) * max(0.0, cy2 - cy1)
+                        ix1 = max(bx1, cx1); iy1 = max(by1, cy1)
+                        ix2 = min(bx2, cx2); iy2 = min(by2, cy2)
+                        inter = max(0.0, ix2 - ix1) * max(0.0, iy2 - iy1)
+                        union = ba + ca - inter
+                        iou = inter / union if union > 0 else 0.0
+
+                    if iou >= iou_thr:
+                        suppressed[j] = True
+
+        return kept
+
+    @staticmethod
+    def _merge_boundary_polygons(dets: list["Detection"], img_w: int, img_h: int,
+                                  merge_dist: float = 8.0) -> list["Detection"]:
+        """Gop cac manh polygon cung class nam sat ranh gioi o vao mot polygon lien tuc.
+
+        Chi xu ly khi Shapely kha dung. Neu khong the gop, giu nguyen 2 manh cu.
+        Chon exterior ring lon nhat de tranh multipolygon phuc tap.
+        """
+        try:
+            from shapely.geometry import Polygon as ShPoly
+            from shapely.ops import unary_union
+        except ImportError:
+            return dets
+
+        if not dets:
+            return dets
+
+        # Phan loai: polygon co the nam sat bien anh/o hay khong
+        def _is_boundary(poly_flat: list[float]) -> bool:
+            """True neu co diem nao nam cach bien anh <= merge_dist."""
+            for i in range(0, len(poly_flat) - 1, 2):
+                x, y = poly_flat[i], poly_flat[i + 1]
+                if (x <= merge_dist or y <= merge_dist
+                        or x >= img_w - merge_dist or y >= img_h - merge_dist):
+                    return True
+            return False
+
+        from collections import defaultdict
+        boundary_by_class: dict[int, list[int]] = defaultdict(list)
+        interior_idx: list[int] = []
+
+        for idx, d in enumerate(dets):
+            if len(d.polygon) >= 6 and _is_boundary(d.polygon):
+                boundary_by_class[d.class_id].append(idx)
+            else:
+                interior_idx.append(idx)
+
+        result: list["Detection"] = [dets[i] for i in interior_idx]
+
+        for cls_id, idxs in boundary_by_class.items():
+            if len(idxs) == 1:
+                result.append(dets[idxs[0]])
+                continue
+
+            sh_polys = []
+            valid_idxs = []
+            for i in idxs:
+                pts = [(dets[i].polygon[k], dets[i].polygon[k+1])
+                       for k in range(0, len(dets[i].polygon) - 1, 2)]
+                try:
+                    p = ShPoly(pts).buffer(0)
+                    if p.is_valid and not p.is_empty:
+                        sh_polys.append(p)
+                        valid_idxs.append(i)
+                    else:
+                        result.append(dets[i])
+                except Exception:
+                    result.append(dets[i])
+
+            if not sh_polys:
+                continue
+
+            # Thu gop; neu that bai giu nguyen cac manh
+            try:
+                merged = unary_union(sh_polys)
+                # Lay exterior ring lon nhat neu la MultiPolygon
+                if merged.geom_type == "MultiPolygon":
+                    merged = max(merged.geoms, key=lambda g: g.area)
+                if merged.geom_type != "Polygon" or merged.is_empty:
+                    for i in valid_idxs:
+                        result.append(dets[i])
+                    continue
+                coords = list(merged.exterior.coords)
+                flat = [v for pt in coords[:-1] for v in pt]  # bo diem cuoi trung diem dau
+                # Lay Detection co confidence cao nhat de ke thua metadata
+                base = max((dets[i] for i in valid_idxs), key=lambda d: d.confidence)
+                import copy
+                merged_det = copy.copy(base)
+                merged_det.polygon = flat
+                xs = [flat[k] for k in range(0, len(flat), 2)]
+                ys = [flat[k] for k in range(1, len(flat), 2)]
+                merged_det.bbox = [min(xs), min(ys), max(xs), max(ys)]
+                result.append(merged_det)
+            except Exception:
+                for i in valid_idxs:
+                    result.append(dets[i])
+
+        return result
+
+    def slice_predict(self, source, config: "InferenceConfig | None" = None,
+                      progress_cb=None) -> list["Detection"]:
+        """Suy luan cat lat: chia anh thanh cac o chong lan, inference tung o,
+        dich toa do ve anh goc, gop bang NMS xuyen o.
+
+        Args:
+            source: duong dan anh (str/Path) hoac ndarray BGR.
+            config: InferenceConfig, doc sahi_slice_size va sahi_overlap.
+            progress_cb: callback(tile_idx, total_tiles) bao cao tien do.
+
+        Returns:
+            list[Detection] voi toa do theo khong gian anh goc.
+        """
+        import cv2
+        cfg = config or InferenceConfig()
+        slice_size = max(64, int(cfg.sahi_slice_size))
+        overlap = max(0.0, min(0.9, float(cfg.sahi_overlap)))
+        step = max(1, int(slice_size * (1.0 - overlap)))
+
+        # Doc kich thuoc anh goc
+        if isinstance(source, np.ndarray):
+            img_bgr = source
+        else:
+            from app.core.image_quality import imread_unicode
+            img_bgr = imread_unicode(str(source))
+            if img_bgr is None:
+                log.warning("slice_predict: khong doc duoc anh %s", source)
+                return []
+
+        H, W = img_bgr.shape[:2]
+
+        # Neu anh nho hon slice_size thi fallback ve predict thuong
+        if W <= slice_size and H <= slice_size:
+            log.debug("slice_predict: anh nho hon o, dung predict thuong.")
+            return self.predict(img_bgr, cfg)
+
+        # Sinh cac toa do o bang while loop, dam bao canh cuoi anh luon duoc bao phu
+        tiles: list[tuple[int, int, int, int]] = []
+        y0 = 0
+        while y0 < H:
+            y1 = min(y0 + slice_size, H)
+            x0 = 0
+            while x0 < W:
+                x1 = min(x0 + slice_size, W)
+                tiles.append((x0, y0, x1, y1))
+                if x1 >= W:
+                    break
+                x0 += step
+            if y1 >= H:
+                break
+            y0 += step
+
+        total = len(tiles)
+        all_dets: list[Detection] = []
+
+        # Tao config tam thoi khong co sahi de tranh de quy
+        tile_cfg = InferenceConfig(
+            confidence=cfg.confidence, iou=cfg.iou, max_det=cfg.max_det,
+            imgsz=cfg.imgsz, half=cfg.half, agnostic_nms=cfg.agnostic_nms,
+            retina_masks=cfg.retina_masks, polygon_simplify=cfg.polygon_simplify,
+            min_area_px=cfg.min_area_px, class_filter=list(cfg.class_filter),
+            sahi_enabled=False,
+        )
+
+        for tile_idx, (x0, y0, x1, y1) in enumerate(tiles):
+            if progress_cb:
+                progress_cb(tile_idx, total)
+
+            tile_img = img_bgr[y0:y1, x0:x1]
+            try:
+                tile_dets = self.predict(tile_img, tile_cfg)
+            except Exception as exc:
+                log.warning("slice_predict: loi o tile %d/%d: %s", tile_idx + 1, total, exc)
+                tile_dets = []
+
+            # Dich toa do ve anh goc
+            for d in tile_dets:
+                d.bbox = [
+                    d.bbox[0] + x0, d.bbox[1] + y0,
+                    d.bbox[2] + x0, d.bbox[3] + y0,
+                ]
+                if d.polygon:
+                    shifted = []
+                    for k in range(0, len(d.polygon) - 1, 2):
+                        shifted.append(d.polygon[k] + x0)
+                        shifted.append(d.polygon[k + 1] + y0)
+                    d.polygon = shifted
+
+            all_dets.extend(tile_dets)
+
+        if progress_cb:
+            progress_cb(total, total)
+
+        # NMS xuyen o
+        merged = self._cross_tile_nms(all_dets, cfg.iou, self.task)
+
+        # Gop polygon bien o (chi cho segmentation)
+        if self.task == "segment":
+            merged = self._merge_boundary_polygons(merged, W, H)
+
+        log.debug(
+            "slice_predict: %d o, %d det truoc NMS, %d sau NMS+merge",
+            total, len(all_dets), len(merged),
+        )
+        return merged
 
 
 # ------------------------------------------------------------- TIEN ICH -----

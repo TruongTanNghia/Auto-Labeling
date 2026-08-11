@@ -81,6 +81,8 @@ class AutoLabelWorker(BaseWorker):
         self.class_name_map = class_name_map or {}
         self.use_tracking = use_tracking
         self.tracker_type = tracker_type
+        # Bien theo doi tien do cat lat (cap nhat tu callback)
+        self._tile_progress: tuple[int, int] = (0, 1)  # (hien tai, tong so o)
 
     # -------------------------------------------------------------- chay ---
     def execute(self) -> AutoLabelResult:
@@ -137,6 +139,18 @@ class AutoLabelWorker(BaseWorker):
             try:
                 if self.use_tracking:
                     dets = self.engine.track(rec.path, tracker=self.tracker_type, config=self.cfg, persist=True)
+                elif self.cfg.sahi_enabled:
+                    def _tile_cb(tile_idx: int, total_tiles: int) -> None:
+                        self._tile_progress = (tile_idx, max(1, total_tiles))
+                        # Phat tien do: moi anh chiem mot doan, trong do tung o la mot buoc nho
+                        frac = tile_idx / max(1, total_tiles)
+                        img_progress = i + frac
+                        self.emit_progress(
+                            img_progress, total,
+                            f"{i + 1}/{total} - {rec.filename} - "
+                            f"o {tile_idx}/{total_tiles}")
+                    dets = self.engine.slice_predict(rec.path, self.cfg,
+                                                     progress_cb=_tile_cb)
                 else:
                     dets = self.engine.predict(rec.path, self.cfg)
             except Exception as exc:
@@ -163,9 +177,16 @@ class AutoLabelWorker(BaseWorker):
             self.image_done.emit(image_id, len(anns), stats["max_conf"])
             if i % 5 == 0 or total < 30:
                 self.preview.emit(rec.path, dets)
-            self.emit_progress(
-                i + 1, total,
-                f"{i + 1}/{total} - {rec.filename} - {len(anns)} doi tuong")
+            if not self.cfg.sahi_enabled:
+                # Tien do theo anh (binh thuong)
+                self.emit_progress(
+                    i + 1, total,
+                    f"{i + 1}/{total} - {rec.filename} - {len(anns)} doi tuong")
+            else:
+                # Tien do theo anh sau khi hoan thanh (cac buoc giua da emit trong callback)
+                self.emit_progress(
+                    i + 1, total,
+                    f"{i + 1}/{total} - {rec.filename} - {len(anns)} doi tuong")
 
         res.elapsed = time.time() - t0
         self.repo.refresh_stats()
@@ -260,7 +281,10 @@ class SingleImageInferWorker(BaseWorker):
         self.plugin_prompt = plugin_prompt
 
     def execute(self) -> list[Detection]:
-        dets = self.engine.predict(self.image_path, self.cfg)
+        if self.cfg.sahi_enabled:
+            dets = self.engine.slice_predict(self.image_path, self.cfg)
+        else:
+            dets = self.engine.predict(self.image_path, self.cfg)
         if self.plugin_key:
             plugin = registry.get(self.plugin_key)
             if plugin is not None:

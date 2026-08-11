@@ -347,6 +347,44 @@ class AutoLabelPage(BasePage):
 
         lay.addWidget(infer_card)
 
+        # --- Card: Suy luan cat lat ---
+        sahi_card = Card(tr("autolabel.sahi_card", "Suy luận cắt lát (ảnh lớn)"),
+                         tr("autolabel.sahi_card_sub",
+                            "Tăng khả năng phát hiện đối tượng nhỏ trên ảnh độ phân giải cao"),
+                         "grid")
+
+        self.sahi_toggle = ToggleSwitch(cfg.get("inference.sahi_enabled", False))
+        self.sahi_toggle.toggled.connect(self._on_sahi_toggled)
+        sahi_row = QHBoxLayout()
+        sahi_row.addWidget(label(tr("autolabel.sahi_enable", "Bật suy luận cắt lát"),
+                                 size=12, color=COLORS["text_dim"]))
+        sahi_row.addStretch(1)
+        sahi_row.addWidget(self.sahi_toggle)
+        sahi_card.add(sahi_row)
+
+        self.sahi_slice_spin = spin(cfg.get("inference.sahi_slice_size", 640),
+                                    64, 2048, 64, suffix=" px", width=110)
+        sahi_card.add(Field(tr("autolabel.sahi_slice", "Cỡ ô"),
+                            self.sahi_slice_spin, label_width=LABEL_W_NARROW,
+                            hint=tr("autolabel.sahi_slice_hint",
+                                    "Khuyến nghị: bằng kích thước ảnh đầu vào model (mặc định 640)")))
+
+        self.sahi_overlap_slider = SliderField(
+            cfg.get("inference.sahi_overlap", 0.2), 0.0, 0.5, 2, 0.05)
+        sahi_card.add(Field(tr("autolabel.sahi_overlap", "Tỉ lệ chồng lấn"),
+                            self.sahi_overlap_slider, label_width=LABEL_W_NARROW,
+                            hint=tr("autolabel.sahi_overlap_hint",
+                                    "Tăng để bắt đối tượng sát biên ô, giảm để chạy nhanh hơn")))
+
+        self.sahi_hint = label(
+            tr("autolabel.sahi_perf_hint",
+               "Ảnh 4K với ô 640px tạo ~35 ô — chậm hơn ~10–30 lần so với suy luận thường."),
+            size=11, color=COLORS["text_mute"], wrap=True)
+        sahi_card.add(self.sahi_hint)
+
+        lay.addWidget(sahi_card)
+        self._on_sahi_toggled(self.sahi_toggle.isChecked())
+
         plugin_card = Card(tr("autolabel.refine_plugin", "Plugin tinh chỉnh"),
                            tr("autolabel.refine_plugin_sub", "Cải thiện chất lượng nhãn tự động"),
                            "puzzle")
@@ -546,6 +584,9 @@ class AutoLabelPage(BasePage):
             polygon_simplify=self.simplify_slider.value(),
             min_area_px=self.minarea_spin.value(),
             retina_masks=cfg.get("inference.retina_masks", True),
+            sahi_enabled=self.sahi_toggle.isChecked(),
+            sahi_slice_size=self.sahi_slice_spin.value(),
+            sahi_overlap=self.sahi_overlap_slider.value(),
         )
         use_tracking = self.tracking_toggle.isChecked() and self.tracking_toggle.isEnabled()
         tracker_type = self.tracker_combo.currentData() or "botsort.yaml"
@@ -558,6 +599,9 @@ class AutoLabelPage(BasePage):
             "overwrite_existing": self.overwrite_toggle.isChecked(),
             "use_tracking": use_tracking,
             "tracker_type": tracker_type,
+            "sahi_enabled": icfg.sahi_enabled,
+            "sahi_slice_size": icfg.sahi_slice_size,
+            "sahi_overlap": icfg.sahi_overlap,
         })
         cfg.save()
 
@@ -616,6 +660,11 @@ class AutoLabelPage(BasePage):
     def _on_tracking_toggled(self, checked: bool) -> None:
         self.tracker_combo.setEnabled(checked)
         self._update_tracking_warning()
+
+    def _on_sahi_toggled(self, checked: bool) -> None:
+        self.sahi_slice_spin.setEnabled(checked)
+        self.sahi_overlap_slider.setEnabled(checked)
+        self.sahi_hint.setVisible(checked)
 
     def _update_tracking_warning(self) -> None:
         if not hasattr(self, "tracking_toggle"):
