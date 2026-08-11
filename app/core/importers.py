@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.constants import ANN_AUTO, IMG_AUTO, SHAPE_BBOX, SHAPE_POLYGON
+from app.i18n import tr
 from app.models.entities import Annotation
 from app.models.repository import ProjectRepository
 from app.utils.logger import get_logger
@@ -66,7 +67,7 @@ class DatasetImporter:
         cfg = self.cfg
         d = Path(cfg.dataset_dir)
         if not d.exists():
-            return {"error": f"Khong tim thay thu muc: {d}"}
+            return {"error": tr("importer.directory_not_found_error", "Không tìm thấy thư mục: {dir}", dir=d)}
         try:
             if cfg.fmt == "coco":
                 return self._preview_coco(d)
@@ -105,7 +106,7 @@ class DatasetImporter:
     def _preview_coco(self, root: Path) -> dict:
         json_files = list(root.rglob("*.json"))
         if not json_files:
-            return {"error": "Khong tim thay file JSON trong thu muc."}
+            return {"error": tr("importer.json_not_found_error", "Không tìm thấy file JSON trong thư mục.")}
         n_img, n_ann = 0, 0
         class_names: list[str] = []
         for jf in json_files:
@@ -142,9 +143,11 @@ class DatasetImporter:
         cfg = self.cfg
         root = Path(cfg.dataset_dir)
         if not root.exists():
-            raise FileNotFoundError(f"Khong tim thay thu muc dataset: {root}")
+            raise FileNotFoundError(
+                tr("importer.dataset_directory_not_found_error", "Không tìm thấy thư mục dataset: {root}", root=root)
+            )
 
-        _log(f"Bat dau nhap {cfg.fmt} tu {root}")
+        _log(tr("importer.start_import_log", "Bắt đầu nhập {fmt} từ {root}", fmt=cfg.fmt, root=root))
         if cfg.fmt == "coco":
             self._run_coco(root, result, progress_cb, _log)
         else:
@@ -156,9 +159,15 @@ class DatasetImporter:
             self.repo.recount_all_images()
             self.repo.log_history("import", f"{cfg.fmt} <- {root}")
         _log(
-            f"Hoan tat sau {result.elapsed:.1f}s: "
-            f"{result.n_images} anh, {result.n_annotations} annotation, "
-            f"{result.n_classes_added} class moi, {result.n_skipped} bo qua."
+            tr(
+                "importer.done_log",
+                "Hoàn tất sau {elapsed:.1f}s: {images} ảnh, {annotations} annotation, {classes_added} class mới, {skipped} bỏ qua.",
+                elapsed=result.elapsed,
+                images=result.n_images,
+                annotations=result.n_annotations,
+                classes_added=result.n_classes_added,
+                skipped=result.n_skipped,
+            )
         )
         return result
 

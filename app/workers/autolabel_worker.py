@@ -17,6 +17,7 @@ from app.constants import (
 )
 from app.core.image_quality import imread_unicode
 from app.core.inference import Detection, InferenceConfig, YoloEngine
+from app.i18n import tr
 from app.models.entities import Annotation
 from app.models.repository import ProjectRepository
 from app.plugins.base import PluginContext, registry
@@ -52,7 +53,7 @@ class ModelLoadWorker(BaseWorker):
         self.device = device
 
     def execute(self):
-        self.stage.emit("Dang nap model ...")
+        self.stage.emit(tr("worker.loading_model", "Đang nạp model ..."))
         self.engine.load(self.weights, self.task, self.device, log_cb=self.emit_log)
         return self.engine
 
@@ -101,11 +102,11 @@ class AutoLabelWorker(BaseWorker):
         t0 = time.time()
         total = len(self.image_ids)
         if total == 0:
-            self.emit_log("Khong co anh nao de gan nhan.")
+            self.emit_log(tr("worker.no_images_to_label", "Không có ảnh nào để gán nhãn."))
             return res
 
         if self.use_tracking:
-            self.stage.emit("Sap xep anh theo thu tu frame ...")
+            self.stage.emit(tr("worker.sorting_frames", "Sắp xếp ảnh theo thứ tự frame ..."))
             # Lay danh sach record de sap xep theo frame_index neu co
             records = [self.repo.image(iid) for iid in self.image_ids]
             records = [r for r in records if r is not None]
@@ -117,23 +118,50 @@ class AutoLabelWorker(BaseWorker):
         if self.plugin_key:
             plugin = registry.get(self.plugin_key)
             if plugin is None:
-                self.emit_log(f"Khong tim thay plugin '{self.plugin_key}' - bo qua.")
+                self.emit_log(
+                    tr(
+                        "worker.plugin_not_found",
+                        "Không tìm thấy plugin '{name}' - bỏ qua.",
+                        name=self.plugin_key,
+                    )
+                )
             else:
                 ok, msg = plugin.is_available()
                 if not ok:
-                    self.emit_log(f"Plugin {plugin.info.name} khong kha dung: {msg}")
+                    self.emit_log(
+                        tr(
+                            "worker.plugin_not_available",
+                            "Plugin {name} không khả dụng: {msg}",
+                            name=plugin.info.name,
+                            msg=msg,
+                        )
+                    )
                     plugin = None
                 else:
-                    self.stage.emit(f"Dang nap plugin {plugin.info.name} ...")
+                    self.stage.emit(
+                        tr(
+                            "worker.loading_plugin",
+                            "Đang nạp plugin {name} ...",
+                            name=plugin.info.name,
+                        )
+                    )
                     plugin.load(PluginContext(device=self.engine.device), log_cb=self.emit_log)
 
         # Dam bao class trong project khop voi class cua model
-        self.stage.emit("Dang dong bo danh sach class ...")
+        self.stage.emit(tr("worker.syncing_classes", "Đang đồng bộ danh sách class ..."))
         class_lookup = self._sync_classes()
 
-        self.stage.emit("Dang suy luan ...")
+        self.stage.emit(tr("worker.inferring", "Đang suy luận ..."))
         mode_str = f"tracking ({self.tracker_type})" if self.use_tracking else "detect"
-        self.emit_log(f"Bat dau auto label {total} anh [{mode_str}] | {self.engine.describe()}")
+        self.emit_log(
+            tr(
+                "worker.start_autolabel_log",
+                "Bắt đầu auto label {total} ảnh [{mode}] | {desc}",
+                total=total,
+                mode=mode_str,
+                desc=self.engine.describe(),
+            )
+        )
 
         for i, image_id in enumerate(self.image_ids):
             if self.cancelled:
@@ -141,7 +169,13 @@ class AutoLabelWorker(BaseWorker):
                 break
             rec = self.repo.image(image_id)
             if rec is None or not Path(rec.path).exists():
-                self.emit_log(f"Bo qua anh khong ton tai (id={image_id})")
+                self.emit_log(
+                    tr(
+                        "worker.skip_missing_image",
+                        "Bỏ qua ảnh không tồn tại (id={id})",
+                        id=image_id,
+                    )
+                )
                 continue
             if not self.overwrite and rec.n_objects > 0:
                 continue
@@ -161,14 +195,22 @@ class AutoLabelWorker(BaseWorker):
                         self.emit_progress(
                             img_progress,
                             total,
-                            f"{_i + 1}/{total} - {_rec.filename} - o {tile_idx}/{total_tiles}",
+                            f"{_i + 1}/{total} - {_rec.filename} - "
+                            + tr("worker.tile_step", "ô {idx}/{total_tiles}", idx=tile_idx, total_tiles=total_tiles),
                         )
 
                     dets = self.engine.slice_predict(rec.path, self.cfg, progress_cb=_tile_cb)
                 else:
                     dets = self.engine.predict(rec.path, self.cfg)
             except Exception as exc:
-                self.emit_log(f"Loi suy luan {rec.filename}: {exc}")
+                self.emit_log(
+                    tr(
+                        "worker.infer_error",
+                        "Lỗi suy luận {filename}: {exc}",
+                        filename=rec.filename,
+                        exc=exc,
+                    )
+                )
                 continue
 
             if plugin is not None:
@@ -191,25 +233,38 @@ class AutoLabelWorker(BaseWorker):
             self.image_done.emit(image_id, len(anns), stats["max_conf"])
             if i % 5 == 0 or total < 30:
                 self.preview.emit(rec.path, dets)
-            if not self.cfg.sahi_enabled:
-                # Tien do theo anh (binh thuong)
-                self.emit_progress(
-                    i + 1, total, f"{i + 1}/{total} - {rec.filename} - {len(anns)} doi tuong"
-                )
-            else:
-                # Tien do theo anh sau khi hoan thanh (cac buoc giua da emit trong callback)
-                self.emit_progress(
-                    i + 1, total, f"{i + 1}/{total} - {rec.filename} - {len(anns)} doi tuong"
-                )
+            prog_text = tr(
+                "worker.progress_status",
+                "{current}/{total} - {filename} - {objects} đối tượng",
+                current=i + 1,
+                total=total,
+                filename=rec.filename,
+                objects=len(anns),
+            )
+            self.emit_progress(i + 1, total, prog_text)
 
         res.elapsed = time.time() - t0
         self.repo.refresh_stats()
-        self.repo.log_history("auto_label", f"{res.n_images} anh, {res.n_objects} doi tuong")
+        self.repo.log_history(
+            "auto_label",
+            tr(
+                "history.auto_label",
+                "{images} ảnh, {objects} đối tượng",
+                images=res.n_images,
+                objects=res.n_objects,
+            ),
+        )
         self.repo.touch()
         self.emit_log(
-            f"Xong: {res.n_images} anh | {res.n_objects} doi tuong | "
-            f"can review: {res.n_review} | khong co doi tuong: {res.n_empty} | "
-            f"{res.fps:.1f} anh/s"
+            tr(
+                "worker.done_log",
+                "Xong: {images} ảnh | {objects} đối tượng | cần review: {review} | không có đối tượng: {empty} | {fps:.1f} ảnh/s",
+                images=res.n_images,
+                objects=res.n_objects,
+                review=res.n_review,
+                empty=res.n_empty,
+                fps=res.fps,
+            )
         )
         return res
 
@@ -245,7 +300,14 @@ class AutoLabelWorker(BaseWorker):
             out = plugin.annotate(ctx)
             return out if out else dets
         except Exception as exc:
-            self.emit_log(f"Plugin loi ({Path(image_path).name}): {exc}")
+            self.emit_log(
+                tr(
+                    "worker.plugin_error",
+                    "Plugin lỗi ({filename}): {exc}",
+                    filename=Path(image_path).name,
+                    exc=exc,
+                )
+            )
             return dets
 
     def _to_annotations(
@@ -337,5 +399,11 @@ class SingleImageInferWorker(BaseWorker):
                     )
                     dets = plugin.annotate(ctx) or dets
                 else:
-                    self.emit_log(f"Plugin khong kha dung: {msg}")
+                    self.emit_log(
+                        tr(
+                            "worker.plugin_not_available_msg",
+                            "Plugin không khả dụng: {msg}",
+                            msg=msg,
+                        )
+                    )
         return dets

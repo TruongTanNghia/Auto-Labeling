@@ -457,14 +457,14 @@ class AnnotationCanvas(QWidget):
     def paintEvent(self, ev) -> None:  # noqa: D102
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing, True)
-        p.fillRect(self.rect(), QColor("#0A0A10"))
+        bg_color = QColor(COLORS.get("canvas_bg", COLORS["bg"]))
+        p.fillRect(self.rect(), bg_color)
 
         if self.pixmap is None:
             p.setPen(QPen(QColor(COLORS["text_mute"])))
             p.drawText(
                 self.rect(), Qt.AlignCenter, tr("canvas.no_image_opened", "Chưa mở ảnh nào\nChọn một ảnh ở danh sách bên trái")
             )
-            return
             return
 
         # --- anh ---
@@ -506,13 +506,19 @@ class AnnotationCanvas(QWidget):
         fill.setAlphaF(min(0.85, alpha))
         lw = self.style.line_width + (1.2 if selected else 0.0)
 
+        # Viền tương phản để nhìn rõ trên cả nền tối lẫn sáng
+        contrast_color = QColor(0, 0, 0, 180) if color.lightness() > 140 else QColor(255, 255, 255, 180)
         p.setBrush(QBrush(fill))
+        p.setPen(QPen(contrast_color, lw + 1.6, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        p.drawPolygon(poly)
+
+        p.setBrush(Qt.NoBrush)
         p.setPen(QPen(color, lw, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         p.drawPolygon(poly)
 
         if hovered and not selected:
             p.setBrush(Qt.NoBrush)
-            p.setPen(QPen(QColor(255, 255, 255, 150), lw + 0.8))
+            p.setPen(QPen(QColor(255, 255, 255, 200), lw + 1.2))
             p.drawPolygon(poly)
 
         # keypoints (pose)
@@ -521,17 +527,18 @@ class AnnotationCanvas(QWidget):
 
         # dinh polygon khi duoc chon
         if selected:
-            p.setPen(QPen(QColor("#FFFFFF"), 1.4))
+            p.setPen(QPen(QColor(COLORS["text"]), 1.4))
             for j, (x, y) in enumerate(pts):
                 sp = self.to_screen(QPointF(x, y))
                 is_hover = self._hover_vertex == (idx, j)
                 r = self.style.vertex_size / 2 + (1.8 if is_hover else 0)
-                p.setBrush(QColor(color.lighter(150) if is_hover else "#FFFFFF"))
+                p.setBrush(QColor(color.lighter(150) if is_hover else COLORS["surface"]))
                 p.drawEllipse(sp, r, r)
 
         # nhan
         if self.style.show_labels:
             self._draw_label(p, ann, poly, color)
+
 
     def _draw_keypoints(self, p: QPainter, ann: Annotation, color: QColor) -> None:
         kp = ann.keypoints

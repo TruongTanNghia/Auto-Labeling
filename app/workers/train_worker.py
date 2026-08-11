@@ -8,6 +8,7 @@ from PySide6.QtCore import Signal
 
 from app.core.exporters import DatasetExporter, ExportConfig
 from app.core.trainer import EpochMetrics, ModelTrainer, TrainConfig, TrainResult
+from app.i18n import tr
 from app.models.repository import ProjectRepository
 from app.workers.base import BaseWorker
 
@@ -56,8 +57,8 @@ class TrainWorker(BaseWorker):
 
     def execute(self) -> TrainResult:
         if self.build_dataset or not self.cfg.data_yaml:
-            self.stage.emit("Dang dung dataset YOLO ...")
-            self.emit_log("Chuan bi dataset train/val tu project ...")
+            self.stage.emit(tr("worker.building_yolo_ds", "Đang dựng dataset YOLO ..."))
+            self.emit_log(tr("worker.prep_dataset_log", "Chuẩn bị dataset train/val từ project ..."))
             ds_dir = self.repo.sub("runs") / "dataset"
             ecfg = ExportConfig(
                 fmt=self.TASK_FORMAT.get(self.task, "yolo_seg"),
@@ -76,9 +77,16 @@ class TrainWorker(BaseWorker):
                 log_cb=self.emit_log,
             )
             if self.cancelled:
-                return TrainResult(ok=False, message="Da huy truoc khi train.")
+                return TrainResult(ok=False, message=tr("worker.cancelled_before_train", "Đã huỷ trước khi train."))
             self.cfg.data_yaml = eres.yaml_path
-            self.emit_log(f"Dataset: {eres.n_images} anh, {eres.n_objects} doi tuong.")
+            self.emit_log(
+                tr(
+                    "worker.dataset_prepared_log",
+                    "Dataset: {images} ảnh, {objects} đối tượng.",
+                    images=eres.n_images,
+                    objects=eres.n_objects,
+                )
+            )
 
         if not self.cfg.project_dir:
             self.cfg.project_dir = str(self.repo.sub("runs"))
@@ -96,7 +104,7 @@ class TrainWorker(BaseWorker):
             str(Path(self.cfg.project_dir) / self.cfg.run_name),
         )
 
-        self.stage.emit("Dang train ...")
+        self.stage.emit(tr("worker.training", "Đang train ..."))
         self._trainer = ModelTrainer(self.cfg)
         try:
             result = self._trainer.run(

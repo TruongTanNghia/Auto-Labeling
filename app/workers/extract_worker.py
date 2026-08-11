@@ -12,6 +12,7 @@ from app.core.frame_extractor import (
     FrameExtractor,
     scan_folder_records,
 )
+from app.i18n import tr
 from app.models.repository import ProjectRepository
 from app.utils.paths import ensure_dir
 from app.workers.base import BaseWorker
@@ -84,7 +85,15 @@ class ExtractWorker(BaseWorker):
             self.emit_log(f"Them {len(total_result.saved)} anh vao project ...")
             self.repo.add_images_bulk(total_result.saved)
             self.repo.refresh_stats()
-            self.repo.log_history("extract", f"{total_result.n_saved} anh tu {n_videos} video")
+            self.repo.log_history(
+                "extract",
+                tr(
+                    "history.extract",
+                    "{saved} ảnh từ {videos} video",
+                    saved=total_result.n_saved,
+                    videos=n_videos,
+                ),
+            )
             self.repo.touch()
         return total_result
 
@@ -131,7 +140,10 @@ class ScanFolderWorker(BaseWorker):
             self.stage.emit("Dang ghi vao co so du lieu ...")
             self.repo.add_images_bulk(res.saved)
             self.repo.refresh_stats()
-            self.repo.log_history("import_images", f"{res.n_saved} anh")
+            self.repo.log_history(
+                "import_images",
+                tr("history.import_images", "{saved} ảnh", saved=res.n_saved),
+            )
             self.repo.touch()
         self.emit_log(
             f"Da nap {res.n_saved} anh | trung: {res.n_duplicate} | "

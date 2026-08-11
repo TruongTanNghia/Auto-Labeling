@@ -17,6 +17,7 @@ from app.constants import (
     MODE_SCENE_DETECT,
 )
 from app.core.image_quality import DuplicateFilter, analyze, imwrite_unicode
+from app.i18n import tr
 from app.utils.logger import get_logger
 from app.utils.paths import ensure_dir
 
@@ -166,7 +167,7 @@ class FrameExtractor:
 
         cap = cv2.VideoCapture(str(video_path))
         if not cap.isOpened():
-            raise RuntimeError(f"Khong mo duoc video: {video_path}")
+            raise RuntimeError(tr("extractor.cannot_open_video", "Không mở được video: {path}", path=video_path))
 
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
@@ -190,7 +191,15 @@ class FrameExtractor:
         expected = max(1, end_f - start_f) if end_f > start_f else max(1, total)
 
         _log = log_cb or (lambda *_: None)
-        _log(f"Bat dau cat frame: {Path(video_path).name} | che do={cfg.mode} | fps={fps:.2f}")
+        _log(
+            tr(
+                "extractor.start_log",
+                "Bắt đầu cắt frame: {name} | chế độ={mode} | fps={fps:.2f}",
+                name=Path(video_path).name,
+                mode=cfg.mode,
+                fps=fps,
+            )
+        )
 
         while True:
             if self._cancelled:
@@ -212,7 +221,13 @@ class FrameExtractor:
                 progress_cb(
                     min(expected, cur_index - start_f + 1),
                     expected,
-                    f"Doc frame {cur_index}/{end_f or total} - da luu {result.n_saved}",
+                    tr(
+                        "extractor.read_frame_progress",
+                        "Đọc frame {current}/{total} - đã lưu {saved}",
+                        current=cur_index,
+                        total=end_f or total,
+                        saved=result.n_saved,
+                    ),
                 )
 
             if not keep:
@@ -250,7 +265,7 @@ class FrameExtractor:
             fname = f"{cfg.prefix}_{saved_no:06d}.{cfg.image_format}"
             fpath = out_dir / fname
             if not self._write(fpath, frame):
-                _log(f"Khong ghi duoc {fname}")
+                _log(tr("extractor.cannot_write_log", "Không ghi được {fname}", fname=fname))
                 continue
 
             h, w = frame.shape[:2]
@@ -275,16 +290,28 @@ class FrameExtractor:
                 preview_cb(str(fpath))
 
             if cfg.max_frames > 0 and result.n_saved >= cfg.max_frames:
-                _log(f"Da dat gioi han {cfg.max_frames} anh - dung.")
+                _log(tr("extractor.limit_reached_log", "Đã đạt giới hạn {max_frames} ảnh - dừng.", max_frames=cfg.max_frames))
                 break
 
         cap.release()
         result.elapsed = time.time() - t0
         if progress_cb:
-            progress_cb(expected, expected, f"Hoan tat - {result.n_saved} anh")
+            progress_cb(
+                expected,
+                expected,
+                tr("extractor.done_progress", "Hoàn tất - {saved} ảnh", saved=result.n_saved),
+            )
         _log(
-            f"Xong sau {result.elapsed:.1f}s: doc {result.n_read} frame, luu {result.n_saved} anh, "
-            f"trung {result.n_duplicate}, mo {result.n_blurry}, toi {result.n_dark}"
+            tr(
+                "extractor.done_log",
+                "Xong sau {elapsed:.1f}s: đọc {read} frame, lưu {saved} ảnh, trùng {dup}, mờ {blur}, tối {dark}",
+                elapsed=result.elapsed,
+                read=result.n_read,
+                saved=result.n_saved,
+                dup=result.n_duplicate,
+                blur=result.n_blurry,
+                dark=result.n_dark,
+            )
         )
         return result
 
@@ -379,7 +406,7 @@ def scan_folder_records(
         result.n_read += 1
         if img is None:
             if log_cb:
-                log_cb(f"Bo qua (khong doc duoc): {p}")
+                log_cb(tr("extractor.skip_unreadable_log", "Bỏ qua (không đọc được): {path}", path=p))
             continue
         h, w = img.shape[:2]
         rep = analyze(img, cfg.blur_threshold, cfg.lowlight_threshold)
@@ -410,7 +437,17 @@ def scan_folder_records(
         )
         result.n_saved += 1
         if progress_cb and (i % 5 == 0 or i == total - 1):
-            progress_cb(i + 1, total, f"Phan tich {i + 1}/{total} - {Path(p).name}")
+            progress_cb(
+                i + 1,
+                total,
+                tr(
+                    "extractor.analyzing_progress",
+                    "Phân tích {current}/{total} - {filename}",
+                    current=i + 1,
+                    total=total,
+                    filename=Path(p).name,
+                ),
+            )
 
     result.elapsed = time.time() - t0
     return result

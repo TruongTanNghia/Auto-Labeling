@@ -34,10 +34,17 @@ class _ChartBase(QWidget):
         self.setMinimumHeight(min_height)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setMouseTracking(True)
-        self._grid_color = QColor(COLORS["border"])
-        self._text_color = QColor(COLORS["text_mute"])
         self._font = QFont()
         self._font.setPointSize(8)
+
+    @property
+    def _grid_color(self) -> QColor:
+        return QColor(COLORS["border"])
+
+    @property
+    def _text_color(self) -> QColor:
+        return QColor(COLORS["text_mute"])
+
 
     def _painter(self) -> QPainter:
         p = QPainter(self)
@@ -488,20 +495,22 @@ class Heatmap(_ChartBase):
 
     def _color_for(self, v: float) -> QColor:
         v = max(0.0, min(1.0, v))
+        bg_col = QColor(COLORS["bg_alt"])
         if self.colormap == "purple":
             stops = [
-                (0.0, QColor("#12121C")),
-                (0.35, QColor("#3B2C7A")),
-                (0.7, QColor("#7C5CFF")),
-                (1.0, QColor("#E8DFFF")),
+                (0.0, bg_col),
+                (0.35, QColor(COLORS["accent_soft"])),
+                (0.7, QColor(COLORS["accent"])),
+                (1.0, QColor(COLORS["accent_hi"])),
             ]
         else:
             stops = [
-                (0.0, QColor("#101018")),
-                (0.4, QColor("#1D4E89")),
-                (0.75, QColor("#F5A524")),
-                (1.0, QColor("#FFF3D6")),
+                (0.0, bg_col),
+                (0.4, QColor(COLORS["info"])),
+                (0.75, QColor(COLORS["warning"])),
+                (1.0, QColor(COLORS["danger"])),
             ]
+
         for i in range(len(stops) - 1):
             t0, c0 = stops[i]
             t1, c1 = stops[i + 1]

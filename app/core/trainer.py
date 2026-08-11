@@ -6,6 +6,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from app.i18n import tr
 from app.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -136,8 +137,10 @@ def disable_integration_callbacks(log_cb=None) -> None:
         ul_callbacks.add_integration_callbacks = _noop
         if log_cb:
             log_cb(
-                "Da tat cac callback tich hop ben thu ba (ray/wandb/comet/...) "
-                "de tranh xung dot phien ban."
+                tr(
+                    "trainer.disabled_callbacks_log",
+                    "Đã tắt các callback tích hợp bên thứ ba (ray/wandb/comet/...) để tránh xung đột phiên bản.",
+                )
             )
     except Exception as exc:  # pragma: no cover
         log.debug("Khong tat duoc integration callbacks: %s", exc)
@@ -208,12 +211,16 @@ class ModelTrainer:
         result = TrainResult()
 
         if not cfg.data_yaml or not Path(cfg.data_yaml).exists():
-            raise FileNotFoundError(f"Khong tim thay data.yaml: {cfg.data_yaml}")
+            raise FileNotFoundError(
+                tr("trainer.dataset_not_found", "Không tìm thấy data.yaml: {path}", path=cfg.data_yaml)
+            )
 
         try:
             from ultralytics import YOLO
         except ImportError as exc:
-            raise RuntimeError("Chua cai ultralytics: pip install ultralytics") from exc
+            raise RuntimeError(
+                tr("trainer.ultralytics_not_installed", "Chưa cài ultralytics: pip install ultralytics")
+            ) from exc
 
         from app.core.inference import (
             YoloEngine,
@@ -235,17 +242,37 @@ class ModelTrainer:
 
             candidate = weights if Path(weights).exists() else str(weights_dir() / weights)
             if purge_corrupt_weight(candidate):
-                _log(f"File trong so hong, dang tai lai: {Path(candidate).name}")
+                _log(
+                    tr(
+                        "trainer.corrupt_weights_log",
+                        "File trọng số hỏng, đang tải lại: {name}",
+                        name=Path(candidate).name,
+                    )
+                )
                 self._model = YOLO(weights)
             else:
-                raise RuntimeError(f"Khong nap duoc model '{weights}': {exc}") from exc
+                raise RuntimeError(
+                    tr(
+                        "trainer.cannot_load_model",
+                        "Không nạp được model '{weights}': {exc}",
+                        weights=weights,
+                        exc=exc,
+                    )
+                ) from exc
 
-        _log(f"Model goc: {weights}")
-        _log(f"Dataset  : {cfg.data_yaml}")
+        _log(tr("trainer.base_model_log", "Model gốc: {weights}", weights=weights))
+        _log(tr("trainer.dataset_path_log", "Dataset  : {path}", path=cfg.data_yaml))
         kwargs = cfg.to_ultralytics_kwargs()
         _log(
-            f"Thiet bi : {kwargs['device']} | epochs={cfg.epochs} batch={cfg.batch} "
-            f"imgsz={cfg.imgsz} optimizer={cfg.optimizer}"
+            tr(
+                "trainer.device_params_log",
+                "Thiết bị : {device} | epochs={epochs} batch={batch} imgsz={imgsz} optimizer={optimizer}",
+                device=kwargs["device"],
+                epochs=cfg.epochs,
+                batch=cfg.batch,
+                imgsz=cfg.imgsz,
+                optimizer=cfg.optimizer,
+            )
         )
 
         self._install_callbacks(progress_cb, _log, metric_cb, t0)
@@ -253,7 +280,7 @@ class ModelTrainer:
         try:
             self._model.train(**kwargs)
         except KeyboardInterrupt:
-            result.message = "Da dung theo yeu cau."
+            result.message = tr("trainer.stopped_by_user", "Đã dừng theo yêu cầu.")
         except Exception as exc:
             result.ok = False
             result.message = str(exc)
@@ -274,11 +301,26 @@ class ModelTrainer:
         result.elapsed = time.time() - t0
         result.ok = not self._cancelled
         result.message = result.message or (
-            "Da dung giua chung." if self._cancelled else "Train hoan tat."
+            tr("trainer.stopped_halfway", "Đã dừng giữa chừng.")
+            if self._cancelled
+            else tr("trainer.train_completed", "Train hoàn tất.")
         )
-        _log(f"{result.message} Thoi gian: {result.elapsed / 60:.1f} phut")
+        _log(
+            tr(
+                "trainer.summary_log",
+                "{msg} Thời gian: {minutes:.1f} phút",
+                msg=result.message,
+                minutes=result.elapsed / 60,
+            )
+        )
         if result.best_weights:
-            _log(f"Trong so tot nhat: {result.best_weights}")
+            _log(
+                tr(
+                    "trainer.best_weights_log",
+                    "Trọng số tốt nhất: {path}",
+                    path=result.best_weights,
+                )
+            )
         return result
 
     # ---------------------------------------------------------- callbacks ---
@@ -337,7 +379,11 @@ class ModelTrainer:
             if metric_cb:
                 metric_cb(m)
             if progress_cb:
-                progress_cb(epoch, total, f"Epoch {epoch}/{total}")
+                progress_cb(
+                    epoch,
+                    total,
+                    tr("trainer.epoch_progress", "Epoch {current}/{total}", current=epoch, total=total),
+                )
 
         def on_batch_end(trainer):
             if self._cancelled:
@@ -345,7 +391,13 @@ class ModelTrainer:
                 trainer.stop = True
 
         def on_train_start(trainer):
-            _log(f"Bat dau train - luu ket qua tai: {getattr(trainer, 'save_dir', '?')}")
+            _log(
+                tr(
+                    "trainer.start_train_log",
+                    "Bắt đầu train - lưu kết quả tại: {dir}",
+                    dir=getattr(trainer, "save_dir", "?"),
+                )
+            )
 
         try:
             model.add_callback("on_fit_epoch_end", safe(on_epoch_end))
@@ -366,26 +418,31 @@ def validate_dataset(data_yaml: str) -> tuple[bool, str]:
     """Kiem tra nhanh data.yaml truoc khi train."""
     p = Path(data_yaml)
     if not p.exists():
-        return False, "Khong tim thay data.yaml."
+        return False, tr("trainer.val_no_data_yaml", "Không tìm thấy data.yaml.")
     try:
         import yaml
 
         with open(p, encoding="utf-8") as fh:
             data = yaml.safe_load(fh) or {}
     except Exception as exc:
-        return False, f"Doc data.yaml loi: {exc}"
+        return False, tr("trainer.val_read_error", "Đọc data.yaml lỗi: {exc}", exc=exc)
 
     names = data.get("names")
     if not names:
-        return False, "data.yaml thieu muc 'names'."
+        return False, tr("trainer.val_missing_names", "data.yaml thiếu mục 'names'.")
     root = Path(data.get("path", p.parent))
     train_rel = data.get("train")
     if not train_rel:
-        return False, "data.yaml thieu muc 'train'."
+        return False, tr("trainer.val_missing_train", "data.yaml thiếu mục 'train'.")
     train_dir = (root / train_rel) if not Path(train_rel).is_absolute() else Path(train_rel)
     if not train_dir.exists():
-        return False, f"Khong tim thay thu muc train: {train_dir}"
+        return False, tr("trainer.val_train_dir_not_found", "Không tìm thấy thư mục train: {dir}", dir=train_dir)
     n_img = sum(1 for _ in train_dir.glob("*.*"))
     if n_img == 0:
-        return False, "Thu muc train khong co anh nao."
-    return True, f"OK - {n_img} anh train, {len(names)} class."
+        return False, tr("trainer.val_no_images", "Thư mục train không có ảnh nào.")
+    return True, tr(
+        "trainer.val_ok",
+        "OK - {images} ảnh train, {classes} class.",
+        images=n_img,
+        classes=len(names),
+    )

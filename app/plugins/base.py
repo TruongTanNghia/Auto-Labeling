@@ -92,7 +92,7 @@ class AnnotatorPlugin(ABC):
         missing = [m for m in self.info.requires if importlib.util.find_spec(m) is None]
         if missing:
             return False, tr("plugins.missing_packages", "Thieu goi: ") + ", ".join(missing)
-        return True, tr("plugins.available", "San sang")
+        return True, tr("plugins.available", "Sẵn sàng")
 
     def load(self, ctx: PluginContext | None = None, log_cb=None) -> None:
         """Nap model. Mac dinh khong lam gi - plugin ghi de neu can."""

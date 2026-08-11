@@ -16,6 +16,7 @@ from xml.etree import ElementTree as ET
 import numpy as np
 
 from app.constants import IMG_APPROVED, IMG_AUTO, IMG_REVIEW
+from app.i18n import tr
 from app.models.entities import Annotation, ClassDef, ImageRecord
 from app.models.repository import ProjectRepository
 from app.utils.logger import get_logger
@@ -78,12 +79,20 @@ class DatasetExporter:
         classes = self._classes()
         images = self._select_images()
         if not images:
-            raise RuntimeError("Khong co anh nao thoa dieu kien de xuat.")
+            raise RuntimeError(tr("exporter.no_images_error", "Không có ảnh nào thoả điều kiện để xuất."))
 
-        _log(f"Chuan bi xuat {len(images)} anh, {len(classes)} class -> {out_dir}")
+        _log(
+            tr(
+                "exporter.preparing_log",
+                "Chuẩn bị xuất {images} ảnh, {classes} class -> {dir}",
+                images=len(images),
+                classes=len(classes),
+                dir=out_dir,
+            )
+        )
         splits = self._split(images)
         for name, items in splits.items():
-            _log(f"  {name}: {len(items)} anh")
+            _log(f"  {name}: {len(items)} " + tr("exporter.images_unit", "ảnh"))
 
         writer = {
             "yolo_seg": self._export_yolo,
@@ -95,7 +104,7 @@ class DatasetExporter:
             "mask": self._export_mask,
         }.get(cfg.fmt)
         if writer is None:
-            raise ValueError(f"Dinh dang khong ho tro: {cfg.fmt}")
+            raise ValueError(tr("exporter.unsupported_format_error", "Định dạng không hỗ trợ: {fmt}", fmt=cfg.fmt))
 
         result = ExportResult(output_dir=str(out_dir), fmt=cfg.fmt, n_classes=len(classes))
         result.splits = {k: len(v) for k, v in splits.items()}
@@ -103,8 +112,13 @@ class DatasetExporter:
         result.cancelled = self._cancelled
         result.elapsed = time.time() - t0
         _log(
-            f"Hoan tat sau {result.elapsed:.1f}s: {result.n_images} anh, "
-            f"{result.n_objects} doi tuong."
+            tr(
+                "exporter.done_log",
+                "Hoàn tất sau {elapsed:.1f}s: {images} ảnh, {objects} đối tượng.",
+                elapsed=result.elapsed,
+                images=result.n_images,
+                objects=result.n_objects,
+            )
         )
         self.repo.log_history("export", f"{cfg.fmt} -> {out_dir}")
         return result

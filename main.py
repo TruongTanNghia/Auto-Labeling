@@ -23,8 +23,9 @@ from PySide6.QtWidgets import QApplication, QMessageBox  # noqa: E402
 from app.config import cfg  # noqa: E402
 from app.constants import APP_NAME, APP_VERSION, COLORS, ORG_NAME  # noqa: E402
 from app.controllers.app_controller import AppController  # noqa: E402
+from app.i18n import tr  # noqa: E402
 from app.theme import icons  # noqa: E402
-from app.theme.style import build_stylesheet  # noqa: E402
+from app.theme.style import apply_theme  # noqa: E402
 from app.utils.logger import get_logger, setup_logging  # noqa: E402
 
 
@@ -35,7 +36,7 @@ def _excepthook(exc_type, exc_value, exc_tb) -> None:
     try:
         box = QMessageBox()
         box.setIcon(QMessageBox.Critical)
-        box.setWindowTitle("Da xay ra loi")
+        box.setWindowTitle(tr("common.error_occurred", "Đã xảy ra lỗi"))
         box.setText(f"{exc_type.__name__}: {exc_value}")
         box.setDetailedText(text)
         box.exec()
@@ -55,6 +56,15 @@ def main() -> int:
     app.setApplicationName(APP_NAME)
     app.setApplicationVersion(APP_VERSION)
     app.setOrganizationName(ORG_NAME)
+
+    apply_theme(app, cfg.get("general.theme", "Dark"), cfg.get("general.accent"))
+
+    def _on_color_scheme_changed():
+        if cfg.get("general.theme", "Dark") in ("System", "Theo hệ thống", "system"):
+            apply_theme(app)
+
+    app.styleHints().colorSchemeChanged.connect(_on_color_scheme_changed)
+
     app.setWindowIcon(QIcon(icons.pixmap("logo", COLORS["accent_hi"], 64, stroke=1.6)))
 
     font = QFont("Segoe UI Variable Display")
@@ -62,7 +72,6 @@ def main() -> int:
         font = QFont("Segoe UI")
     font.setPointSize(9)
     app.setFont(font)
-    app.setStyleSheet(build_stylesheet(cfg.get("general.accent")))
 
     sys.excepthook = _excepthook
 

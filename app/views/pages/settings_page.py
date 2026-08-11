@@ -183,12 +183,21 @@ class SettingsPage(BasePage):
                 label_width=LABEL_W_WIDE,
             )
         )
-        self.theme_combo = combo(["Dark"], current="Dark")
+        cur_theme = cfg.get("general.theme", "Dark")
+        self.theme_combo = combo(
+            [
+                ("Dark", tr("settings.general.theme_dark", "Tối")),
+                ("Light", tr("settings.general.theme_light", "Sáng")),
+                ("System", tr("settings.general.theme_system", "Theo hệ thống")),
+            ],
+            current=cur_theme,
+        )
         card.add(
             Field(
                 tr("settings.general.theme", "Chủ đề"), self.theme_combo, label_width=LABEL_W_WIDE
             )
         )
+
 
         accent_row = QWidget()
         ar = QHBoxLayout(accent_row)
@@ -982,10 +991,12 @@ class SettingsPage(BasePage):
     def save_all(self) -> None:
         self._save_current_plugin_form()
         new_lang = self.lang_combo.currentData()
+        new_theme = self.theme_combo.currentData()
         cfg.update_section(
             "general",
             {
                 "language": new_lang,
+                "theme": new_theme,
                 "accent": self._accent,
                 "projects_dir": self.projects_edit.text().strip(),
                 "autosave_minutes": self.autosave_spin.value(),
@@ -995,6 +1006,10 @@ class SettingsPage(BasePage):
             },
         )
         set_language(new_lang)
+        from app.theme.style import apply_theme
+
+        apply_theme(None, new_theme, self._accent)
+
         cfg.update_section(
             "model",
             {

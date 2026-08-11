@@ -86,9 +86,10 @@ class Sidebar(QWidget):
 
         # --- trang thai ---
         divider = QFrame()
+        divider.setObjectName("Divider")
         divider.setFixedHeight(1)
-        divider.setStyleSheet(f"background: {COLORS['border']};")
         lay.addWidget(divider)
+
         lay.addSpacing(8)
 
         self.status_row = QHBoxLayout()

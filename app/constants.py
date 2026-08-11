@@ -9,8 +9,8 @@ APP_TAGLINE = "AI-Powered Video to Dataset Annotation"
 APP_VERSION = "1.0.0"
 ORG_NAME = "AutoLabelAI"
 
-# ---------------------------------------------------------------- Bang mau ---
-COLORS = {
+# ---------------------------------------------------------------- Bảng màu ---
+DARK_COLORS = {
     "bg": "#0F0F16",
     "bg_alt": "#14141D",
     "surface": "#1A1A26",
@@ -30,7 +30,38 @@ COLORS = {
     "danger": "#F3506B",
     "info": "#38BDF8",
     "shadow": "#07070C",
+    "canvas_bg": "#0A0A10",
+    "log_bg": "#0B0B12",
+    "log_text": "#B9B9CF",
 }
+
+LIGHT_COLORS = {
+    "bg": "#F3F4F6",
+    "bg_alt": "#FFFFFF",
+    "surface": "#FFFFFF",
+    "surface_alt": "#F8FAFC",
+    "surface_hi": "#E5E7EB",
+    "border": "#E2E8F0",
+    "border_hi": "#CBD5E1",
+    "text": "#0F172A",
+    "text_dim": "#334155",
+    "text_mute": "#64748B",
+    "accent": "#7C5CFF",
+    "accent_hi": "#6336FF",
+    "accent_dim": "#5B3FD9",
+    "accent_soft": "#EEF2FF",
+    "success": "#10B981",
+    "warning": "#F59E0B",
+    "danger": "#EF4444",
+    "info": "#06B6D4",
+    "shadow": "#CBD5E1",
+    "canvas_bg": "#E2E8F0",
+    "log_bg": "#F8FAFC",
+    "log_text": "#334155",
+}
+
+COLORS = dict(DARK_COLORS)
+
 
 # Bang mau gan cho class annotation (tuong phan tot tren nen toi)
 CLASS_PALETTE = [
@@ -355,7 +386,7 @@ def get_shortcuts():
         ),
         (
             tr("settings.shortcuts.annotation", "Sửa nhãn"),
-            "Giữ Space",
+            tr("settings.shortcuts.keep_space", "Giữ Space"),
             tr("settings.shortcuts.annotation_desc", "Di chuyển ảnh"),
         ),
         (
@@ -400,7 +431,7 @@ def get_shortcuts():
         ),
         (
             tr("settings.shortcuts.annotation", "Sửa nhãn"),
-            "Alt + cuộn chuột",
+            tr("settings.shortcuts.scroll", "Alt + cuộn chuột"),
             tr("settings.shortcuts.annotation_desc", "Đổi cỡ cọ vẽ / tẩy"),
         ),
         (

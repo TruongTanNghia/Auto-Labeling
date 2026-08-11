@@ -65,7 +65,6 @@ def hline() -> QFrame:
     f = QFrame()
     f.setObjectName("Divider")
     f.setFixedHeight(1)
-    f.setStyleSheet(f"background: {COLORS['border']};")
     return f
 
 
@@ -73,8 +72,8 @@ def vline() -> QFrame:
     f = QFrame()
     f.setObjectName("VDivider")
     f.setFixedWidth(1)
-    f.setStyleSheet(f"background: {COLORS['border']};")
     return f
+
 
 
 def spacer(w: int = 0, h: int = 0) -> QWidget:

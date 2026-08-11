@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from pathlib import Path
 
@@ -310,9 +311,10 @@ class DashboardPage(BasePage):
 
         self.history_list.clear()
         for h in repo.history(30):
+            dt = _detail_text(h["action"], h["detail"])
             item = QListWidgetItem(
                 f"{h['ts']}   {_action_text(h['action'])}"
-                + (f" — {h['detail']}" if h["detail"] else "")
+                + (f" — {dt}" if dt else "")
             )
             item.setIcon(icons.icon(_action_icon(h["action"]), COLORS["text_mute"], 15))
             self.history_list.addItem(item)
@@ -527,15 +529,6 @@ class NewProjectDialog(QDialog):
 
 
 # ================================================================ HELPERS ===
-_ACTION_TEXT = {
-    "create_project": "Tạo project",
-    "extract": "Cắt frame từ video",
-    "import_images": "Nạp ảnh vào project",
-    "auto_label": "Gán nhãn tự động",
-    "export": "Xuất dataset",
-    "add_class": "Thêm lớp",
-    "delete_images": "Xoá ảnh",
-}
 _ACTION_ICON = {
     "create_project": "plus",
     "extract": "film",
@@ -548,8 +541,52 @@ _ACTION_ICON = {
 
 
 def _action_text(action: str) -> str:
-    return _ACTION_TEXT.get(action, action)
+    mapping = {
+        "create_project": tr("dashboard.action.create_project", "Tạo project"),
+        "extract": tr("dashboard.action.extract", "Cắt frame từ video"),
+        "import_images": tr("dashboard.action.import_images", "Nạp ảnh vào project"),
+        "auto_label": tr("dashboard.action.auto_label", "Gán nhãn tự động"),
+        "export": tr("dashboard.action.export", "Xuất dataset"),
+        "add_class": tr("dashboard.action.add_class", "Thêm lớp"),
+        "delete_images": tr("dashboard.action.delete_images", "Xoá ảnh"),
+    }
+    return mapping.get(action, action)
 
 
 def _action_icon(action: str) -> str:
     return _ACTION_ICON.get(action, "info")
+
+
+def _detail_text(action: str, detail: str) -> str:
+    if not detail:
+        return ""
+    m = re.match(
+        r"^(\d+)\s+(?:anh|ảnh|images),\s*(\d+)\s+(?:doi tuong|đối tượng|objects)$",
+        detail,
+        re.IGNORECASE,
+    )
+    if m:
+        return tr(
+            "history.auto_label",
+            "{images} ảnh, {objects} đối tượng",
+            images=m.group(1),
+            objects=m.group(2),
+        )
+    m = re.match(
+        r"^(\d+)\s+(?:anh|ảnh|images)\s+(?:tu|từ|from)\s+(\d+)\s+video(?:|\(s\))$",
+        detail,
+        re.IGNORECASE,
+    )
+    if m:
+        return tr(
+            "history.extract",
+            "{saved} ảnh từ {videos} video",
+            saved=m.group(1),
+            videos=m.group(2),
+        )
+    m = re.match(r"^(\d+)\s+(?:anh|ảnh|images)$", detail, re.IGNORECASE)
+    if m:
+        if action == "delete_images":
+            return tr("history.delete_images", "{count} ảnh", count=m.group(1))
+        return tr("history.import_images", "{saved} ảnh", saved=m.group(1))
+    return detail

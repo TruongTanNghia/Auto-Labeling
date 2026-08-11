@@ -519,6 +519,11 @@ class TrainPage(BasePage):
 
         info = self.repo.refresh_stats()
         self.header.set_subtitle(
-            f"{info.n_labeled:,} ảnh đã gán nhãn   ·   {info.n_objects:,} đối tượng   ·   "
-            f"{info.n_classes} lớp"
+            tr(
+                "train.header_subtitle",
+                "{labeled} ảnh đã gán nhãn   ·   {objects} đối tượng   ·   {classes} lớp",
+                labeled=f"{info.n_labeled:,}",
+                objects=f"{info.n_objects:,}",
+                classes=info.n_classes,
+            )
         )

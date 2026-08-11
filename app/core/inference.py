@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 
 from app.constants import SHAPE_BBOX, SHAPE_OBB, SHAPE_POLYGON, SHAPE_POSE
+from app.i18n import tr
 from app.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -172,7 +173,7 @@ def purge_corrupt_weight(path: str) -> bool:
 
 
 def available_devices() -> list[tuple[str, str]]:
-    out = [("auto", "Auto (uu tien GPU)"), ("cpu", "CPU")]
+    out = [("auto", tr("inference.device_auto_gpu", "Auto (ưu tiên GPU)")), ("cpu", "CPU")]
     info = device_info()
     for i in range(info["count"]):
         out.append((str(i), f"CUDA:{i} - {info['name']}"))

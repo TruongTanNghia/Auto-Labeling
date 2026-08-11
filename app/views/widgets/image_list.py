@@ -13,7 +13,8 @@ from PySide6.QtWidgets import (
     QStyledItemDelegate,
 )
 
-from app.constants import COLORS, IMAGE_STATUS_LABEL, IMG_UNLABELED
+from app.constants import COLORS, get_image_status_label, IMG_UNLABELED
+from app.i18n import tr
 from app.models.entities import ImageRecord
 from app.theme import icons
 
@@ -94,7 +95,7 @@ class _CompactDelegate(QStyledItemDelegate):
             painter.drawRoundedRect(box, 7, 7)
 
         status = index.data(ROLE_STATUS) or IMG_UNLABELED
-        _, color = IMAGE_STATUS_LABEL.get(status, ("", COLORS["text_mute"]))
+        _, color = get_image_status_label().get(status, ("", COLORS["text_mute"]))
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(color))
         cy = r.center().y()
@@ -147,7 +148,7 @@ class _GalleryDelegate(QStyledItemDelegate):
         hovered = bool(option.state & QStyle.State_MouseOver)
 
         status = index.data(ROLE_STATUS) or IMG_UNLABELED
-        _, color = IMAGE_STATUS_LABEL.get(status, ("", COLORS["text_mute"]))
+        _, color = get_image_status_label().get(status, ("", COLORS["text_mute"]))
 
         pad = 5
         img_box = QRect(
@@ -247,7 +248,9 @@ class ImageListPanel(QListWidget):
             item.setData(ROLE_PATH, rec.path)
             item.setData(ROLE_NOBJ, rec.n_objects)
             item.setData(ROLE_DUP, rec.is_duplicate)
-            item.setToolTip(f"{rec.path}\n{rec.width}x{rec.height} | {rec.n_objects} doi tuong")
+            obj_str = tr("image_list.objects_unit", "{count} đối tượng", count=rec.n_objects)
+            status_str = tr(f"status.{rec.status}", rec.status)
+            item.setToolTip(f"{rec.path}\n{rec.width}x{rec.height} | {obj_str} | {status_str}")
             self.addItem(item)
             self._by_id[rec.id] = item
         self.blockSignals(False)
@@ -344,9 +347,11 @@ class ImageGallery(QListWidget):
             item.setData(ROLE_NOBJ, rec.n_objects)
             item.setData(ROLE_DUP, rec.is_duplicate)
             item.setSizeHint(QSize(self._cell, self._cell + 24))
+            obj_str = tr("image_list.objects_unit", "{count} đối tượng", count=rec.n_objects)
+            status_str = tr(f"status.{rec.status}", rec.status)
             item.setToolTip(
                 f"{Path(rec.path).name}\n{rec.width}x{rec.height}\n"
-                f"{rec.n_objects} doi tuong | {rec.status}"
+                f"{obj_str} | {status_str}"
                 + (f"\nBlur: {rec.blur_score:.0f}" if rec.blur_score else "")
             )
             self.addItem(item)

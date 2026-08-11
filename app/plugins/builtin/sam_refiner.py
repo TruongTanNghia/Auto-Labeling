@@ -13,6 +13,7 @@ import numpy as np
 
 from app.constants import SHAPE_POLYGON
 from app.core.inference import Detection, mask_to_polygons, resolve_device
+from app.i18n import tr
 from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo, PluginParam
 
 #: (ten file trong so, nhan hien thi, phien ban ultralytics toi thieu)
@@ -55,16 +56,17 @@ def pick_sam_weights(preferred: str = "auto") -> tuple[str, str]:
 class SamRefiner(AnnotatorPlugin):
     info = PluginInfo(
         key="sam",
-        name="SAM Refiner (3 / 2)",
+        name=tr("plugins.sam.name", "SAM Refiner (3 / 2)"),
         version="1.1",
         author="AutoLabel Studio AI",
-        description=(
-            "Dung Segment Anything de chuyen bounding box cua YOLO thanh mask polygon "
-            "bam sat vien doi tuong. Rat huu ich khi model detection chi cho ra box ma "
-            "ban can dataset segmentation.\n\n"
-            "Tu chon phien ban tot nhat dang co: SAM 3 (can ultralytics >= 8.3.237 va "
-            "file sam3.pt tai thu cong tu Hugging Face) -> SAM 2 (sam2_b.pt, tu tai) -> "
-            "SAM 1 (sam_b.pt)."
+        description=tr(
+            "plugins.sam.desc",
+            "Dùng Segment Anything để chuyển bounding box của YOLO thành mask polygon "
+            "bám sát viền đối tượng. Rất hữu ích khi model detection chỉ cho ra box mà "
+            "bạn cần dataset segmentation.\n\n"
+            "Tự chọn phiên bản tốt nhất đang có: SAM 3 (cần ultralytics >= 8.3.237 và "
+            "file sam3.pt tải thủ công từ Hugging Face) -> SAM 2 (sam2_b.pt, tự tải) -> "
+            "SAM 1 (sam_b.pt).",
         ),
         requires=["ultralytics", "torch"],
         kind="refine",
@@ -76,29 +78,29 @@ class SamRefiner(AnnotatorPlugin):
         return [
             PluginParam(
                 key="weights",
-                label="Trọng số SAM",
+                label=tr("plugins.sam.weights_label", "Trọng số SAM"),
                 type="choice",
                 default="auto",
                 options=["auto", "sam3.pt", "sam2_b.pt", "sam_b.pt"],
-                description="Chọn phiên bản trọng số SAM thích hợp",
+                description=tr("plugins.sam.weights_desc", "Chọn phiên bản trọng số SAM thích hợp"),
             ),
             PluginParam(
                 key="min_area",
-                label="Diện tích tối thiểu (px)",
+                label=tr("plugins.sam.min_area_label", "Diện tích tối thiểu (px)"),
                 type="float",
                 default=40.0,
                 min_value=0.0,
                 max_value=5000.0,
-                description="Ngưỡng diện tích nhỏ nhất của polygon",
+                description=tr("plugins.sam.min_area_desc", "Ngưỡng diện tích nhỏ nhất của polygon"),
             ),
             PluginParam(
                 key="simplify",
-                label="Độ giản lược polygon",
+                label=tr("plugins.sam.simplify_label", "Độ giản lược polygon"),
                 type="float",
                 default=0.002,
                 min_value=0.0,
                 max_value=0.05,
-                description="Mức độ làm mịn đường viền polygon",
+                description=tr("plugins.sam.simplify_desc", "Mức độ làm mịn đường viền polygon"),
             ),
         ]
 
@@ -114,13 +116,18 @@ class SamRefiner(AnnotatorPlugin):
         from app.utils.paths import weights_dir
 
         if (weights_dir() / weights).exists():
-            return True, f"San sang ({label})"
+            return True, tr("plugins.sam.available", "Sẵn sàng ({label})", label=label)
         if weights == "sam3.pt":
-            return False, (
-                "Can dat sam3.pt vao thu muc weights "
-                "(tai thu cong tu Hugging Face, Meta yeu cau xin quyen)"
+            return False, tr(
+                "plugins.sam.need_sam3_manual",
+                "Cần đặt sam3.pt vào thư mục weights (tải thủ công từ Hugging Face, Meta yêu cầu xin quyền)",
             )
-        return True, f"San sang ({label} - se tai {weights} lan dau)"
+        return True, tr(
+            "plugins.sam.available_first_download",
+            "Sẵn sàng ({label} - sẽ tải {weights} lần đầu)",
+            label=label,
+            weights=weights,
+        )
 
     # ------------------------------------------------------------------- nap --
     def load(self, ctx: PluginContext | None = None, log_cb=None) -> None:

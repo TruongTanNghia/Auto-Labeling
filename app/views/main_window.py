@@ -329,9 +329,17 @@ class MainWindow(QMainWindow):
             self.sidebar.set_project(tr("main.no_project", "Chưa mở project"))
             return
         info = repo.refresh_stats()
-        self.title_bar.set_project(f"{info.name}   ·   {info.n_images:,} ảnh")
+        self.title_bar.set_project(
+            f"{info.name}   ·   " + tr("main.images_count", "{count} ảnh", count=f"{info.n_images:,}")
+        )
         self.sidebar.set_project(
-            f"{info.name}\n{info.n_labeled:,}/{info.n_images:,} ảnh đã gán nhãn"
+            f"{info.name}\n"
+            + tr(
+                "main.labeled_images_count",
+                "{labeled}/{total} ảnh đã gán nhãn",
+                labeled=f"{info.n_labeled:,}",
+                total=f"{info.n_images:,}",
+            )
         )
 
     def _refresh_device(self) -> None:

@@ -598,7 +598,14 @@ class StatsPage(BasePage):
                 (tr("stats.num_classes", "Số lớp"), str(info.n_classes)),
                 (tr("stats.total_mask_area", "Tổng diện tích mask"), f"{repo.total_mask_area():,.0f} px²"),
                 (tr("stats.total_tracks", "Số track"), f"{t_stats['n_tracks']:,}"),
-                (tr("stats.avg_track_len", "Độ dài track trung bình"), f"{t_stats['avg_track_len']:.1f} nhãn/track"),
+                (
+                    tr("stats.avg_track_len", "Độ dài track trung bình"),
+                    tr(
+                        "stats.labels_per_track",
+                        "{count:.1f} nhãn/track",
+                        count=t_stats["avg_track_len"],
+                    ),
+                ),
             ]
         )
 

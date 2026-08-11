@@ -17,6 +17,7 @@ from app.constants import (
     IMG_REVIEW,
     IMG_UNLABELED,
 )
+from app.i18n import tr
 from app.models.database import Database
 from app.models.entities import Annotation, ClassDef, ImageRecord, ProjectInfo
 from app.utils.logger import get_logger
@@ -339,6 +340,9 @@ class ProjectRepository:
         limit: int = 0,
         offset: int = 0,
         order: str = "id ASC",
+        labeled_only: bool = False,
+        duplicates_only: bool = False,
+        blurry_only: bool = False,
     ) -> list[ImageRecord]:
         sql = "SELECT i.* FROM image i"
         where, params = [], []
@@ -346,15 +350,26 @@ class ProjectRepository:
             sql += " JOIN annotation a ON a.image_id = i.id"
             where.append("a.class_id=?")
             params.append(class_id)
-        if status:
+        if labeled_only:
+            where.append("i.status IN (?,?,?)")
+            params.extend([IMG_AUTO, IMG_REVIEW, IMG_APPROVED])
+        elif status:
             if status == "labeled":
                 where.append("i.status IN (?,?,?)")
                 params.extend([IMG_AUTO, IMG_REVIEW, IMG_APPROVED])
             else:
                 where.append("i.status=?")
                 params.append(status)
-        if not include_duplicates:
+        if duplicates_only:
+            where.append("i.is_duplicate=1")
+        elif not include_duplicates:
             where.append("i.is_duplicate=0")
+        if blurry_only:
+            from app.config import cfg
+
+            thr = float(cfg.get("extract.blur_threshold", 60.0))
+            where.append("i.blur_score > 0 AND i.blur_score < ?")
+            params.append(thr)
         if search:
             where.append("i.filename LIKE ?")
             params.append(f"%{search}%")
@@ -420,7 +435,7 @@ class ProjectRepository:
         self.db.executemany("DELETE FROM annotation WHERE image_id=?", [(i,) for i in ids])
         self.db.executemany("DELETE FROM image WHERE id=?", [(i,) for i in ids])
         self.db.commit()
-        self.log_history("delete_images", f"{len(ids)} anh")
+        self.log_history("delete_images", tr("history.delete_images", "{count} ảnh", count=len(ids)))
         return len(ids)
 
     def neighbor_image(

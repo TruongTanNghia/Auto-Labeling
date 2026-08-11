@@ -24,7 +24,7 @@ from app.constants import (
     ANN_MANUAL,
     ANN_REVIEW,
     COLORS,
-    IMAGE_STATUS_LABEL,
+    get_image_status_label,
     IMG_APPROVED,
 )
 from app.core.inference import InferenceConfig
@@ -540,7 +540,7 @@ class EditorPage(BasePage):
 
         idx = next((i for i, r in enumerate(self._images) if r.id == image_id), -1)
         self.pos_label.setText(f"{idx + 1} / {len(self._images)}")
-        status_text, color = IMAGE_STATUS_LABEL.get(rec.status, ("", COLORS["text_mute"]))
+        status_text, color = get_image_status_label().get(rec.status, ("", COLORS["text_mute"]))
         self.header.set_subtitle(
             f"{rec.filename}   •   {rec.width}x{rec.height}   •   {status_text}"
         )
@@ -676,7 +676,7 @@ class EditorPage(BasePage):
             self.canvas.annotations[i] for i in indices if 0 <= i < len(self.canvas.annotations)
         ]
         if not anns:
-            self.obj_info.setText("Chưa chọn đối tượng nào")
+            self.obj_info.setText(tr("editor.no_object_selected", "Chưa chọn đối tượng nào"))
             self.obj_class_combo.setEnabled(False)
             self.obj_conf.setEnabled(False)
             self.apply_track_btn.setVisible(False)
@@ -695,16 +695,29 @@ class EditorPage(BasePage):
 
         if len(anns) == 1:
             track_text = f"   ·   Track: #{a.track_id}" if a.track_id is not None else ""
+            new_text = tr("common.new", "mới")
             self.obj_info.setText(
-                f"Mã: {a.id or 'mới'}{track_text}   ·   {len(a.points()) or 4} đỉnh\n"
-                f"Kích thước: {a.width:.0f} × {a.height:.0f} px\n"
-                f"Diện tích: {a.area:,.0f} px²"
+                tr(
+                    "editor.single_obj_info",
+                    "Mã: {id}{track}   ·   {vertices} đỉnh\nKích thước: {width:.0f} × {height:.0f} px\nDiện tích: {area:,.0f} px²",
+                    id=a.id or new_text,
+                    track=track_text,
+                    vertices=len(a.points()) or 4,
+                    width=a.width,
+                    height=a.height,
+                    area=a.area,
+                )
             )
             self.apply_track_btn.setVisible(a.track_id is not None)
         else:
             total = sum(x.area for x in anns)
             self.obj_info.setText(
-                f"Đang chọn {len(anns)} đối tượng\nTổng diện tích: {total:,.0f} px²"
+                tr(
+                    "editor.multi_obj_info",
+                    "Đang chọn {count} đối tượng\nTổng diện tích: {total:,.0f} px²",
+                    count=len(anns),
+                    total=total,
+                )
             )
             self.apply_track_btn.setVisible(False)
 
@@ -712,18 +725,18 @@ class EditorPage(BasePage):
         if not self.object_list.selectedItems():
             return
         menu = QMenu(self)
-        act_del = menu.addAction(icons.icon("trash", COLORS["danger"], 16), "Xoá")
-        act_merge = menu.addAction(icons.icon("merge", COLORS["text_dim"], 16), "Gộp vùng")
-        act_simplify = menu.addAction(icons.icon("sparkle", COLORS["text_dim"], 16), "Giản lược")
+        act_del = menu.addAction(icons.icon("trash", COLORS["danger"], 16), tr("common.delete", "Xoá"))
+        act_merge = menu.addAction(icons.icon("merge", COLORS["text_dim"], 16), tr("editor.merge_regions_short", "Gộp vùng"))
+        act_simplify = menu.addAction(icons.icon("sparkle", COLORS["text_dim"], 16), tr("editor.simplify_short", "Giản lược"))
         act_topoly = menu.addAction(
-            icons.icon("polygon", COLORS["text_dim"], 16), "Chuyển thành polygon"
+            icons.icon("polygon", COLORS["text_dim"], 16), tr("editor.convert_to_polygon", "Chuyển thành polygon")
         )
         selected_anns = self.canvas.selected_annotations()
         act_track = None
         if selected_anns and selected_anns[0].track_id is not None:
             menu.addSeparator()
             act_track = menu.addAction(
-                icons.icon("layers", COLORS["accent"], 16), "Áp dụng sửa đổi cho track"
+                icons.icon("layers", COLORS["accent"], 16), tr("editor.apply_track", "Áp dụng sửa đổi cho track")
             )
 
         chosen = menu.exec(self.object_list.mapToGlobal(pos))
