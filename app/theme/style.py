@@ -1,4 +1,5 @@
 """Dark Fluent stylesheet - sinh dong tu bang mau trong constants."""
+
 from __future__ import annotations
 
 import re
@@ -352,12 +353,13 @@ def build_stylesheet(accent: str | None = None) -> str:
         colors["accent_hi"] = _shift(accent, 1.22)
         colors["accent_dim"] = _shift(accent, 0.78)
         colors["accent_soft"] = _mix(accent, COLORS["bg"], 0.26)
-    qss = (_QSS
-           .replace("@check_icon@", _asset("check_white.png", "check", "#FFFFFF", 14, 3.0))
-           .replace("@arrow_up@", _asset("chev_up.png", "chevron_up",
-                                         COLORS["text_dim"], 12, 2.6))
-           .replace("@arrow_down@", _asset("chev_down.png", "chevron_down",
-                                           COLORS["text_dim"], 12, 2.6)))
+    qss = (
+        _QSS.replace("@check_icon@", _asset("check_white.png", "check", "#FFFFFF", 14, 3.0))
+        .replace("@arrow_up@", _asset("chev_up.png", "chevron_up", COLORS["text_dim"], 12, 2.6))
+        .replace(
+            "@arrow_down@", _asset("chev_down.png", "chevron_down", COLORS["text_dim"], 12, 2.6)
+        )
+    )
     for key, val in colors.items():
         qss = qss.replace(f"@{key}@", val)
     # Don sach token con sot (neu co)
@@ -365,8 +367,7 @@ def build_stylesheet(accent: str | None = None) -> str:
     return qss
 
 
-def _asset(filename: str, icon_name: str, color: str, size: int,
-           stroke: float) -> str:
+def _asset(filename: str, icon_name: str, color: str, size: int, stroke: float) -> str:
     """Sinh (mot lan) file PNG cho cac phan tu ma QSS chi nhan qua url()."""
     from app.theme.icons import pixmap
     from app.utils.paths import ensure_dir, user_data_dir

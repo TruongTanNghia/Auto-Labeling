@@ -1,4 +1,5 @@
 """Cau hinh ung dung: doc/ghi JSON, co gia tri mac dinh va API dang dot-path."""
+
 from __future__ import annotations
 
 import copy
@@ -106,7 +107,7 @@ DEFAULTS: dict[str, Any] = {
 class Config:
     """Singleton cau hinh, luu ra file JSON trong thu muc user data."""
 
-    _instance: "Config | None" = None
+    _instance: Config | None = None
     _lock = threading.RLock()
 
     def __init__(self) -> None:
@@ -115,7 +116,7 @@ class Config:
 
     # ------------------------------------------------------------ singleton --
     @classmethod
-    def instance(cls) -> "Config":
+    def instance(cls) -> Config:
         with cls._lock:
             if cls._instance is None:
                 cls._instance = Config()
@@ -126,12 +127,13 @@ class Config:
         path = config_file()
         if path.exists():
             try:
-                with open(path, "r", encoding="utf-8") as fh:
+                with open(path, encoding="utf-8") as fh:
                     stored = json.load(fh)
                 _deep_update(self._data, stored)
             except Exception:
                 pass
         from app.i18n import set_language
+
         set_language(self.get("general.language", "vi"))
 
     def save(self) -> None:

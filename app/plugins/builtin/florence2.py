@@ -3,6 +3,7 @@
 Ho tro cac task: <OD>, <DENSE_REGION_CAPTION>, <CAPTION_TO_PHRASE_GROUNDING>,
 <REFERRING_EXPRESSION_SEGMENTATION>.
 """
+
 from __future__ import annotations
 
 from app.constants import SHAPE_BBOX, SHAPE_POLYGON
@@ -20,12 +21,19 @@ def _ensure_transformers_compatibility() -> None:
         import transformers.tokenization_utils_base
 
         if not hasattr(transformers.configuration_utils.PretrainedConfig, "forced_bos_token_id"):
-            setattr(transformers.configuration_utils.PretrainedConfig, "forced_bos_token_id", None)
-        if not hasattr(transformers.tokenization_utils_base.PreTrainedTokenizerBase, "additional_special_tokens"):
+            transformers.configuration_utils.PretrainedConfig.forced_bos_token_id = None
+        if not hasattr(
+            transformers.tokenization_utils_base.PreTrainedTokenizerBase,
+            "additional_special_tokens",
+        ):
             transformers.tokenization_utils_base.PreTrainedTokenizerBase.additional_special_tokens = property(
-                lambda self: getattr(self, "special_tokens_map", {}).get("additional_special_tokens", [])
+                lambda self: getattr(self, "special_tokens_map", {}).get(
+                    "additional_special_tokens", []
+                )
             )
-        transformers.modeling_utils.PreTrainedModel._sdpa_can_dispatch = lambda self, *a, **kw: getattr(self, "_supports_sdpa", False)
+        transformers.modeling_utils.PreTrainedModel._sdpa_can_dispatch = lambda self, *a, **kw: (
+            getattr(self, "_supports_sdpa", False)
+        )
 
         def _cache_getitem(self, idx):
             target = getattr(self, "self_attention_cache", self)
@@ -49,7 +57,12 @@ def _ensure_transformers_compatibility() -> None:
 def _safe_prepare_inputs_for_generation(self, decoder_input_ids, past_key_values=None, **kwargs):
     if past_key_values is not None:
         try:
-            if isinstance(past_key_values, (tuple, list)) and len(past_key_values) > 0 and past_key_values[0] is not None and past_key_values[0][0] is not None:
+            if (
+                isinstance(past_key_values, (tuple, list))
+                and len(past_key_values) > 0
+                and past_key_values[0] is not None
+                and past_key_values[0][0] is not None
+            ):
                 past_length = past_key_values[0][0].shape[2]
             elif hasattr(past_key_values, "get_seq_length"):
                 past_length = past_key_values.get_seq_length()
@@ -151,13 +164,18 @@ class Florence2Plugin(AnnotatorPlugin):
         self._device = "cpu" if device == "cpu" else f"cuda:{device}"
         dtype = torch.float16 if self._device != "cpu" else torch.float32
         self._processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
-        self._model = AutoModelForCausalLM.from_pretrained(
-            model_id, dtype=dtype, trust_remote_code=True).to(self._device).eval()
+        self._model = (
+            AutoModelForCausalLM.from_pretrained(model_id, dtype=dtype, trust_remote_code=True)
+            .to(self._device)
+            .eval()
+        )
         self._torch = torch
         self._dtype = dtype
         self._loaded = True
         if hasattr(self._model, "language_model"):
-            type(self._model.language_model).prepare_inputs_for_generation = _safe_prepare_inputs_for_generation
+            type(
+                self._model.language_model
+            ).prepare_inputs_for_generation = _safe_prepare_inputs_for_generation
             decoder_cls = type(self._model.language_model.model.decoder)
             if not getattr(decoder_cls, "_patched", False):
                 orig_decoder_forward = decoder_cls.forward
@@ -187,7 +205,9 @@ class Florence2Plugin(AnnotatorPlugin):
 
         if hasattr(self._model, "generation_config"):
             self._model.generation_config.return_legacy_cache = True
-        if hasattr(self._model, "language_model") and hasattr(self._model.language_model, "generation_config"):
+        if hasattr(self._model, "language_model") and hasattr(
+            self._model.language_model, "generation_config"
+        ):
             self._model.language_model.generation_config.return_legacy_cache = True
 
         if log_cb:
@@ -200,6 +220,7 @@ class Florence2Plugin(AnnotatorPlugin):
 
         if ctx.image is not None:
             import cv2
+
             pil = Image.fromarray(cv2.cvtColor(ctx.image, cv2.COLOR_BGR2RGB))
         else:
             pil = Image.open(ctx.image_path).convert("RGB")
@@ -217,19 +238,26 @@ class Florence2Plugin(AnnotatorPlugin):
             text = ""
 
         # Florence-2 yeu cau anh dau vao vuong de ma hoa feature map (768x768)
-        pil_input = pil if pil.width == pil.height else pil.resize((768, 768), Image.Resampling.LANCZOS)
+        pil_input = (
+            pil if pil.width == pil.height else pil.resize((768, 768), Image.Resampling.LANCZOS)
+        )
         inputs = self._processor(text=task + text, images=pil_input, return_tensors="pt")
-        inputs = {k: (v.to(self._device, self._dtype) if v.dtype.is_floating_point
-                      else v.to(self._device)) for k, v in inputs.items()}
+        inputs = {
+            k: (
+                v.to(self._device, self._dtype) if v.dtype.is_floating_point else v.to(self._device)
+            )
+            for k, v in inputs.items()
+        }
         with self._torch.no_grad():
             ids = self._model.generate(
-                input_ids=inputs["input_ids"], pixel_values=inputs["pixel_values"],
+                input_ids=inputs["input_ids"],
+                pixel_values=inputs["pixel_values"],
                 max_new_tokens=int(self.config("max_new_tokens", 1024)),
-                num_beams=3, do_sample=False,
+                num_beams=3,
+                do_sample=False,
             )
         raw = self._processor.batch_decode(ids, skip_special_tokens=False)[0]
-        parsed = self._processor.post_process_generation(
-            raw, task=task, image_size=pil.size)
+        parsed = self._processor.post_process_generation(raw, task=task, image_size=pil.size)
         return self._to_detections(parsed.get(task, {}), ctx)
 
     # ---------------------------------------------------------------- parse --
@@ -240,10 +268,15 @@ class Florence2Plugin(AnnotatorPlugin):
 
         for box, label in zip(data.get("bboxes", []), data.get("labels", [])):
             x1, y1, x2, y2 = [float(v) for v in box]
-            out.append(Detection(
-                class_id=names.get(str(label).lower(), 0), class_name=str(label),
-                confidence=0.75, bbox=[x1, y1, x2, y2], shape=SHAPE_BBOX,
-            ))
+            out.append(
+                Detection(
+                    class_id=names.get(str(label).lower(), 0),
+                    class_name=str(label),
+                    confidence=0.75,
+                    bbox=[x1, y1, x2, y2],
+                    shape=SHAPE_BBOX,
+                )
+            )
 
         for polys, label in zip(data.get("polygons", []), data.get("labels", [])):
             for poly in polys:
@@ -251,9 +284,14 @@ class Florence2Plugin(AnnotatorPlugin):
                 if len(flat) < 6:
                     continue
                 xs, ys = flat[0::2], flat[1::2]
-                out.append(Detection(
-                    class_id=names.get(str(label).lower(), 0), class_name=str(label),
-                    confidence=0.75, polygon=flat, shape=SHAPE_POLYGON,
-                    bbox=[min(xs), min(ys), max(xs), max(ys)],
-                ))
+                out.append(
+                    Detection(
+                        class_id=names.get(str(label).lower(), 0),
+                        class_name=str(label),
+                        confidence=0.75,
+                        polygon=flat,
+                        shape=SHAPE_POLYGON,
+                        bbox=[min(xs), min(ys), max(xs), max(ys)],
+                    )
+                )
         return out

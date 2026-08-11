@@ -6,6 +6,7 @@ Tu chon phien ban SAM tot nhat dang co trong may:
 Voi loai prompt hinh hoc (box/point), ca ba phien ban dung chung lop
 `ultralytics.SAM`, nen chi can doi ten file trong so.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -13,7 +14,6 @@ import numpy as np
 from app.constants import SHAPE_POLYGON
 from app.core.inference import Detection, mask_to_polygons, resolve_device
 from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo, PluginParam
-
 
 #: (ten file trong so, nhan hien thi, phien ban ultralytics toi thieu)
 SAM_CANDIDATES = [
@@ -26,6 +26,7 @@ SAM_CANDIDATES = [
 def ultralytics_version() -> tuple[int, ...]:
     try:
         import ultralytics
+
         parts = str(ultralytics.__version__).split(".")[:3]
         return tuple(int("".join(ch for ch in p if ch.isdigit()) or 0) for p in parts)
     except Exception:
@@ -111,11 +112,14 @@ class SamRefiner(AnnotatorPlugin):
             return ok, msg
         weights, label = pick_sam_weights(self.config("weights", "auto"))
         from app.utils.paths import weights_dir
+
         if (weights_dir() / weights).exists():
             return True, f"San sang ({label})"
         if weights == "sam3.pt":
-            return False, ("Can dat sam3.pt vao thu muc weights "
-                           "(tai thu cong tu Hugging Face, Meta yeu cau xin quyen)")
+            return False, (
+                "Can dat sam3.pt vao thu muc weights "
+                "(tai thu cong tu Hugging Face, Meta yeu cau xin quyen)"
+            )
         return True, f"San sang ({label} - se tai {weights} lan dau)"
 
     # ------------------------------------------------------------------- nap --
@@ -135,7 +139,8 @@ class SamRefiner(AnnotatorPlugin):
             if weights == "sam3.pt":
                 raise FileNotFoundError(
                     f"Khong tim thay {weights}. SAM 3 khong tai tu dong duoc - hay tai "
-                    f"tu Hugging Face roi dat vao {weights_dir()}")
+                    f"tu Hugging Face roi dat vao {weights_dir()}"
+                )
             if log_cb:
                 log_cb(f"[SAM] Chua co {weights}, dang tai ...")
             got = download_asset(weights, log_cb)
@@ -179,18 +184,26 @@ class SamRefiner(AnnotatorPlugin):
         out: list[Detection] = []
         for i, det in enumerate(ctx.detections):
             new_det = Detection(
-                class_id=det.class_id, class_name=det.class_name,
-                confidence=det.confidence, bbox=list(det.bbox), shape=det.shape,
+                class_id=det.class_id,
+                class_name=det.class_name,
+                confidence=det.confidence,
+                bbox=list(det.bbox),
+                shape=det.shape,
             )
             if i < len(data):
-                polys = mask_to_polygons((data[i] > 0.5).astype(np.uint8),
-                                         min_area=min_area, simplify=simplify)
+                polys = mask_to_polygons(
+                    (data[i] > 0.5).astype(np.uint8), min_area=min_area, simplify=simplify
+                )
                 if polys:
                     biggest = max(polys, key=len)
                     arr = np.asarray(biggest, dtype=np.float32)
                     new_det.polygon = [float(v) for v in arr.flatten()]
                     new_det.shape = SHAPE_POLYGON
-                    new_det.bbox = [float(arr[:, 0].min()), float(arr[:, 1].min()),
-                                    float(arr[:, 0].max()), float(arr[:, 1].max())]
+                    new_det.bbox = [
+                        float(arr[:, 0].min()),
+                        float(arr[:, 1].min()),
+                        float(arr[:, 0].max()),
+                        float(arr[:, 1].max()),
+                    ]
             out.append(new_det)
         return out

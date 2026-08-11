@@ -9,6 +9,7 @@ Yeu cau:
   - file sam3.pt dat trong thu muc weights (Meta yeu cau xin quyen tren Hugging Face,
     khong tai tu dong duoc)
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -102,8 +103,9 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
         if ver < MIN_VERSION:
             have = ".".join(str(v) for v in ver)
             need = ".".join(str(v) for v in MIN_VERSION)
-            return False, (f"Can ultralytics >= {need} (dang co {have}). "
-                           f"Nang cap: pip install -U ultralytics")
+            return False, (
+                f"Can ultralytics >= {need} (dang co {have}). Nang cap: pip install -U ultralytics"
+            )
         try:
             from ultralytics.models.sam import SAM3SemanticPredictor  # noqa: F401
         except Exception:
@@ -111,8 +113,11 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
 
         if not self._resolve_weights_path():
             from app.utils.paths import weights_dir
-            return False, (f"Chua co {self.WEIGHTS} trong {weights_dir()} hoac app/models/ - "
-                           f"Meta yeu cau xin quyen tren Hugging Face roi tai thu cong")
+
+            return False, (
+                f"Chua co {self.WEIGHTS} trong {weights_dir()} hoac app/models/ - "
+                f"Meta yeu cau xin quyen tren Hugging Face roi tai thu cong"
+            )
         return True, "San sang"
 
     # ------------------------------------------------------------------- nap --
@@ -133,13 +138,15 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
         device = resolve_device(ctx.device if ctx else "auto")
         if log_cb:
             log_cb(f"[SAM3] Dang nap {path.name} ...")
-        self._model = SAM3SemanticPredictor(overrides={
-            "model": str(path),
-            "device": "cpu" if device == "cpu" else device,
-            "conf": ctx.confidence if ctx else 0.35,
-            "save": False,
-            "verbose": False,
-        })
+        self._model = SAM3SemanticPredictor(
+            overrides={
+                "model": str(path),
+                "device": "cpu" if device == "cpu" else device,
+                "conf": ctx.confidence if ctx else 0.35,
+                "save": False,
+                "verbose": False,
+            }
+        )
         self._loaded = True
         if log_cb:
             log_cb("[SAM3] San sang.")
@@ -179,12 +186,14 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
 
         boxes = getattr(res, "boxes", None)
         masks = getattr(res, "masks", None)
-        mask_data = masks.data.cpu().numpy() if (
-            masks is not None and getattr(masks, "data", None) is not None) else None
+        mask_data = (
+            masks.data.cpu().numpy()
+            if (masks is not None and getattr(masks, "data", None) is not None)
+            else None
+        )
         names = getattr(res, "names", {}) or {}
 
-        n = len(boxes) if boxes is not None else (
-            len(mask_data) if mask_data is not None else 0)
+        n = len(boxes) if boxes is not None else (len(mask_data) if mask_data is not None else 0)
         for i in range(n):
             label = concepts[0]
             conf = 1.0
@@ -192,22 +201,31 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
             if boxes is not None and i < len(boxes):
                 cid = int(boxes.cls[i].item()) if getattr(boxes, "cls", None) is not None else 0
                 label = str(names.get(cid, concepts[min(cid, len(concepts) - 1)]))
-                conf = float(boxes.conf[i].item()) if getattr(
-                    boxes, "conf", None) is not None else 1.0
+                conf = (
+                    float(boxes.conf[i].item()) if getattr(boxes, "conf", None) is not None else 1.0
+                )
                 bbox = [float(v) for v in boxes.xyxy[i].tolist()]
 
             det = Detection(
-                class_id=name_to_id.get(label.lower(), 0), class_name=label,
-                confidence=conf, bbox=bbox, shape=SHAPE_BBOX,
+                class_id=name_to_id.get(label.lower(), 0),
+                class_name=label,
+                confidence=conf,
+                bbox=bbox,
+                shape=SHAPE_BBOX,
             )
             if mask_data is not None and i < len(mask_data):
-                polys = mask_to_polygons((mask_data[i] > 0.5).astype(np.uint8),
-                                         min_area=min_area, simplify=simplify)
+                polys = mask_to_polygons(
+                    (mask_data[i] > 0.5).astype(np.uint8), min_area=min_area, simplify=simplify
+                )
                 if polys:
                     arr = np.asarray(max(polys, key=len), dtype=np.float32)
                     det.polygon = [float(v) for v in arr.flatten()]
                     det.shape = SHAPE_POLYGON
-                    det.bbox = [float(arr[:, 0].min()), float(arr[:, 1].min()),
-                                float(arr[:, 0].max()), float(arr[:, 1].max())]
+                    det.bbox = [
+                        float(arr[:, 0].min()),
+                        float(arr[:, 1].min()),
+                        float(arr[:, 0].max()),
+                        float(arr[:, 1].max()),
+                    ]
             out.append(det)
         return out

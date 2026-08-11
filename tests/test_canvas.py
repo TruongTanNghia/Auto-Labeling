@@ -1,7 +1,9 @@
 """Kiem thu AnnotationCanvas (polygon, brush, eraser, split, merge, undo/redo)."""
+
 from __future__ import annotations
 
 from PySide6.QtCore import QPointF
+
 from app.models.repository import ProjectRepository
 from app.views.widgets.canvas import (
     TOOL_BRUSH,

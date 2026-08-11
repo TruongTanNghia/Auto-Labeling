@@ -1,9 +1,9 @@
 """Script tao app.ico cho AutoLabel Studio AI."""
+
 import sys
-from pathlib import Path
 
 from PySide6.QtCore import QByteArray, QRectF, Qt
-from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
+from PySide6.QtGui import QImage, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
 
 # SVG Logo tu app/theme/icons.py
@@ -14,13 +14,14 @@ LOGO_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="
 <circle cx="12" cy="12" r="1.8" fill="#7C5CFF"/>
 </svg>"""
 
+
 def build_ico(output_path: str = "app.ico") -> None:
     from PIL import Image
 
     renderer = QSvgRenderer(QByteArray(LOGO_SVG.encode("utf-8")))
     sizes = [16, 32, 48, 64, 128, 256]
     images = []
-    
+
     for s in sizes:
         px = QPixmap(s, s)
         px.fill(Qt.transparent)
@@ -38,10 +39,17 @@ def build_ico(output_path: str = "app.ico") -> None:
         pil_img = Image.frombytes("RGBA", (width, height), bytes(ptr), "raw", "BGRA")
         images.append(pil_img)
 
-    images[0].save(output_path, format="ICO", sizes=[(im.width, im.height) for im in images], append_images=images[1:])
+    images[0].save(
+        output_path,
+        format="ICO",
+        sizes=[(im.width, im.height) for im in images],
+        append_images=images[1:],
+    )
     print(f"Da tao {output_path} thanh cong.")
+
 
 if __name__ == "__main__":
     from PySide6.QtWidgets import QApplication
+
     app = QApplication(sys.argv)
     build_ico("app.ico")

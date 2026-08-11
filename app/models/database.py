@@ -1,4 +1,5 @@
 """Lop truy cap SQLite: tao schema, migrate, connection an toan da luong."""
+
 from __future__ import annotations
 
 import sqlite3
@@ -121,10 +122,16 @@ class Database:
             self._conn.executescript(_SCHEMA)
             # Migration check: Dam bao column track_id co trong table annotation
             try:
-                cols = [r[1] for r in self._conn.execute("PRAGMA table_info(annotation)").fetchall()]
+                cols = [
+                    r[1] for r in self._conn.execute("PRAGMA table_info(annotation)").fetchall()
+                ]
                 if "track_id" not in cols:
-                    self._conn.execute("ALTER TABLE annotation ADD COLUMN track_id INTEGER DEFAULT NULL")
-                self._conn.execute("CREATE INDEX IF NOT EXISTS ix_ann_track ON annotation(track_id)")
+                    self._conn.execute(
+                        "ALTER TABLE annotation ADD COLUMN track_id INTEGER DEFAULT NULL"
+                    )
+                self._conn.execute(
+                    "CREATE INDEX IF NOT EXISTS ix_ann_track ON annotation(track_id)"
+                )
             except Exception as exc:
                 log.warning("Loi migration DB (track_id): %s", exc)
 
@@ -195,7 +202,7 @@ class Database:
                 target.close()
 
     # -------------------------------------------------------- context mgr --
-    def __enter__(self) -> "Database":
+    def __enter__(self) -> Database:
         return self
 
     def __exit__(self, *exc) -> None:

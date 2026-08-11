@@ -3,9 +3,9 @@
 Toa do annotation luon la pixel cua anh goc. Bien doi hien thi:
     screen = image_point * scale + offset
 """
+
 from __future__ import annotations
 
-import copy
 import math
 from dataclasses import dataclass
 
@@ -25,6 +25,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
 from app.constants import ANN_MANUAL, COLORS, SHAPE_POLYGON
+from app.i18n import tr
 from app.models.entities import Annotation
 
 # ------------------------------------------------------------------ shapely --
@@ -32,6 +33,7 @@ try:
     from shapely.geometry import LineString, MultiPolygon, Point, Polygon
     from shapely.ops import split as shapely_split
     from shapely.ops import unary_union
+
     _HAS_SHAPELY = True
 except Exception:  # pragma: no cover
     _HAS_SHAPELY = False
@@ -63,11 +65,11 @@ class AnnotationCanvas(QWidget):
     """Vung ve chinh cua Annotation Editor."""
 
     annotationsChanged = Signal()
-    selectionChanged = Signal(list)          # danh sach index dang chon
+    selectionChanged = Signal(list)  # danh sach index dang chon
     statusMessage = Signal(str)
     zoomChanged = Signal(float)
     viewChanged = Signal()
-    newShapeCreated = Signal(int)            # index cua shape moi
+    newShapeCreated = Signal(int)  # index cua shape moi
     doubleClickedEmpty = Signal()
 
     def __init__(self, parent=None) -> None:
@@ -120,8 +122,9 @@ class AnnotationCanvas(QWidget):
         self._max_history = 60
 
     # =========================================================== DU LIEU ===
-    def load_image(self, path: str, annotations: list[Annotation] | None = None,
-                   fit: bool = True) -> bool:
+    def load_image(
+        self, path: str, annotations: list[Annotation] | None = None, fit: bool = True
+    ) -> bool:
         if not path:
             self.pixmap = None
             self.img_w = self.img_h = 0
@@ -136,7 +139,7 @@ class AnnotationCanvas(QWidget):
                 self.img_w = self.img_h = 0
                 self.annotations = []
                 self.update()
-                self.statusMessage.emit(f"Không đọc được ảnh: {path}")
+                self.statusMessage.emit(tr("canvas.err_read_img", "Không đọc được ảnh: {path}", path=path))
                 return False
             pm = QPixmap.fromImage(img)
         self.pixmap = pm
@@ -175,12 +178,14 @@ class AnnotationCanvas(QWidget):
 
     # ============================================================= BIEN DOI ==
     def to_screen(self, p) -> QPointF:
-        return QPointF(p.x() * self._scale + self._offset.x(),
-                       p.y() * self._scale + self._offset.y())
+        return QPointF(
+            p.x() * self._scale + self._offset.x(), p.y() * self._scale + self._offset.y()
+        )
 
     def to_image(self, p) -> QPointF:
-        return QPointF((p.x() - self._offset.x()) / self._scale,
-                       (p.y() - self._offset.y()) / self._scale)
+        return QPointF(
+            (p.x() - self._offset.x()) / self._scale, (p.y() - self._offset.y()) / self._scale
+        )
 
     @property
     def scale(self) -> float:
@@ -207,8 +212,7 @@ class AnnotationCanvas(QWidget):
             anchor = QPointF(self.width() / 2, self.height() / 2)
         img_pt = self.to_image(anchor)
         self._scale = scale
-        self._offset = QPointF(anchor.x() - img_pt.x() * scale,
-                               anchor.y() - img_pt.y() * scale)
+        self._offset = QPointF(anchor.x() - img_pt.x() * scale, anchor.y() - img_pt.y() * scale)
         self.zoomChanged.emit(self._scale)
         self.viewChanged.emit()
         self.update()
@@ -242,7 +246,7 @@ class AnnotationCanvas(QWidget):
 
     def undo(self) -> None:
         if not self._undo:
-            self.statusMessage.emit("Không còn thao tác nào để hoàn tác")
+            self.statusMessage.emit(tr("canvas.no_undo", "Không còn thao tác nào để hoàn tác"))
             return
         self._redo.append([a.clone() for a in self.annotations])
         self.annotations = self._undo.pop()
@@ -251,11 +255,11 @@ class AnnotationCanvas(QWidget):
         self.update()
         self.annotationsChanged.emit()
         self.selectionChanged.emit(sorted(self.selected))
-        self.statusMessage.emit("Đã hoàn tác")
+        self.statusMessage.emit(tr("canvas.undone", "Đã hoàn tác"))
 
     def redo(self) -> None:
         if not self._redo:
-            self.statusMessage.emit("Không còn thao tác nào để làm lại")
+            self.statusMessage.emit(tr("canvas.no_redo", "Không còn thao tác nào để làm lại"))
             return
         self._undo.append([a.clone() for a in self.annotations])
         self.annotations = self._redo.pop()
@@ -264,7 +268,7 @@ class AnnotationCanvas(QWidget):
         self.update()
         self.annotationsChanged.emit()
         self.selectionChanged.emit(sorted(self.selected))
-        self.statusMessage.emit("Đã làm lại")
+        self.statusMessage.emit(tr("canvas.redone", "Đã làm lại"))
 
     @property
     def can_undo(self) -> bool:
@@ -297,7 +301,7 @@ class AnnotationCanvas(QWidget):
         self._reset_transient()
         self.update()
         if had:
-            self.statusMessage.emit("Đã huỷ thao tác đang vẽ")
+            self.statusMessage.emit(tr("canvas.canceled_draft", "Đã huỷ thao tác đang vẽ"))
 
     def _reset_transient(self) -> None:
         self._draft = []
@@ -331,8 +335,9 @@ class AnnotationCanvas(QWidget):
         self.selectionChanged.emit(sorted(self.selected))
 
     def selected_annotations(self) -> list[Annotation]:
-        return [self.annotations[i] for i in sorted(self.selected)
-                if 0 <= i < len(self.annotations)]
+        return [
+            self.annotations[i] for i in sorted(self.selected) if 0 <= i < len(self.annotations)
+        ]
 
     # ============================================================ THAO TAC ===
     def delete_selected(self) -> None:
@@ -347,12 +352,12 @@ class AnnotationCanvas(QWidget):
         self.update()
         self.annotationsChanged.emit()
         self.selectionChanged.emit([])
-        self.statusMessage.emit(f"Đã xoá {n} đối tượng")
+        self.statusMessage.emit(tr("canvas.deleted_objects", "Đã xoá {n} đối tượng", n=n))
 
     def set_class_for_selected(self, class_id: int) -> None:
         if not self.selected:
             self.active_class_id = class_id
-            self.statusMessage.emit(f"Lớp mặc định: {self.class_names.get(class_id, '?')}")
+            self.statusMessage.emit(tr("canvas.default_class", "Lớp mặc định: {name}", name=self.class_names.get(class_id, '?')))
             return
         self.push_undo()
         for i in self.selected:
@@ -364,8 +369,8 @@ class AnnotationCanvas(QWidget):
         self.annotationsChanged.emit()
         self.selectionChanged.emit(sorted(self.selected))
         self.statusMessage.emit(
-            f"Đã gán lớp “{self.class_names.get(class_id, '?')}” cho "
-            f"{len(self.selected)} đối tượng")
+            tr("canvas.assigned_class", "Đã gán lớp “{name}” cho {count} đối tượng", name=self.class_names.get(class_id, '?'), count=len(self.selected))
+        )
 
     def set_confidence_for_selected(self, conf: float) -> None:
         if not self.selected:
@@ -378,10 +383,10 @@ class AnnotationCanvas(QWidget):
 
     def merge_selected(self) -> None:
         if len(self.selected) < 2:
-            self.statusMessage.emit("Hãy chọn ít nhất 2 đối tượng để gộp")
+            self.statusMessage.emit(tr("canvas.merge_select_min", "Hãy chọn ít nhất 2 đối tượng để gộp"))
             return
         if not _HAS_SHAPELY:
-            self.statusMessage.emit("Cần thư viện shapely để gộp vùng")
+            self.statusMessage.emit(tr("canvas.shapely_req_merge", "Cần thư viện shapely để gộp vùng"))
             return
         idxs = sorted(self.selected)
         polys = []
@@ -390,7 +395,7 @@ class AnnotationCanvas(QWidget):
             if g is not None and not g.is_empty:
                 polys.append(g)
         if len(polys) < 2:
-            self.statusMessage.emit("Không đủ hình hợp lệ để gộp")
+            self.statusMessage.emit(tr("canvas.merge_not_enough_valid", "Không đủ hình hợp lệ để gộp"))
             return
         merged = unary_union(polys)
         base = self.annotations[idxs[0]].clone()
@@ -416,7 +421,7 @@ class AnnotationCanvas(QWidget):
         self.update()
         self.annotationsChanged.emit()
         self.selectionChanged.emit(sorted(self.selected))
-        self.statusMessage.emit(f"Đã gộp {len(idxs)} đối tượng thành {len(new_indices)} vùng")
+        self.statusMessage.emit(tr("canvas.merged_result", "Đã gộp {n_src} đối tượng thành {n_dst} vùng", n_src=len(idxs), n_dst=len(new_indices)))
 
     def simplify_selected(self, tolerance_px: float = 1.5) -> None:
         if not self.selected or not _HAS_SHAPELY:
@@ -432,7 +437,7 @@ class AnnotationCanvas(QWidget):
                 self.annotations[i].set_points(pts)
         self.update()
         self.annotationsChanged.emit()
-        self.statusMessage.emit("Đã giản lược polygon")
+        self.statusMessage.emit(tr("canvas.simplified", "Đã giản lược polygon"))
 
     def convert_selected_to_polygon(self) -> None:
         """Bien bbox thanh polygon 4 dinh de co the sua bang brush."""
@@ -456,13 +461,16 @@ class AnnotationCanvas(QWidget):
 
         if self.pixmap is None:
             p.setPen(QPen(QColor(COLORS["text_mute"])))
-            p.drawText(self.rect(), Qt.AlignCenter,
-                       "Chưa mở ảnh nào\nChọn một ảnh ở danh sách bên trái")
+            p.drawText(
+                self.rect(), Qt.AlignCenter, tr("canvas.no_image_opened", "Chưa mở ảnh nào\nChọn một ảnh ở danh sách bên trái")
+            )
+            return
             return
 
         # --- anh ---
-        target = QRectF(self._offset.x(), self._offset.y(),
-                        self.img_w * self._scale, self.img_h * self._scale)
+        target = QRectF(
+            self._offset.x(), self._offset.y(), self.img_w * self._scale, self.img_h * self._scale
+        )
         p.setRenderHint(QPainter.SmoothPixmapTransform, self._scale < 3.0)
         p.drawPixmap(target, self.pixmap, QRectF(self.pixmap.rect()))
         p.setPen(QPen(QColor(COLORS["border_hi"]), 1))
@@ -538,8 +546,7 @@ class AnnotationCanvas(QWidget):
             p.setBrush(color.lighter(140))
             p.drawEllipse(sp, 3.0, 3.0)
 
-    def _draw_label(self, p: QPainter, ann: Annotation, poly: QPolygonF,
-                    color: QColor) -> None:
+    def _draw_label(self, p: QPainter, ann: Annotation, poly: QPolygonF, color: QColor) -> None:
         name = ann.class_name or self.class_names.get(ann.class_id, "?")
         text = name
         if self.style.show_confidence and ann.confidence < 1.0:
@@ -601,8 +608,9 @@ class AnnotationCanvas(QWidget):
 
         if self.tool in (TOOL_BRUSH, TOOL_ERASER) and len(self._brush_path) >= 1:
             color = accent if self.tool == TOOL_BRUSH else QColor(COLORS["danger"])
-            pen = QPen(color, self.brush_size * self._scale, Qt.SolidLine,
-                       Qt.RoundCap, Qt.RoundJoin)
+            pen = QPen(
+                color, self.brush_size * self._scale, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin
+            )
             c = QColor(color)
             c.setAlphaF(0.42)
             pen.setColor(c)
@@ -619,8 +627,11 @@ class AnnotationCanvas(QWidget):
         if self.tool == TOOL_SPLIT and len(self._split_line) >= 1:
             p.setPen(QPen(QColor(COLORS["warning"]), 2.0, Qt.DashLine))
             a = self.to_screen(self._split_line[0])
-            b = self._draft_cursor if len(self._split_line) == 1 else \
-                self.to_screen(self._split_line[1])
+            b = (
+                self._draft_cursor
+                if len(self._split_line) == 1
+                else self.to_screen(self._split_line[1])
+            )
             p.drawLine(a, b)
 
     def _draw_brush_cursor(self, p: QPainter) -> None:
@@ -630,8 +641,7 @@ class AnnotationCanvas(QWidget):
         if not self.rect().contains(pos):
             return
         r = self.brush_size * self._scale / 2
-        color = QColor(COLORS["accent_hi"]) if self.tool == TOOL_BRUSH \
-            else QColor(COLORS["danger"])
+        color = QColor(COLORS["accent_hi"]) if self.tool == TOOL_BRUSH else QColor(COLORS["danger"])
         p.setBrush(Qt.NoBrush)
         p.setPen(QPen(color, 1.6))
         p.drawEllipse(QPointF(pos), r, r)
@@ -665,7 +675,8 @@ class AnnotationCanvas(QWidget):
             self._draft.append(img_pt)
             self._draft_cursor = pos
             self.statusMessage.emit(
-                f"Polygon: {len(self._draft)} đỉnh — chuột phải hoặc Enter để đóng hình")
+                tr("canvas.drawing_polygon", "Polygon: {count} đỉnh — chuột phải hoặc Enter để đóng hình", count=len(self._draft))
+            )
             self.update()
         elif self.tool == TOOL_BBOX:
             self._bbox_start = img_pt
@@ -711,22 +722,27 @@ class AnnotationCanvas(QWidget):
                 src = self._shape_snapshot[k]
                 a = self.annotations[i]
                 if len(src.polygon) >= 6:
-                    pts = [(self._clampx(x + delta.x()), self._clampy(y + delta.y()))
-                           for x, y in src.points()]
+                    pts = [
+                        (self._clampx(x + delta.x()), self._clampy(y + delta.y()))
+                        for x, y in src.points()
+                    ]
                     a.set_points(pts)
                 else:
-                    a.bbox = [self._clampx(src.bbox[0] + delta.x()),
-                              self._clampy(src.bbox[1] + delta.y()),
-                              self._clampx(src.bbox[2] + delta.x()),
-                              self._clampy(src.bbox[3] + delta.y())]
+                    a.bbox = [
+                        self._clampx(src.bbox[0] + delta.x()),
+                        self._clampy(src.bbox[1] + delta.y()),
+                        self._clampx(src.bbox[2] + delta.x()),
+                        self._clampy(src.bbox[3] + delta.y()),
+                    ]
                 a.status = ANN_MANUAL
             self.update()
             return
 
         if self.tool in (TOOL_BRUSH, TOOL_ERASER):
             if ev.buttons() & Qt.LeftButton:
-                if not self._brush_path or _dist(self._brush_path[-1], img_pt) > \
-                        max(0.8, 1.5 / self._scale):
+                if not self._brush_path or _dist(self._brush_path[-1], img_pt) > max(
+                    0.8, 1.5 / self._scale
+                ):
                     self._brush_path.append(img_pt)
             self.update()
             return
@@ -748,8 +764,7 @@ class AnnotationCanvas(QWidget):
 
         if self._panning:
             self._panning = False
-            self.setCursor(Qt.OpenHandCursor if self.tool == TOOL_PAN
-                           else self._tool_cursor())
+            self.setCursor(Qt.OpenHandCursor if self.tool == TOOL_PAN else self._tool_cursor())
             return
 
         if self._drag_vertex[0] >= 0:
@@ -808,9 +823,12 @@ class AnnotationCanvas(QWidget):
 
     def _tool_cursor(self):
         return {
-            TOOL_SELECT: Qt.ArrowCursor, TOOL_POLYGON: Qt.CrossCursor,
-            TOOL_BBOX: Qt.CrossCursor, TOOL_BRUSH: Qt.BlankCursor,
-            TOOL_ERASER: Qt.BlankCursor, TOOL_SPLIT: Qt.CrossCursor,
+            TOOL_SELECT: Qt.ArrowCursor,
+            TOOL_POLYGON: Qt.CrossCursor,
+            TOOL_BBOX: Qt.CrossCursor,
+            TOOL_BRUSH: Qt.BlankCursor,
+            TOOL_ERASER: Qt.BlankCursor,
+            TOOL_SPLIT: Qt.CrossCursor,
             TOOL_PAN: Qt.OpenHandCursor,
         }.get(self.tool, Qt.ArrowCursor)
 
@@ -926,14 +944,17 @@ class AnnotationCanvas(QWidget):
         a.status = ANN_MANUAL
         self.update()
         self.annotationsChanged.emit()
-        self.statusMessage.emit("Đã thêm đỉnh mới")
+        self.statusMessage.emit(tr("canvas.added_vertex", "Đã thêm đỉnh mới"))
 
     # ======================================================== TAO HINH MOI ==
     def _new_annotation(self, pts) -> Annotation:
         a = Annotation(
             class_id=self.active_class_id,
             class_name=self.class_names.get(self.active_class_id, ""),
-            shape=SHAPE_POLYGON, confidence=1.0, status=ANN_MANUAL, source="manual",
+            shape=SHAPE_POLYGON,
+            confidence=1.0,
+            status=ANN_MANUAL,
+            source="manual",
         )
         a.set_points(pts)
         return a
@@ -953,7 +974,7 @@ class AnnotationCanvas(QWidget):
         self.annotationsChanged.emit()
         self.newShapeCreated.emit(idx)
         self.selectionChanged.emit([idx])
-        self.statusMessage.emit(f"Đã tạo polygon {len(pts)} đỉnh")
+        self.statusMessage.emit(tr("canvas.created_polygon", "Đã tạo polygon {count} đỉnh", count=len(pts)))
 
     def _finish_bbox(self, end: QPointF) -> None:
         start = self._bbox_start
@@ -974,12 +995,12 @@ class AnnotationCanvas(QWidget):
         self.annotationsChanged.emit()
         self.newShapeCreated.emit(idx)
         self.selectionChanged.emit([idx])
-        self.statusMessage.emit("Đã tạo khung bao")
+        self.statusMessage.emit(tr("canvas.created_bbox", "Đã tạo khung bao"))
 
     # ============================================================== BRUSH ===
     def set_brush_size(self, size: float) -> None:
         self.brush_size = max(2.0, min(400.0, float(size)))
-        self.statusMessage.emit(f"Cỡ cọ: {self.brush_size:.0f} px")
+        self.statusMessage.emit(tr("canvas.brush_size_status", "Cỡ cọ: {size:.0f} px", size=self.brush_size))
         self.update()
 
     def _stroke_geometry(self):
@@ -997,7 +1018,7 @@ class AnnotationCanvas(QWidget):
         self._brush_path = []
         if stroke is None or stroke.is_empty:
             if not _HAS_SHAPELY:
-                self.statusMessage.emit("Cần thư viện shapely cho Cọ vẽ / Tẩy")
+                self.statusMessage.emit(tr("canvas.shapely_req_brush", "Cần thư viện shapely cho Cọ vẽ / Tẩy"))
             self.update()
             return
 
@@ -1015,15 +1036,17 @@ class AnnotationCanvas(QWidget):
                 self.annotationsChanged.emit()
                 self.newShapeCreated.emit(idx)
                 self.selectionChanged.emit([idx])
-                self.statusMessage.emit("Đã tạo vùng mới bằng cọ vẽ")
+                self.statusMessage.emit(tr("canvas.created_brush_region", "Đã tạo vùng mới bằng cọ vẽ"))
             self.update()
             return
 
         if not targets:
             # eraser ap dung cho moi hinh giao voi net
-            targets = [i for i, a in enumerate(self.annotations)
-                       if a.class_id not in self.hidden_classes
-                       and _intersects(_to_shapely(a), stroke)]
+            targets = [
+                i
+                for i, a in enumerate(self.annotations)
+                if a.class_id not in self.hidden_classes and _intersects(_to_shapely(a), stroke)
+            ]
             if not targets:
                 self.update()
                 return
@@ -1072,15 +1095,14 @@ class AnnotationCanvas(QWidget):
         self.update()
         self.annotationsChanged.emit()
         self.selectionChanged.emit(sorted(self.selected))
-        self.statusMessage.emit("Tẩy đã cập nhật vùng" if erase
-                                else "Cọ vẽ đã cập nhật vùng")
+        self.statusMessage.emit(tr("canvas.eraser_updated", "Tẩy đã cập nhật vùng") if erase else tr("canvas.brush_updated", "Cọ vẽ đã cập nhật vùng"))
 
     # ============================================================== SPLIT ===
     def _apply_split(self) -> None:
         if len(self._split_line) < 2 or not _HAS_SHAPELY:
             self._split_line = []
             if not _HAS_SHAPELY:
-                self.statusMessage.emit("Cần thư viện shapely cho công cụ Cắt đôi")
+                self.statusMessage.emit(tr("canvas.shapely_req_split", "Cần thư viện shapely cho công cụ Cắt đôi"))
             self.update()
             return
         a0, a1 = self._split_line[0], self._split_line[1]
@@ -1094,17 +1116,24 @@ class AnnotationCanvas(QWidget):
         length = math.hypot(dx, dy) or 1.0
         ext = max(self.img_w, self.img_h) * 1.5
         ux, uy = dx / length, dy / length
-        line = LineString([
-            (a0.x() - ux * ext, a0.y() - uy * ext),
-            (a1.x() + ux * ext, a1.y() + uy * ext),
-        ])
+        line = LineString(
+            [
+                (a0.x() - ux * ext, a0.y() - uy * ext),
+                (a1.x() + ux * ext, a1.y() + uy * ext),
+            ]
+        )
 
-        candidates = sorted(self.selected) if self.selected else [
-            i for i, a in enumerate(self.annotations)
-            if a.class_id not in self.hidden_classes and _intersects(_to_shapely(a), line)
-        ]
+        candidates = (
+            sorted(self.selected)
+            if self.selected
+            else [
+                i
+                for i, a in enumerate(self.annotations)
+                if a.class_id not in self.hidden_classes and _intersects(_to_shapely(a), line)
+            ]
+        )
         if not candidates:
-            self.statusMessage.emit("Đường cắt không đi qua đối tượng nào")
+            self.statusMessage.emit(tr("canvas.split_no_intersect", "Đường cắt không đi qua đối tượng nào"))
             self.update()
             return
 
@@ -1140,7 +1169,7 @@ class AnnotationCanvas(QWidget):
         self.update()
         self.annotationsChanged.emit()
         self.selectionChanged.emit(sorted(self.selected))
-        self.statusMessage.emit(f"Đã tách thành {len(new_selection)} vùng")
+        self.statusMessage.emit(tr("canvas.split_result", "Đã tách thành {count} vùng", count=len(new_selection)))
 
     # ============================================================= HELPERS ==
     def _clampx(self, v: float) -> float:
@@ -1154,7 +1183,7 @@ class AnnotationCanvas(QWidget):
 class Navigator(QWidget):
     """Minimap: anh thu nho + khung the hien vung dang xem."""
 
-    navigate = Signal(QPointF)   # toa do anh nguoi dung click
+    navigate = Signal(QPointF)  # toa do anh nguoi dung click
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -1171,8 +1200,7 @@ class Navigator(QWidget):
             self._img_size = (0, 0)
         else:
             self._img_size = (pixmap.width(), pixmap.height())
-            self._thumb = pixmap.scaled(360, 360, Qt.KeepAspectRatio,
-                                        Qt.SmoothTransformation)
+            self._thumb = pixmap.scaled(360, 360, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.update()
 
     def set_view_rect(self, rect: QRectF) -> None:
@@ -1214,8 +1242,7 @@ class Navigator(QWidget):
         if iw and ih:
             sx, sy = tr.width() / iw, tr.height() / ih
             for pts, color in self._annotations:
-                poly = QPolygonF([QPointF(tr.left() + x * sx, tr.top() + y * sy)
-                                  for x, y in pts])
+                poly = QPolygonF([QPointF(tr.left() + x * sx, tr.top() + y * sy) for x, y in pts])
                 c = QColor(color)
                 c.setAlphaF(0.55)
                 p.setBrush(c)
@@ -1300,7 +1327,7 @@ def _splice_hole(outer: list, hole: list) -> list:
             if d < best[2]:
                 best = (i, j, d)
     i, j, _ = best
-    return (outer[: i + 1] + hole[j:] + hole[: j + 1] + outer[i:])
+    return outer[: i + 1] + hole[j:] + hole[: j + 1] + outer[i:]
 
 
 def _intersects(geom, other) -> bool:
@@ -1333,7 +1360,14 @@ def _readable_text(bg: QColor) -> QColor:
 
 
 __all__ = [
-    "AnnotationCanvas", "Navigator", "CanvasStyle",
-    "TOOL_SELECT", "TOOL_POLYGON", "TOOL_BRUSH", "TOOL_ERASER",
-    "TOOL_SPLIT", "TOOL_BBOX", "TOOL_PAN",
+    "AnnotationCanvas",
+    "Navigator",
+    "CanvasStyle",
+    "TOOL_SELECT",
+    "TOOL_POLYGON",
+    "TOOL_BRUSH",
+    "TOOL_ERASER",
+    "TOOL_SPLIT",
+    "TOOL_BBOX",
+    "TOOL_PAN",
 ]

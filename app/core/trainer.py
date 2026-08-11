@@ -1,4 +1,5 @@
 """Train lai mo hinh Ultralytics ngay trong ung dung."""
+
 from __future__ import annotations
 
 import time
@@ -17,7 +18,7 @@ class TrainConfig:
     epochs: int = 100
     batch: int = 16
     imgsz: int = 640
-    optimizer: str = "auto"          # auto | SGD | Adam | AdamW | RMSProp | NAdam
+    optimizer: str = "auto"  # auto | SGD | Adam | AdamW | RMSProp | NAdam
     lr0: float = 0.01
     lrf: float = 0.01
     momentum: float = 0.937
@@ -50,7 +51,7 @@ class TrainConfig:
     mixup: float = 0.0
 
     @classmethod
-    def from_dict(cls, data: dict) -> "TrainConfig":
+    def from_dict(cls, data: dict) -> TrainConfig:
         known = set(cls.__dataclass_fields__)
         return cls(**{k: v for k, v in data.items() if k in known})
 
@@ -84,14 +85,30 @@ class TrainConfig:
             kw["name"] = self.run_name
         if self.augment:
             kw.update(
-                hsv_h=self.hsv_h, hsv_s=self.hsv_s, hsv_v=self.hsv_v,
-                degrees=self.degrees, translate=self.translate, scale=self.scale,
-                fliplr=self.fliplr, flipud=self.flipud,
-                mosaic=self.mosaic, mixup=self.mixup,
+                hsv_h=self.hsv_h,
+                hsv_s=self.hsv_s,
+                hsv_v=self.hsv_v,
+                degrees=self.degrees,
+                translate=self.translate,
+                scale=self.scale,
+                fliplr=self.fliplr,
+                flipud=self.flipud,
+                mosaic=self.mosaic,
+                mixup=self.mixup,
             )
         else:
-            kw.update(hsv_h=0.0, hsv_s=0.0, hsv_v=0.0, degrees=0.0, translate=0.0,
-                      scale=0.0, fliplr=0.0, flipud=0.0, mosaic=0.0, mixup=0.0)
+            kw.update(
+                hsv_h=0.0,
+                hsv_s=0.0,
+                hsv_v=0.0,
+                degrees=0.0,
+                translate=0.0,
+                scale=0.0,
+                fliplr=0.0,
+                flipud=0.0,
+                mosaic=0.0,
+                mixup=0.0,
+            )
         return kw
 
 
@@ -118,8 +135,10 @@ def disable_integration_callbacks(log_cb=None) -> None:
         _noop._als_patched = True
         ul_callbacks.add_integration_callbacks = _noop
         if log_cb:
-            log_cb("Da tat cac callback tich hop ben thu ba (ray/wandb/comet/...) "
-                   "de tranh xung dot phien ban.")
+            log_cb(
+                "Da tat cac callback tich hop ben thu ba (ray/wandb/comet/...) "
+                "de tranh xung dot phien ban."
+            )
     except Exception as exc:  # pragma: no cover
         log.debug("Khong tat duoc integration callbacks: %s", exc)
 
@@ -140,10 +159,12 @@ class EpochMetrics:
     elapsed: float = 0.0
 
     def as_line(self) -> str:
-        return (f"[{self.epoch}/{self.total_epochs}] "
-                f"box={self.box_loss:.3f} seg={self.seg_loss:.3f} cls={self.cls_loss:.3f} | "
-                f"mAP50={self.map50:.3f} mAP50-95={self.map5095:.3f} "
-                f"P={self.precision:.3f} R={self.recall:.3f}")
+        return (
+            f"[{self.epoch}/{self.total_epochs}] "
+            f"box={self.box_loss:.3f} seg={self.seg_loss:.3f} cls={self.cls_loss:.3f} | "
+            f"mAP50={self.map50:.3f} mAP50-95={self.map5095:.3f} "
+            f"P={self.precision:.3f} R={self.recall:.3f}"
+        )
 
 
 @dataclass
@@ -175,7 +196,7 @@ class ModelTrainer:
             trainer = getattr(self._model, "trainer", None)
             if trainer is not None:
                 trainer.stop_training = True
-                setattr(trainer, "stop", True)
+                trainer.stop = True
         except Exception:
             pass
 
@@ -211,6 +232,7 @@ class ModelTrainer:
             self._model = YOLO(weights)
         except Exception as exc:
             from app.utils.paths import weights_dir
+
             candidate = weights if Path(weights).exists() else str(weights_dir() / weights)
             if purge_corrupt_weight(candidate):
                 _log(f"File trong so hong, dang tai lai: {Path(candidate).name}")
@@ -221,8 +243,10 @@ class ModelTrainer:
         _log(f"Model goc: {weights}")
         _log(f"Dataset  : {cfg.data_yaml}")
         kwargs = cfg.to_ultralytics_kwargs()
-        _log(f"Thiet bi : {kwargs['device']} | epochs={cfg.epochs} batch={cfg.batch} "
-             f"imgsz={cfg.imgsz} optimizer={cfg.optimizer}")
+        _log(
+            f"Thiet bi : {kwargs['device']} | epochs={cfg.epochs} batch={cfg.batch} "
+            f"imgsz={cfg.imgsz} optimizer={cfg.optimizer}"
+        )
 
         self._install_callbacks(progress_cb, _log, metric_cb, t0)
 
@@ -250,7 +274,8 @@ class ModelTrainer:
         result.elapsed = time.time() - t0
         result.ok = not self._cancelled
         result.message = result.message or (
-            "Da dung giua chung." if self._cancelled else "Train hoan tat.")
+            "Da dung giua chung." if self._cancelled else "Train hoan tat."
+        )
         _log(f"{result.message} Thoi gian: {result.elapsed / 60:.1f} phut")
         if result.best_weights:
             _log(f"Trong so tot nhat: {result.best_weights}")
@@ -263,18 +288,20 @@ class ModelTrainer:
 
         def safe(fn):
             """Loi trong callback cua ta khong duoc phep lam sap qua trinh train."""
+
             def wrapper(trainer):
                 try:
                     fn(trainer)
                 except Exception as exc:  # pragma: no cover
                     log.warning("Callback %s loi: %s", fn.__name__, exc)
+
             wrapper.__name__ = getattr(fn, "__name__", "callback")
             return wrapper
 
         def on_epoch_end(trainer):
             if self._cancelled:
                 trainer.stop_training = True
-                setattr(trainer, "stop", True)
+                trainer.stop = True
                 return
             epoch = int(getattr(trainer, "epoch", 0)) + 1
             m = EpochMetrics(epoch=epoch, total_epochs=total, elapsed=time.time() - t0)
@@ -315,7 +342,7 @@ class ModelTrainer:
         def on_batch_end(trainer):
             if self._cancelled:
                 trainer.stop_training = True
-                setattr(trainer, "stop", True)
+                trainer.stop = True
 
         def on_train_start(trainer):
             _log(f"Bat dau train - luu ket qua tai: {getattr(trainer, 'save_dir', '?')}")
@@ -342,7 +369,8 @@ def validate_dataset(data_yaml: str) -> tuple[bool, str]:
         return False, "Khong tim thay data.yaml."
     try:
         import yaml
-        with open(p, "r", encoding="utf-8") as fh:
+
+        with open(p, encoding="utf-8") as fh:
             data = yaml.safe_load(fh) or {}
     except Exception as exc:
         return False, f"Doc data.yaml loi: {exc}"

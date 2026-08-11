@@ -2,6 +2,7 @@
 
 Ho tro: YOLO Detection, YOLO Segmentation, COCO JSON, Pascal VOC XML, PNG Mask.
 """
+
 from __future__ import annotations
 
 import json
@@ -38,10 +39,10 @@ class ExportConfig:
     exclude_blurry: bool = False
     blur_threshold: float = 60.0
     min_confidence: float = 0.0
-    class_ids: list[int] = field(default_factory=list)   # rong = tat ca
+    class_ids: list[int] = field(default_factory=list)  # rong = tat ca
     dataset_name: str = "dataset"
     write_yaml: bool = True
-    flat_layout: bool = False     # khong chia train/val
+    flat_layout: bool = False  # khong chia train/val
 
 
 @dataclass
@@ -96,14 +97,15 @@ class DatasetExporter:
         if writer is None:
             raise ValueError(f"Dinh dang khong ho tro: {cfg.fmt}")
 
-        result = ExportResult(output_dir=str(out_dir), fmt=cfg.fmt,
-                              n_classes=len(classes))
+        result = ExportResult(output_dir=str(out_dir), fmt=cfg.fmt, n_classes=len(classes))
         result.splits = {k: len(v) for k, v in splits.items()}
         writer(out_dir, splits, classes, result, progress_cb, _log)
         result.cancelled = self._cancelled
         result.elapsed = time.time() - t0
-        _log(f"Hoan tat sau {result.elapsed:.1f}s: {result.n_images} anh, "
-             f"{result.n_objects} doi tuong.")
+        _log(
+            f"Hoan tat sau {result.elapsed:.1f}s: {result.n_images} anh, "
+            f"{result.n_objects} doi tuong."
+        )
         self.repo.log_history("export", f"{cfg.fmt} -> {out_dir}")
         return result
 
@@ -117,14 +119,11 @@ class DatasetExporter:
     def _select_images(self) -> list[ImageRecord]:
         cfg = self.cfg
         status = IMG_APPROVED if cfg.only_approved else None
-        images = self.repo.images(status=status,
-                                  include_duplicates=not cfg.exclude_duplicates)
+        images = self.repo.images(status=status, include_duplicates=not cfg.exclude_duplicates)
         if not cfg.only_approved and not cfg.include_unlabeled:
-            images = [im for im in images
-                      if im.status in (IMG_AUTO, IMG_REVIEW, IMG_APPROVED)]
+            images = [im for im in images if im.status in (IMG_AUTO, IMG_REVIEW, IMG_APPROVED)]
         if cfg.exclude_blurry:
-            images = [im for im in images
-                      if not (0 < im.blur_score < cfg.blur_threshold)]
+            images = [im for im in images if not (0 < im.blur_score < cfg.blur_threshold)]
         return [im for im in images if Path(im.path).exists()]
 
     def _split(self, images: list[ImageRecord]) -> dict[str, list[ImageRecord]]:
@@ -137,9 +136,9 @@ class DatasetExporter:
         n_val = int(n * cfg.val_split)
         n_test = int(n * cfg.test_split)
         n_train = max(0, n - n_val - n_test)
-        out = {"train": items[:n_train], "val": items[n_train:n_train + n_val]}
+        out = {"train": items[:n_train], "val": items[n_train : n_train + n_val]}
         if n_test:
-            out["test"] = items[n_train + n_val:]
+            out["test"] = items[n_train + n_val :]
         return {k: v for k, v in out.items() if v}
 
     def _annotations(self, image: ImageRecord, class_map: dict[int, int]) -> list[Annotation]:
@@ -169,7 +168,7 @@ class DatasetExporter:
         class_map = {c.id: i for i, c in enumerate(classes)}
         total = sum(len(v) for v in splits.values())
         done = 0
-        kpt_shape = [0, 3]      # suy ra tu du lieu that de ghi vao data.yaml
+        kpt_shape = [0, 3]  # suy ra tu du lieu that de ghi vao data.yaml
 
         for split, items in splits.items():
             img_dir = ensure_dir(out_dir / "images" / split)
@@ -249,21 +248,19 @@ class DatasetExporter:
             result.yaml_path = str(yaml_path)
             _log(f"Da ghi {yaml_path.name}")
 
-        (out_dir / "classes.txt").write_text(
-            "\n".join(c.name for c in classes), encoding="utf-8")
+        (out_dir / "classes.txt").write_text("\n".join(c.name for c in classes), encoding="utf-8")
         if progress_cb:
             progress_cb(total, total, "Hoan tat")
 
     # =========================================================== COCO ======
     def _export_coco(self, out_dir, splits, classes, result, progress_cb, _log):
-        class_map = {c.id: i + 1 for i, c in enumerate(classes)}   # COCO id bat dau tu 1
+        class_map = {c.id: i + 1 for i, c in enumerate(classes)}  # COCO id bat dau tu 1
         ann_dir = ensure_dir(out_dir / "annotations")
         total = sum(len(v) for v in splits.values())
         done = 0
 
         categories = [
-            {"id": class_map[c.id], "name": c.name, "supercategory": "object"}
-            for c in classes
+            {"id": class_map[c.id], "name": c.name, "supercategory": "object"} for c in classes
         ]
         n_kpt = 0
 
@@ -277,7 +274,9 @@ class DatasetExporter:
                     "date_created": time.strftime("%Y-%m-%dT%H:%M:%S"),
                 },
                 "licenses": [{"id": 1, "name": "Unknown", "url": ""}],
-                "images": [], "annotations": [], "categories": categories,
+                "images": [],
+                "annotations": [],
+                "categories": categories,
             }
             ann_id = 1
             for img_id, im in enumerate(items, start=1):
@@ -285,10 +284,15 @@ class DatasetExporter:
                     return
                 src = Path(im.path)
                 self._copy_image(src, img_dir)
-                coco["images"].append({
-                    "id": img_id, "file_name": src.name,
-                    "width": im.width, "height": im.height, "license": 1,
-                })
+                coco["images"].append(
+                    {
+                        "id": img_id,
+                        "file_name": src.name,
+                        "width": im.width,
+                        "height": im.height,
+                        "license": 1,
+                    }
+                )
                 for a in self._annotations(im, class_map):
                     x1, y1, x2, y2 = a.bbox
                     w, h = max(0.0, x2 - x1), max(0.0, y2 - y1)
@@ -296,19 +300,26 @@ class DatasetExporter:
                     if len(a.polygon) >= 6:
                         seg = [[round(float(v), 2) for v in a.polygon]]
                     entry = {
-                        "id": ann_id, "image_id": img_id,
+                        "id": ann_id,
+                        "image_id": img_id,
                         "category_id": class_map[a.class_id],
                         "bbox": [round(x1, 2), round(y1, 2), round(w, 2), round(h, 2)],
                         "area": round(float(a.area or w * h), 2),
-                        "segmentation": seg, "iscrowd": 0,
+                        "segmentation": seg,
+                        "iscrowd": 0,
                         "score": round(float(a.confidence), 4),
                     }
                     kp, _dim = _keypoints(a)
                     if kp:
                         flat = []
                         for x, y, v in kp:
-                            flat.extend([round(float(x), 2), round(float(y), 2),
-                                         int(v if v in (0, 1, 2) else 2)])
+                            flat.extend(
+                                [
+                                    round(float(x), 2),
+                                    round(float(y), 2),
+                                    int(v if v in (0, 1, 2) else 2),
+                                ]
+                            )
                         entry["keypoints"] = flat
                         entry["num_keypoints"] = sum(1 for _x, _y, v in kp if v > 0)
                         n_kpt = max(n_kpt, len(kp))
@@ -357,8 +368,9 @@ class DatasetExporter:
                 ET.SubElement(size, "width").text = str(im.width)
                 ET.SubElement(size, "height").text = str(im.height)
                 ET.SubElement(size, "depth").text = "3"
-                ET.SubElement(root, "segmented").text = "1" if any(
-                    len(a.polygon) >= 6 for a in anns) else "0"
+                ET.SubElement(root, "segmented").text = (
+                    "1" if any(len(a.polygon) >= 6 for a in anns) else "0"
+                )
 
                 for a in anns:
                     obj = ET.SubElement(root, "object")
@@ -381,16 +393,16 @@ class DatasetExporter:
                     result.n_objects += 1
 
                 _indent(root)
-                ET.ElementTree(root).write(xml_dir / f"{src.stem}.xml",
-                                           encoding="utf-8", xml_declaration=True)
+                ET.ElementTree(root).write(
+                    xml_dir / f"{src.stem}.xml", encoding="utf-8", xml_declaration=True
+                )
                 names.append(src.stem)
                 result.n_images += 1
                 done += 1
                 if progress_cb and done % 10 == 0:
                     progress_cb(done, total, f"{split}: {src.name}")
             (set_dir / f"{split}.txt").write_text("\n".join(names), encoding="utf-8")
-        (out_dir / "classes.txt").write_text("\n".join(c.name for c in classes),
-                                             encoding="utf-8")
+        (out_dir / "classes.txt").write_text("\n".join(c.name for c in classes), encoding="utf-8")
         if progress_cb:
             progress_cb(total, total, "Hoan tat")
 
@@ -398,7 +410,7 @@ class DatasetExporter:
     def _export_mask(self, out_dir, splits, classes, result, progress_cb, _log):
         import cv2
 
-        class_map = {c.id: i + 1 for i, c in enumerate(classes)}   # 0 = background
+        class_map = {c.id: i + 1 for i, c in enumerate(classes)}  # 0 = background
         total = sum(len(v) for v in splits.values())
         done = 0
 
@@ -453,6 +465,7 @@ def _obb_corners(ann) -> list[tuple[float, float]]:
     if len(pts) >= 3:
         try:
             import cv2
+
             rect = cv2.minAreaRect(np.asarray(pts, dtype=np.float32))
             return [(float(x), float(y)) for x, y in cv2.boxPoints(rect)]
         except Exception:
@@ -497,17 +510,27 @@ def _indent(elem, level: int = 0) -> None:
         elem.tail = pad
 
 
-def build_training_yaml(repo: ProjectRepository, out_dir: Path, val_split: float = 0.2,
-                        test_split: float = 0.0, seg: bool = True,
-                        only_approved: bool = False, progress_cb=None,
-                        log_cb=None) -> str:
+def build_training_yaml(
+    repo: ProjectRepository,
+    out_dir: Path,
+    val_split: float = 0.2,
+    test_split: float = 0.0,
+    seg: bool = True,
+    only_approved: bool = False,
+    progress_cb=None,
+    log_cb=None,
+) -> str:
     """Tien ich: dung nhanh dataset YOLO tu project de train ngay trong app."""
     cfg = ExportConfig(
         fmt="yolo_seg" if seg else "yolo_det",
-        output_dir=str(out_dir.parent), dataset_name=out_dir.name,
-        val_split=val_split, test_split=test_split,
+        output_dir=str(out_dir.parent),
+        dataset_name=out_dir.name,
+        val_split=val_split,
+        test_split=test_split,
         train_split=max(0.0, 1.0 - val_split - test_split),
-        only_approved=only_approved, copy_images=True, write_yaml=True,
+        only_approved=only_approved,
+        copy_images=True,
+        write_yaml=True,
     )
     res = DatasetExporter(repo, cfg).run(progress_cb=progress_cb, log_cb=log_cb)
     return res.yaml_path

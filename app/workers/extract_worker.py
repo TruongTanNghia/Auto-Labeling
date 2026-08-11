@@ -1,4 +1,5 @@
 """Worker: cat frame tu video / quet thu muc anh va nap vao project."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -19,10 +20,16 @@ from app.workers.base import BaseWorker
 class ExtractWorker(BaseWorker):
     """Cat frame tu mot hoac nhieu video, sau do them anh vao project."""
 
-    preview = Signal(str)   # duong dan anh de hien thi xem truoc
+    preview = Signal(str)  # duong dan anh de hien thi xem truoc
 
-    def __init__(self, repo: ProjectRepository, videos: list[str],
-                 config: ExtractConfig, output_dir: str = "", parent=None) -> None:
+    def __init__(
+        self,
+        repo: ProjectRepository,
+        videos: list[str],
+        config: ExtractConfig,
+        output_dir: str = "",
+        parent=None,
+    ) -> None:
         super().__init__(parent)
         self.repo = repo
         self.videos = list(videos)
@@ -53,7 +60,8 @@ class ExtractWorker(BaseWorker):
             cfg.prefix = name if n_videos > 1 else cfg.prefix
             self._extractor = FrameExtractor(cfg)
             res = self._extractor.extract(
-                video, out_dir,
+                video,
+                out_dir,
                 progress_cb=lambda c, t, m: self.emit_progress(c, t, m),
                 log_cb=self.emit_log,
                 preview_cb=self.preview.emit,
@@ -76,8 +84,7 @@ class ExtractWorker(BaseWorker):
             self.emit_log(f"Them {len(total_result.saved)} anh vao project ...")
             self.repo.add_images_bulk(total_result.saved)
             self.repo.refresh_stats()
-            self.repo.log_history(
-                "extract", f"{total_result.n_saved} anh tu {n_videos} video")
+            self.repo.log_history("extract", f"{total_result.n_saved} anh tu {n_videos} video")
             self.repo.touch()
         return total_result
 
@@ -85,9 +92,14 @@ class ExtractWorker(BaseWorker):
 class ScanFolderWorker(BaseWorker):
     """Quet thu muc anh co san: do chat luong, danh dau trung, nap vao project."""
 
-    def __init__(self, repo: ProjectRepository, paths: list[str],
-                 config: ExtractConfig, copy_into_project: bool = False,
-                 parent=None) -> None:
+    def __init__(
+        self,
+        repo: ProjectRepository,
+        paths: list[str],
+        config: ExtractConfig,
+        copy_into_project: bool = False,
+        parent=None,
+    ) -> None:
         super().__init__(parent)
         self.repo = repo
         self.paths = list(paths)
@@ -109,7 +121,8 @@ class ScanFolderWorker(BaseWorker):
 
         self.stage.emit("Dang phan tich chat luong anh ...")
         res = scan_folder_records(
-            paths, self.cfg,
+            paths,
+            self.cfg,
             progress_cb=lambda c, t, m: self.emit_progress(c, t, m),
             log_cb=self.emit_log,
             cancel_check=lambda: self.cancelled,
@@ -122,5 +135,6 @@ class ScanFolderWorker(BaseWorker):
             self.repo.touch()
         self.emit_log(
             f"Da nap {res.n_saved} anh | trung: {res.n_duplicate} | "
-            f"mo: {res.n_blurry} | toi: {res.n_dark}")
+            f"mo: {res.n_blurry} | toi: {res.n_dark}"
+        )
         return res

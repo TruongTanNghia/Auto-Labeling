@@ -1,4 +1,5 @@
 """Worker: tu dong gan nhan bang YOLO (+ plugin tinh chinh tuy chon)."""
+
 from __future__ import annotations
 
 import time
@@ -41,8 +42,9 @@ class AutoLabelResult:
 class ModelLoadWorker(BaseWorker):
     """Nap model o thread rieng (tai file .pt lan dau co the mat vai chuc giay)."""
 
-    def __init__(self, engine: YoloEngine, weights: str, task: str, device: str,
-                 parent=None) -> None:
+    def __init__(
+        self, engine: YoloEngine, weights: str, task: str, device: str, parent=None
+    ) -> None:
         super().__init__(parent)
         self.engine = engine
         self.weights = weights
@@ -58,16 +60,25 @@ class ModelLoadWorker(BaseWorker):
 class AutoLabelWorker(BaseWorker):
     """Chay suy luan tren danh sach anh va ghi annotation vao project."""
 
-    preview = Signal(str, object)   # image_path, list[Detection]
-    image_done = Signal(int, int, float)   # image_id, n_objects, max_conf
+    preview = Signal(str, object)  # image_path, list[Detection]
+    image_done = Signal(int, int, float)  # image_id, n_objects, max_conf
 
-    def __init__(self, repo: ProjectRepository, engine: YoloEngine, image_ids: list[int],
-                 infer_cfg: InferenceConfig, review_threshold: float = 0.6,
-                 low_conf_threshold: float = 0.35, overwrite: bool = True,
-                 plugin_key: str = "", plugin_prompt: str = "",
-                 class_name_map: dict | None = None,
-                 use_tracking: bool = False, tracker_type: str = "botsort.yaml",
-                 parent=None) -> None:
+    def __init__(
+        self,
+        repo: ProjectRepository,
+        engine: YoloEngine,
+        image_ids: list[int],
+        infer_cfg: InferenceConfig,
+        review_threshold: float = 0.6,
+        low_conf_threshold: float = 0.35,
+        overwrite: bool = True,
+        plugin_key: str = "",
+        plugin_prompt: str = "",
+        class_name_map: dict | None = None,
+        use_tracking: bool = False,
+        tracker_type: str = "botsort.yaml",
+        parent=None,
+    ) -> None:
         super().__init__(parent)
         self.repo = repo
         self.engine = engine
@@ -114,8 +125,7 @@ class AutoLabelWorker(BaseWorker):
                     plugin = None
                 else:
                     self.stage.emit(f"Dang nap plugin {plugin.info.name} ...")
-                    plugin.load(PluginContext(device=self.engine.device),
-                                log_cb=self.emit_log)
+                    plugin.load(PluginContext(device=self.engine.device), log_cb=self.emit_log)
 
         # Dam bao class trong project khop voi class cua model
         self.stage.emit("Dang dong bo danh sach class ...")
@@ -138,19 +148,23 @@ class AutoLabelWorker(BaseWorker):
 
             try:
                 if self.use_tracking:
-                    dets = self.engine.track(rec.path, tracker=self.tracker_type, config=self.cfg, persist=True)
+                    dets = self.engine.track(
+                        rec.path, tracker=self.tracker_type, config=self.cfg, persist=True
+                    )
                 elif self.cfg.sahi_enabled:
-                    def _tile_cb(tile_idx: int, total_tiles: int) -> None:
+
+                    def _tile_cb(tile_idx: int, total_tiles: int, _i=i, _rec=rec) -> None:
                         self._tile_progress = (tile_idx, max(1, total_tiles))
                         # Phat tien do: moi anh chiem mot doan, trong do tung o la mot buoc nho
                         frac = tile_idx / max(1, total_tiles)
-                        img_progress = i + frac
+                        img_progress = _i + frac
                         self.emit_progress(
-                            img_progress, total,
-                            f"{i + 1}/{total} - {rec.filename} - "
-                            f"o {tile_idx}/{total_tiles}")
-                    dets = self.engine.slice_predict(rec.path, self.cfg,
-                                                     progress_cb=_tile_cb)
+                            img_progress,
+                            total,
+                            f"{_i + 1}/{total} - {_rec.filename} - o {tile_idx}/{total_tiles}",
+                        )
+
+                    dets = self.engine.slice_predict(rec.path, self.cfg, progress_cb=_tile_cb)
                 else:
                     dets = self.engine.predict(rec.path, self.cfg)
             except Exception as exc:
@@ -180,23 +194,23 @@ class AutoLabelWorker(BaseWorker):
             if not self.cfg.sahi_enabled:
                 # Tien do theo anh (binh thuong)
                 self.emit_progress(
-                    i + 1, total,
-                    f"{i + 1}/{total} - {rec.filename} - {len(anns)} doi tuong")
+                    i + 1, total, f"{i + 1}/{total} - {rec.filename} - {len(anns)} doi tuong"
+                )
             else:
                 # Tien do theo anh sau khi hoan thanh (cac buoc giua da emit trong callback)
                 self.emit_progress(
-                    i + 1, total,
-                    f"{i + 1}/{total} - {rec.filename} - {len(anns)} doi tuong")
+                    i + 1, total, f"{i + 1}/{total} - {rec.filename} - {len(anns)} doi tuong"
+                )
 
         res.elapsed = time.time() - t0
         self.repo.refresh_stats()
-        self.repo.log_history(
-            "auto_label", f"{res.n_images} anh, {res.n_objects} doi tuong")
+        self.repo.log_history("auto_label", f"{res.n_images} anh, {res.n_objects} doi tuong")
         self.repo.touch()
         self.emit_log(
             f"Xong: {res.n_images} anh | {res.n_objects} doi tuong | "
             f"can review: {res.n_review} | khong co doi tuong: {res.n_empty} | "
-            f"{res.fps:.1f} anh/s")
+            f"{res.fps:.1f} anh/s"
+        )
         return res
 
     # ------------------------------------------------------------- helper ---
@@ -220,9 +234,13 @@ class AutoLabelWorker(BaseWorker):
         try:
             img = imread_unicode(image_path)
             ctx = PluginContext(
-                image_path=image_path, image=img, detections=dets,
-                class_names=self.engine.class_names, prompt=self.plugin_prompt,
-                device=self.engine.device, confidence=self.cfg.confidence,
+                image_path=image_path,
+                image=img,
+                detections=dets,
+                class_names=self.engine.class_names,
+                prompt=self.plugin_prompt,
+                device=self.engine.device,
+                confidence=self.cfg.confidence,
             )
             out = plugin.annotate(ctx)
             return out if out else dets
@@ -230,8 +248,9 @@ class AutoLabelWorker(BaseWorker):
             self.emit_log(f"Plugin loi ({Path(image_path).name}): {exc}")
             return dets
 
-    def _to_annotations(self, image_id: int, dets: list[Detection],
-                        class_lookup: dict[int, int]) -> tuple[list[Annotation], dict]:
+    def _to_annotations(
+        self, image_id: int, dets: list[Detection], class_lookup: dict[int, int]
+    ) -> tuple[list[Annotation], dict]:
         anns: list[Annotation] = []
         need_review = False
         low_conf = 0
@@ -241,8 +260,7 @@ class AutoLabelWorker(BaseWorker):
         for d in dets:
             class_id = class_lookup.get(d.class_id)
             if class_id is None:
-                name = self.class_name_map.get(
-                    d.class_name, d.class_name) or f"class_{d.class_id}"
+                name = self.class_name_map.get(d.class_name, d.class_name) or f"class_{d.class_id}"
                 class_id = self.repo.add_class(name).id
                 class_lookup[d.class_id] = class_id
             status = ANN_AUTO
@@ -255,24 +273,41 @@ class AutoLabelWorker(BaseWorker):
             classes.append(d.class_name)
 
             ann = Annotation(
-                image_id=image_id, class_id=class_id, class_name=d.class_name,
+                image_id=image_id,
+                class_id=class_id,
+                class_name=d.class_name,
                 shape=SHAPE_POLYGON if len(d.polygon) >= 6 else d.shape,
-                bbox=list(d.bbox), polygon=list(d.polygon), keypoints=list(d.keypoints),
-                confidence=float(d.confidence), status=status, area=d.area, source="yolo",
+                bbox=list(d.bbox),
+                polygon=list(d.polygon),
+                keypoints=list(d.keypoints),
+                confidence=float(d.confidence),
+                status=status,
+                area=d.area,
+                source="yolo",
                 track_id=d.track_id,
             )
             anns.append(ann)
 
-        return anns, {"need_review": need_review, "low_conf": low_conf,
-                      "max_conf": max_conf, "classes": classes}
+        return anns, {
+            "need_review": need_review,
+            "low_conf": low_conf,
+            "max_conf": max_conf,
+            "classes": classes,
+        }
 
 
 class SingleImageInferWorker(BaseWorker):
     """Suy luan mot anh - dung cho nut 'Auto label anh nay' trong Editor."""
 
-    def __init__(self, engine: YoloEngine, image_path: str,
-                 infer_cfg: InferenceConfig, plugin_key: str = "",
-                 plugin_prompt: str = "", parent=None) -> None:
+    def __init__(
+        self,
+        engine: YoloEngine,
+        image_path: str,
+        infer_cfg: InferenceConfig,
+        plugin_key: str = "",
+        plugin_prompt: str = "",
+        parent=None,
+    ) -> None:
         super().__init__(parent)
         self.engine = engine
         self.image_path = image_path
@@ -290,12 +325,14 @@ class SingleImageInferWorker(BaseWorker):
             if plugin is not None:
                 ok, msg = plugin.is_available()
                 if ok:
-                    plugin.load(PluginContext(device=self.engine.device),
-                                log_cb=self.emit_log)
+                    plugin.load(PluginContext(device=self.engine.device), log_cb=self.emit_log)
                     ctx = PluginContext(
-                        image_path=self.image_path, image=imread_unicode(self.image_path),
-                        detections=dets, class_names=self.engine.class_names,
-                        prompt=self.plugin_prompt, device=self.engine.device,
+                        image_path=self.image_path,
+                        image=imread_unicode(self.image_path),
+                        detections=dets,
+                        class_names=self.engine.class_names,
+                        prompt=self.plugin_prompt,
+                        device=self.engine.device,
                         confidence=self.cfg.confidence,
                     )
                     dets = plugin.annotate(ctx) or dets

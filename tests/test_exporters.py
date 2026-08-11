@@ -1,8 +1,10 @@
 """Kiem thu DatasetExporter, DatasetImporter va round-trip 7 dinh dang."""
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
+
 import pytest
 
 from app.core.exporters import DatasetExporter, ExportConfig
@@ -83,7 +85,9 @@ def test_export_obb_pose(repo: ProjectRepository, tmp_dir: Path):
         flat_layout=True,
     )
     r = DatasetExporter(repo, c).run()
-    j = json.loads((Path(r.output_dir) / "annotations" / "instances_all.json").read_text(encoding="utf-8"))
+    j = json.loads(
+        (Path(r.output_dir) / "annotations" / "instances_all.json").read_text(encoding="utf-8")
+    )
     kp_anns = [x for x in j["annotations"] if x.get("keypoints")]
     assert kp_anns
     assert len(kp_anns[0]["keypoints"]) == 9

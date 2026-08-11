@@ -1,4 +1,5 @@
 """Lop co so cho moi tac vu nen - dam bao UI khong bao gio bi khoa."""
+
 from __future__ import annotations
 
 import traceback
@@ -13,11 +14,11 @@ log = get_logger(__name__)
 class BaseWorker(QThread):
     """QThread co san tin hieu tien do / log / ket qua / loi va co che huy."""
 
-    progress = Signal(int, int, str)   # current, total, message
-    message = Signal(str)              # dong log
-    finished_ok = Signal(object)       # ket qua
-    failed = Signal(str)               # thong bao loi
-    stage = Signal(str)                # ten giai doan hien tai
+    progress = Signal(int, int, str)  # current, total, message
+    message = Signal(str)  # dong log
+    finished_ok = Signal(object)  # ket qua
+    failed = Signal(str)  # thong bao loi
+    stage = Signal(str)  # ten giai doan hien tai
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)

@@ -1,4 +1,5 @@
 """Thanh dieu huong ben trai."""
+
 from __future__ import annotations
 
 from PySide6.QtCore import QSize, Qt, Signal
@@ -12,7 +13,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.constants import APP_NAME, APP_TAGLINE, APP_VERSION, COLORS, NAV_ITEMS
+from app.constants import APP_VERSION, COLORS
 from app.theme import icons
 from app.views.widgets.common import StatusDot, label
 
@@ -33,8 +34,7 @@ class NavButton(QPushButton):
         self.toggled.connect(self._on_toggle)
 
     def _on_toggle(self, checked: bool) -> None:
-        self.setIcon(icons.icon(self._icon_name,
-                                "#FFFFFF" if checked else COLORS["text_dim"], 18))
+        self.setIcon(icons.icon(self._icon_name, "#FFFFFF" if checked else COLORS["text_dim"], 18))
 
 
 class Sidebar(QWidget):
@@ -72,6 +72,7 @@ class Sidebar(QWidget):
         # --- dieu huong ---
         from app.constants import get_nav_items
         from app.i18n import tr
+
         self.group = QButtonGroup(self)
         self.group.setExclusive(True)
         self.buttons: dict[str, NavButton] = {}
@@ -94,16 +95,22 @@ class Sidebar(QWidget):
         self.status_row.setSpacing(7)
         self.status_dot = StatusDot(COLORS["text_mute"], 8)
         self.status_row.addWidget(self.status_dot)
-        self.device_label = label(tr("sidebar.checking", "Đang kiểm tra …"), size=11, color=COLORS["text_dim"])
+        self.device_label = label(
+            tr("sidebar.checking", "Đang kiểm tra …"), size=11, color=COLORS["text_dim"]
+        )
         self.status_row.addWidget(self.device_label, 1)
         lay.addLayout(self.status_row)
 
-        self.project_label = label(tr("main.no_project", "Chưa mở project"), size=11, color=COLORS["text_mute"])
+        self.project_label = label(
+            tr("main.no_project", "Chưa mở project"), size=11, color=COLORS["text_mute"]
+        )
         self.project_label.setWordWrap(True)
         lay.addWidget(self.project_label)
         lay.addSpacing(4)
 
-        version = QLabel(f"{tr('settings.about.version', 'Phiên bản {version}', version=APP_VERSION)}")
+        version = QLabel(
+            f"{tr('settings.about.version', 'Phiên bản {version}', version=APP_VERSION)}"
+        )
         version.setObjectName("SidebarFooter")
         lay.addWidget(version)
 

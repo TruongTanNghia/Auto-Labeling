@@ -1,4 +1,5 @@
 """Repository - toan bo nghiep vu truy xuat du lieu project."""
+
 from __future__ import annotations
 
 import json
@@ -39,8 +40,9 @@ class ProjectRepository:
 
     # =================================================== tao / mo project ===
     @classmethod
-    def create(cls, root_dir: str | Path, name: str, description: str = "",
-               task: str = "segment") -> "ProjectRepository":
+    def create(
+        cls, root_dir: str | Path, name: str, description: str = "", task: str = "segment"
+    ) -> ProjectRepository:
         root = Path(root_dir)
         root.mkdir(parents=True, exist_ok=True)
         for sub in ("frames", "images", "exports", "runs", "backups"):
@@ -54,16 +56,23 @@ class ProjectRepository:
             (name, description, str(root), task, ts, ts),
         )
         db.commit()
-        info = ProjectInfo(id=1, name=name, description=description, root_dir=str(root),
-                           db_path=str(root / PROJECT_DB_NAME), created_at=ts,
-                           updated_at=ts, task=task)
+        info = ProjectInfo(
+            id=1,
+            name=name,
+            description=description,
+            root_dir=str(root),
+            db_path=str(root / PROJECT_DB_NAME),
+            created_at=ts,
+            updated_at=ts,
+            task=task,
+        )
         repo = cls(db, info)
         repo.log_history("create_project", name)
         log.info("Da tao project '%s' tai %s", name, root)
         return repo
 
     @classmethod
-    def open(cls, db_path: str | Path) -> "ProjectRepository":
+    def open(cls, db_path: str | Path) -> ProjectRepository:
         p = Path(db_path)
         if p.is_dir():
             p = p / PROJECT_DB_NAME
@@ -74,9 +83,13 @@ class ProjectRepository:
         if row is None:
             raise ValueError("File project khong hop le (thieu bang project).")
         info = ProjectInfo(
-            id=1, name=row["name"], description=row["description"] or "",
-            root_dir=row["root_dir"] or str(p.parent), db_path=str(p),
-            created_at=row["created_at"] or "", updated_at=row["updated_at"] or "",
+            id=1,
+            name=row["name"],
+            description=row["description"] or "",
+            root_dir=row["root_dir"] or str(p.parent),
+            db_path=str(p),
+            created_at=row["created_at"] or "",
+            updated_at=row["updated_at"] or "",
             task=row["task"] or "segment",
             meta=json.loads(row["meta"] or "{}"),
         )
@@ -124,8 +137,10 @@ class ProjectRepository:
 
     def set_meta(self, key: str, value) -> None:
         self.info.meta[key] = value
-        self.db.execute("UPDATE project SET meta=? WHERE id=1",
-                        (json.dumps(self.info.meta, ensure_ascii=False),))
+        self.db.execute(
+            "UPDATE project SET meta=? WHERE id=1",
+            (json.dumps(self.info.meta, ensure_ascii=False),),
+        )
         self.db.commit()
 
     def get_meta(self, key: str, default=None):
@@ -181,17 +196,27 @@ class ProjectRepository:
             out[n] = self.add_class(n)
         return out
 
-    def update_class(self, class_id: int, name: str | None = None, color: str | None = None,
-                     visible: bool | None = None, locked: bool | None = None) -> None:
+    def update_class(
+        self,
+        class_id: int,
+        name: str | None = None,
+        color: str | None = None,
+        visible: bool | None = None,
+        locked: bool | None = None,
+    ) -> None:
         sets, vals = [], []
         if name is not None:
-            sets.append("name=?"); vals.append(name)
+            sets.append("name=?")
+            vals.append(name)
         if color is not None:
-            sets.append("color=?"); vals.append(color)
+            sets.append("color=?")
+            vals.append(color)
         if visible is not None:
-            sets.append("visible=?"); vals.append(int(visible))
+            sets.append("visible=?")
+            vals.append(int(visible))
         if locked is not None:
-            sets.append("locked=?"); vals.append(int(locked))
+            sets.append("locked=?")
+            vals.append(int(locked))
         if not sets:
             return
         vals.append(class_id)
@@ -221,17 +246,41 @@ class ProjectRepository:
         self.db.commit()
 
     # ============================================================= IMAGE ===
-    def add_image(self, path: str | Path, width: int = 0, height: int = 0, source: str = "",
-                  frame_index: int = -1, timestamp: float = 0.0, phash: str = "",
-                  blur_score: float = 0.0, brightness: float = 0.0,
-                  is_duplicate: bool = False, dup_of: int = 0) -> int:
+    def add_image(
+        self,
+        path: str | Path,
+        width: int = 0,
+        height: int = 0,
+        source: str = "",
+        frame_index: int = -1,
+        timestamp: float = 0.0,
+        phash: str = "",
+        blur_score: float = 0.0,
+        brightness: float = 0.0,
+        is_duplicate: bool = False,
+        dup_of: int = 0,
+    ) -> int:
         path = str(Path(path))
         cur = self.db.execute(
             "INSERT OR IGNORE INTO image(path, filename, width, height, source, frame_index, "
             "timestamp, phash, blur_score, brightness, status, is_duplicate, dup_of, "
             "n_objects, created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)",
-            (path, Path(path).name, width, height, source, frame_index, timestamp, phash,
-             blur_score, brightness, IMG_UNLABELED, int(is_duplicate), dup_of, _now()),
+            (
+                path,
+                Path(path).name,
+                width,
+                height,
+                source,
+                frame_index,
+                timestamp,
+                phash,
+                blur_score,
+                brightness,
+                IMG_UNLABELED,
+                int(is_duplicate),
+                dup_of,
+                _now(),
+            ),
         )
         self.db.commit()
         if cur.lastrowid:
@@ -245,12 +294,25 @@ class ProjectRepository:
         ts = _now()
         for r in records:
             p = str(Path(r["path"]))
-            rows.append((
-                p, Path(p).name, r.get("width", 0), r.get("height", 0), r.get("source", ""),
-                r.get("frame_index", -1), r.get("timestamp", 0.0), r.get("phash", ""),
-                r.get("blur_score", 0.0), r.get("brightness", 0.0), IMG_UNLABELED,
-                int(r.get("is_duplicate", False)), r.get("dup_of", 0), 0, ts,
-            ))
+            rows.append(
+                (
+                    p,
+                    Path(p).name,
+                    r.get("width", 0),
+                    r.get("height", 0),
+                    r.get("source", ""),
+                    r.get("frame_index", -1),
+                    r.get("timestamp", 0.0),
+                    r.get("phash", ""),
+                    r.get("blur_score", 0.0),
+                    r.get("brightness", 0.0),
+                    IMG_UNLABELED,
+                    int(r.get("is_duplicate", False)),
+                    r.get("dup_of", 0),
+                    0,
+                    ts,
+                )
+            )
         self.db.executemany(
             "INSERT OR IGNORE INTO image(path, filename, width, height, source, frame_index, "
             "timestamp, phash, blur_score, brightness, status, is_duplicate, dup_of, "
@@ -268,9 +330,16 @@ class ProjectRepository:
         row = self.db.query_one("SELECT * FROM image WHERE path=?", (str(Path(path)),))
         return ImageRecord.from_row(row) if row else None
 
-    def images(self, status: str | None = None, include_duplicates: bool = True,
-               search: str = "", class_id: int | None = None, limit: int = 0,
-               offset: int = 0, order: str = "id ASC") -> list[ImageRecord]:
+    def images(
+        self,
+        status: str | None = None,
+        include_duplicates: bool = True,
+        search: str = "",
+        class_id: int | None = None,
+        limit: int = 0,
+        offset: int = 0,
+        order: str = "id ASC",
+    ) -> list[ImageRecord]:
         sql = "SELECT i.* FROM image i"
         where, params = [], []
         if class_id is not None:
@@ -321,13 +390,15 @@ class ProjectRepository:
         self.db.commit()
 
     def set_images_status(self, image_ids, status: str) -> None:
-        self.db.executemany("UPDATE image SET status=? WHERE id=?",
-                            [(status, i) for i in image_ids])
+        self.db.executemany(
+            "UPDATE image SET status=? WHERE id=?", [(status, i) for i in image_ids]
+        )
         self.db.commit()
 
     def mark_duplicate(self, image_id: int, dup_of: int, flag: bool = True) -> None:
-        self.db.execute("UPDATE image SET is_duplicate=?, dup_of=? WHERE id=?",
-                        (int(flag), dup_of, image_id))
+        self.db.execute(
+            "UPDATE image SET is_duplicate=?, dup_of=? WHERE id=?", (int(flag), dup_of, image_id)
+        )
         self.db.commit()
 
     def set_image_note(self, image_id: int, note: str) -> None:
@@ -352,8 +423,9 @@ class ProjectRepository:
         self.log_history("delete_images", f"{len(ids)} anh")
         return len(ids)
 
-    def neighbor_image(self, image_id: int, direction: int = 1,
-                       include_duplicates: bool = True) -> ImageRecord | None:
+    def neighbor_image(
+        self, image_id: int, direction: int = 1, include_duplicates: bool = True
+    ) -> ImageRecord | None:
         op, order = (">", "ASC") if direction > 0 else ("<", "DESC")
         dup = "" if include_duplicates else " AND is_duplicate=0"
         row = self.db.query_one(
@@ -386,9 +458,21 @@ class ProjectRepository:
             "INSERT INTO annotation(image_id, class_id, shape, bbox, polygon, keypoints, "
             "confidence, status, area, source, track_id, created_at, updated_at) "
             "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (ann.image_id, ann.class_id, ann.shape, json.dumps(ann.bbox),
-             json.dumps(ann.polygon), json.dumps(ann.keypoints), ann.confidence,
-             ann.status, ann.area, ann.source, ann.track_id, ts, ts),
+            (
+                ann.image_id,
+                ann.class_id,
+                ann.shape,
+                json.dumps(ann.bbox),
+                json.dumps(ann.polygon),
+                json.dumps(ann.keypoints),
+                ann.confidence,
+                ann.status,
+                ann.area,
+                ann.source,
+                ann.track_id,
+                ts,
+                ts,
+            ),
         )
         self.db.commit()
         ann.id = cur.lastrowid
@@ -399,9 +483,20 @@ class ProjectRepository:
         self.db.execute(
             "UPDATE annotation SET class_id=?, shape=?, bbox=?, polygon=?, keypoints=?, "
             "confidence=?, status=?, area=?, source=?, track_id=?, updated_at=? WHERE id=?",
-            (ann.class_id, ann.shape, json.dumps(ann.bbox), json.dumps(ann.polygon),
-             json.dumps(ann.keypoints), ann.confidence, ann.status, ann.area,
-             ann.source, ann.track_id, _now(), ann.id),
+            (
+                ann.class_id,
+                ann.shape,
+                json.dumps(ann.bbox),
+                json.dumps(ann.polygon),
+                json.dumps(ann.keypoints),
+                ann.confidence,
+                ann.status,
+                ann.area,
+                ann.source,
+                ann.track_id,
+                _now(),
+                ann.id,
+            ),
         )
         self.db.commit()
 
@@ -422,8 +517,21 @@ class ProjectRepository:
         self.db.execute("DELETE FROM annotation WHERE image_id=?", (image_id,))
         ts = _now()
         rows = [
-            (image_id, a.class_id, a.shape, json.dumps(a.bbox), json.dumps(a.polygon),
-             json.dumps(a.keypoints), a.confidence, a.status, a.area, a.source, a.track_id, ts, ts)
+            (
+                image_id,
+                a.class_id,
+                a.shape,
+                json.dumps(a.bbox),
+                json.dumps(a.polygon),
+                json.dumps(a.keypoints),
+                a.confidence,
+                a.status,
+                a.area,
+                a.source,
+                a.track_id,
+                ts,
+                ts,
+            )
             for a in anns
         ]
         if rows:
@@ -437,16 +545,17 @@ class ProjectRepository:
         self.recount_image(image_id)
 
     def set_annotation_status(self, ann_id: int, status: str) -> None:
-        self.db.execute("UPDATE annotation SET status=?, updated_at=? WHERE id=?",
-                        (status, _now(), ann_id))
+        self.db.execute(
+            "UPDATE annotation SET status=?, updated_at=? WHERE id=?", (status, _now(), ann_id)
+        )
         self.db.commit()
 
     def approve_image(self, image_id: int) -> None:
-        self.db.execute("UPDATE annotation SET status=? WHERE image_id=?",
-                        (ANN_APPROVED, image_id))
+        self.db.execute("UPDATE annotation SET status=? WHERE image_id=?", (ANN_APPROVED, image_id))
         n = int(self.db.scalar("SELECT COUNT(*) FROM annotation WHERE image_id=?", (image_id,)))
-        self.db.execute("UPDATE image SET status=?, n_objects=? WHERE id=?",
-                        (IMG_APPROVED, n, image_id))
+        self.db.execute(
+            "UPDATE image SET status=?, n_objects=? WHERE id=?", (IMG_APPROVED, n, image_id)
+        )
         self.db.commit()
 
     def recount_image(self, image_id: int) -> int:
@@ -457,8 +566,7 @@ class ProjectRepository:
             status = IMG_UNLABELED
         elif n > 0 and status == IMG_UNLABELED:
             status = IMG_AUTO
-        self.db.execute("UPDATE image SET n_objects=?, status=? WHERE id=?",
-                        (n, status, image_id))
+        self.db.execute("UPDATE image SET n_objects=?, status=? WHERE id=?", (n, status, image_id))
         self.db.commit()
         return n
 
@@ -510,9 +618,15 @@ class ProjectRepository:
         total_img = max(1, self.count_images())
         return [
             {
-                "id": r["id"], "index": r["idx"], "name": r["name"], "color": r["color"],
-                "objects": r["n_obj"], "images": r["n_img"], "masks": r["n_mask"] or 0,
-                "avg_area": r["avg_area"], "avg_conf": r["avg_conf"],
+                "id": r["id"],
+                "index": r["idx"],
+                "name": r["name"],
+                "color": r["color"],
+                "objects": r["n_obj"],
+                "images": r["n_img"],
+                "masks": r["n_mask"] or 0,
+                "avg_area": r["avg_area"],
+                "avg_conf": r["avg_conf"],
                 "coverage": 100.0 * r["n_img"] / total_img,
             }
             for r in rows
@@ -569,12 +683,18 @@ class ProjectRepository:
 
     def quality_counts(self, blur_threshold: float, dark_threshold: float) -> dict[str, int]:
         return {
-            "blurry": int(self.db.scalar(
-                "SELECT COUNT(*) FROM image WHERE blur_score > 0 AND blur_score < ?",
-                (blur_threshold,))),
-            "dark": int(self.db.scalar(
-                "SELECT COUNT(*) FROM image WHERE brightness > 0 AND brightness < ?",
-                (dark_threshold,))),
+            "blurry": int(
+                self.db.scalar(
+                    "SELECT COUNT(*) FROM image WHERE blur_score > 0 AND blur_score < ?",
+                    (blur_threshold,),
+                )
+            ),
+            "dark": int(
+                self.db.scalar(
+                    "SELECT COUNT(*) FROM image WHERE brightness > 0 AND brightness < ?",
+                    (dark_threshold,),
+                )
+            ),
             "duplicate": self.duplicate_count(),
         }
 
@@ -592,19 +712,24 @@ class ProjectRepository:
 
     def track_stats(self) -> dict:
         """Thong ke so track va do dai track trung binh."""
-        n_tracks = int(self.db.scalar(
-            "SELECT COUNT(DISTINCT track_id) FROM annotation WHERE track_id IS NOT NULL AND track_id > 0"
-        ))
-        avg_len = float(self.db.scalar(
-            "SELECT COALESCE(AVG(cnt), 0) FROM (SELECT COUNT(*) AS cnt FROM annotation "
-            "WHERE track_id IS NOT NULL AND track_id > 0 GROUP BY track_id)"
-        ))
+        n_tracks = int(
+            self.db.scalar(
+                "SELECT COUNT(DISTINCT track_id) FROM annotation WHERE track_id IS NOT NULL AND track_id > 0"
+            )
+        )
+        avg_len = float(
+            self.db.scalar(
+                "SELECT COALESCE(AVG(cnt), 0) FROM (SELECT COUNT(*) AS cnt FROM annotation "
+                "WHERE track_id IS NOT NULL AND track_id > 0 GROUP BY track_id)"
+            )
+        )
         return {"n_tracks": n_tracks, "avg_track_len": round(avg_len, 1)}
 
     # ============================================================= LICH SU ==
     def log_history(self, action: str, detail: str = "") -> None:
-        self.db.execute("INSERT INTO history(ts, action, detail) VALUES(?,?,?)",
-                        (_now(), action, detail))
+        self.db.execute(
+            "INSERT INTO history(ts, action, detail) VALUES(?,?,?)", (_now(), action, detail)
+        )
         self.db.commit()
 
     def history(self, limit: int = 200) -> list[dict]:

@@ -1,4 +1,5 @@
 """AutoLabel Studio AI - diem khoi chay ung dung."""
+
 from __future__ import annotations
 
 import os
@@ -48,7 +49,8 @@ def main() -> int:
     log.info("Khoi dong %s v%s", APP_NAME, APP_VERSION)
 
     QApplication.setHighDpiScaleFactorRoundingPolicy(
-        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+    )
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setApplicationVersion(APP_VERSION)
@@ -67,6 +69,7 @@ def main() -> int:
     # Ep Ultralytics dung thu muc weights rieng cua ung dung
     try:
         from app.core.inference import configure_ultralytics
+
         configure_ultralytics()
     except Exception as exc:
         log.debug("configure_ultralytics: %s", exc)
@@ -74,6 +77,7 @@ def main() -> int:
     # Nap plugin o nen de khong lam cham khoi dong
     try:
         from app.plugins.base import registry
+
         registry.discover()
     except Exception as exc:
         log.warning("Khong nap duoc plugin: %s", exc)
@@ -81,6 +85,7 @@ def main() -> int:
     controller = AppController()
 
     from app.views.main_window import MainWindow
+
     window = MainWindow(controller)
     window.show()
 
@@ -92,6 +97,7 @@ def main() -> int:
     autoclose = os.environ.get("ALS_AUTOCLOSE_MS")
     if autoclose:
         from PySide6.QtCore import QTimer
+
         cfg.set("general.confirm_on_exit", False)
         QTimer.singleShot(int(autoclose), app.quit)
 

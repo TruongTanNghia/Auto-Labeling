@@ -1,7 +1,9 @@
 """Kiem thu he thong Plugin, SAM Refiner weight picker, Config Lifecycle va Worker integration."""
+
 from __future__ import annotations
 
 import cv2
+
 from app.config import cfg
 from app.core.inference import Detection, InferenceConfig
 from app.models.repository import ProjectRepository
@@ -57,9 +59,7 @@ def test_plugin_dummy_roundtrip(sample_data):
     ctx = PluginContext(
         image_path="x.jpg",
         image=img,
-        detections=[
-            Detection(class_id=0, class_name="a", confidence=0.5, bbox=[0, 0, 10, 10])
-        ],
+        detections=[Detection(class_id=0, class_name="a", confidence=0.5, bbox=[0, 0, 10, 10])],
         class_names=["a"],
         prompt="test prompt",
         device="cpu",

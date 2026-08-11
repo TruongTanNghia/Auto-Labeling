@@ -1,10 +1,8 @@
 """Trang Annotation Editor: sua nhan bang polygon / brush / eraser / split / merge."""
+
 from __future__ import annotations
 
-from pathlib import Path
-
-from app.i18n import tr
-from PySide6.QtCore import QPointF, QSize, Qt, Signal
+from PySide6.QtCore import QPointF, QSize, Qt
 from PySide6.QtGui import QColor, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -12,7 +10,6 @@ from PySide6.QtWidgets import (
     QColorDialog,
     QHBoxLayout,
     QInputDialog,
-    QLabel,
     QListWidget,
     QListWidgetItem,
     QMenu,
@@ -26,13 +23,12 @@ from app.constants import (
     ANN_APPROVED,
     ANN_MANUAL,
     ANN_REVIEW,
-    CLASS_PALETTE,
     COLORS,
-    IMG_APPROVED,
-    IMG_REVIEW,
     IMAGE_STATUS_LABEL,
+    IMG_APPROVED,
 )
 from app.core.inference import InferenceConfig
+from app.i18n import tr
 from app.models.entities import Annotation, ImageRecord
 from app.theme import icons
 from app.views.pages.base_page import BasePage
@@ -52,14 +48,12 @@ from app.views.widgets.common import (
     Field,
     IconButton,
     SliderField,
-    ToolButton,
     combo,
     dspin,
     ghost_button,
     hline,
     label,
     primary_button,
-    section_label,
     vline,
 )
 from app.views.widgets.image_list import ImageListPanel
@@ -88,7 +82,9 @@ class EditorPage(BasePage):
         self.autolabel_btn.clicked.connect(self.auto_label_current)
         self.save_btn = ghost_button(tr("editor.save_shortcut", "Lưu  (Ctrl+S)"), "save")
         self.save_btn.clicked.connect(lambda: self.save_current(toast=True))
-        self.approve_btn = primary_button(tr("editor.approve_next", "Duyệt && sang ảnh sau"), "check")
+        self.approve_btn = primary_button(
+            tr("editor.approve_next", "Duyệt && sang ảnh sau"), "check"
+        )
         self.approve_btn.clicked.connect(self.approve_and_next)
         for b in (self.autolabel_btn, self.save_btn, self.approve_btn):
             self.header.add_action(b)
@@ -113,13 +109,17 @@ class EditorPage(BasePage):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(10)
 
-        img_card = Card(tr("editor.image_card", "Ảnh"), "", "image", margins=(12, 11, 12, 12), spacing=8)
-        self.filter_combo = combo([
-            ("all", tr("editor.filter_all", "Tất cả")),
-            ("review", tr("editor.filter_review", "Cần xem lại")),
-            ("unlabeled", tr("editor.filter_unlabeled", "Chưa gán nhãn")),
-            ("approved", tr("editor.filter_approved", "Đã duyệt")),
-        ])
+        img_card = Card(
+            tr("editor.image_card", "Ảnh"), "", "image", margins=(12, 11, 12, 12), spacing=8
+        )
+        self.filter_combo = combo(
+            [
+                ("all", tr("editor.filter_all", "Tất cả")),
+                ("review", tr("editor.filter_review", "Cần xem lại")),
+                ("unlabeled", tr("editor.filter_unlabeled", "Chưa gán nhãn")),
+                ("approved", tr("editor.filter_approved", "Đã duyệt")),
+            ]
+        )
         self.filter_combo.currentIndexChanged.connect(self.refresh)
         img_card.add(self.filter_combo)
         self.image_list = ImageListPanel(multi=False)
@@ -127,7 +127,13 @@ class EditorPage(BasePage):
         img_card.add(self.image_list, 1)
         lay.addWidget(img_card, 3)
 
-        class_card = Card(tr("editor.class_card", "Lớp đối tượng"), "", "layers", margins=(12, 11, 12, 12), spacing=8)
+        class_card = Card(
+            tr("editor.class_card", "Lớp đối tượng"),
+            "",
+            "layers",
+            margins=(12, 11, 12, 12),
+            spacing=8,
+        )
         self.class_list = QListWidget()
         self.class_list.setSelectionMode(QAbstractItemView.SingleSelection)
         self.class_list.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -185,7 +191,8 @@ class EditorPage(BasePage):
         bar.setObjectName("CardFlat")
         bar.setStyleSheet(
             f"#CardFlat {{ background: {COLORS['surface_alt']};"
-            f"border: 1px solid {COLORS['border']}; border-radius: 11px; }}")
+            f"border: 1px solid {COLORS['border']}; border-radius: 11px; }}"
+        )
         lay = QHBoxLayout(bar)
         lay.setContentsMargins(10, 7, 10, 7)
         lay.setSpacing(6)
@@ -193,20 +200,57 @@ class EditorPage(BasePage):
         self.tool_group = QButtonGroup(self)
         self.tool_group.setExclusive(True)
         self.TOOL_META = {
-            TOOL_SELECT: ("move", tr("editor.tool_select", "Chọn"), "V",
-                          tr("editor.tool_select_desc", "Chọn đối tượng, kéo để di chuyển, kéo đỉnh để chỉnh hình.\nNháy đúp lên cạnh để thêm đỉnh mới.")),
-            TOOL_POLYGON: ("polygon", tr("editor.tool_polygon", "Polygon"), "W",
-                           tr("editor.tool_polygon_desc", "Bấm để thêm từng đỉnh. Chuột phải hoặc Enter để đóng hình,\nBackspace để bỏ đỉnh vừa thêm, Esc để huỷ.")),
-            TOOL_BBOX: ("crop", tr("editor.tool_bbox", "Hộp bao"), "",
-                        tr("editor.tool_bbox_desc", "Kéo chuột để tạo một khung bao chữ nhật.")),
-            TOOL_BRUSH: ("brush", tr("editor.tool_brush", "Cọ vẽ"), "B",
-                         tr("editor.tool_brush_desc", "Tô thêm vào vùng đang chọn. Chưa chọn gì thì tạo vùng mới.\nAlt + cuộn chuột để đổi cỡ cọ.")),
-            TOOL_ERASER: ("eraser", tr("editor.tool_eraser", "Tẩy"), "E",
-                          tr("editor.tool_eraser_desc", "Xoá bớt vùng. Tẩy ở giữa sẽ tạo lỗ trong mask.")),
-            TOOL_SPLIT: ("split", tr("editor.tool_split", "Cắt đôi"), "S",
-                         "Kẻ một đường cắt ngang để tách vùng làm hai."),
-            TOOL_PAN: ("hand", tr("editor.tool_pan", "Di chuyển"), "",
-                       "Kéo để di chuyển ảnh. Cách khác: giữ Space hoặc chuột giữa."),
+            TOOL_SELECT: (
+                "move",
+                tr("editor.tool_select", "Chọn"),
+                "V",
+                tr(
+                    "editor.tool_select_desc",
+                    "Chọn đối tượng, kéo để di chuyển, kéo đỉnh để chỉnh hình.\nNháy đúp lên cạnh để thêm đỉnh mới.",
+                ),
+            ),
+            TOOL_POLYGON: (
+                "polygon",
+                tr("editor.tool_polygon", "Polygon"),
+                "W",
+                tr(
+                    "editor.tool_polygon_desc",
+                    "Bấm để thêm từng đỉnh. Chuột phải hoặc Enter để đóng hình,\nBackspace để bỏ đỉnh vừa thêm, Esc để huỷ.",
+                ),
+            ),
+            TOOL_BBOX: (
+                "crop",
+                tr("editor.tool_bbox", "Hộp bao"),
+                "",
+                tr("editor.tool_bbox_desc", "Kéo chuột để tạo một khung bao chữ nhật."),
+            ),
+            TOOL_BRUSH: (
+                "brush",
+                tr("editor.tool_brush", "Cọ vẽ"),
+                "B",
+                tr(
+                    "editor.tool_brush_desc",
+                    "Tô thêm vào vùng đang chọn. Chưa chọn gì thì tạo vùng mới.\nAlt + cuộn chuột để đổi cỡ cọ.",
+                ),
+            ),
+            TOOL_ERASER: (
+                "eraser",
+                tr("editor.tool_eraser", "Tẩy"),
+                "E",
+                tr("editor.tool_eraser_desc", "Xoá bớt vùng. Tẩy ở giữa sẽ tạo lỗ trong mask."),
+            ),
+            TOOL_SPLIT: (
+                "split",
+                tr("editor.tool_split", "Cắt đôi"),
+                "S",
+                "Kẻ một đường cắt ngang để tách vùng làm hai.",
+            ),
+            TOOL_PAN: (
+                "hand",
+                tr("editor.tool_pan", "Di chuyển"),
+                "",
+                "Kéo để di chuyển ảnh. Cách khác: giữ Space hoặc chuột giữa.",
+            ),
         }
         self.tool_buttons: dict[str, IconButton] = {}
         for key, (icon_name, name, shortcut, tip) in self.TOOL_META.items():
@@ -222,8 +266,9 @@ class EditorPage(BasePage):
         lay.addSpacing(6)
         lay.addWidget(vline())
         lay.addSpacing(6)
-        self.tool_name_label = label(tr("editor.tool_select", "Chọn"), bold=True, size=12,
-                                     color=COLORS["accent_hi"])
+        self.tool_name_label = label(
+            tr("editor.tool_select", "Chọn"), bold=True, size=12, color=COLORS["accent_hi"]
+        )
         self.tool_name_label.setMinimumWidth(78)
         lay.addWidget(self.tool_name_label)
 
@@ -240,16 +285,26 @@ class EditorPage(BasePage):
         lay.addWidget(self.brush_widget)
 
         lay.addStretch(1)
-        self.merge_btn = IconButton("merge", tr("editor.merge_regions", "Gộp vùng  (M)\nGộp các vùng đang chọn thành một"), 17)
+        self.merge_btn = IconButton(
+            "merge",
+            tr("editor.merge_regions", "Gộp vùng  (M)\nGộp các vùng đang chọn thành một"),
+            17,
+        )
         self.merge_btn.setFixedSize(34, 30)
         self.merge_btn.clicked.connect(lambda: self.canvas.merge_selected())
         lay.addWidget(self.merge_btn)
-        self.simplify_btn = IconButton("sparkle", tr("editor.simplify_polygon", "Giản lược\nGiảm số đỉnh của polygon"), 17)
+        self.simplify_btn = IconButton(
+            "sparkle", tr("editor.simplify_polygon", "Giản lược\nGiảm số đỉnh của polygon"), 17
+        )
         self.simplify_btn.setFixedSize(34, 30)
         self.simplify_btn.clicked.connect(lambda: self.canvas.simplify_selected(1.8))
         lay.addWidget(self.simplify_btn)
-        self.delete_btn = IconButton("trash", tr("editor.delete_object", "Xoá  (Delete)\nXoá đối tượng đang chọn"),
-                                     17, color=COLORS["danger"])
+        self.delete_btn = IconButton(
+            "trash",
+            tr("editor.delete_object", "Xoá  (Delete)\nXoá đối tượng đang chọn"),
+            17,
+            color=COLORS["danger"],
+        )
         self.delete_btn.setFixedSize(34, 30)
         self.delete_btn.clicked.connect(lambda: self.canvas.delete_selected())
         lay.addWidget(self.delete_btn)
@@ -267,8 +322,7 @@ class EditorPage(BasePage):
         self.zoom_out_btn.clicked.connect(lambda: self.canvas.zoom_by(1 / 1.2))
         self.fit_btn = IconButton("maximize", tr("editor.fit_view", "Vừa khung  (Ctrl+0)"))
         self.fit_btn.clicked.connect(lambda: self.canvas.fit_to_view())
-        for b in (self.undo_btn, self.redo_btn, self.zoom_in_btn,
-                  self.zoom_out_btn, self.fit_btn):
+        for b in (self.undo_btn, self.redo_btn, self.zoom_in_btn, self.zoom_out_btn, self.fit_btn):
             lay.addWidget(b)
         return bar
 
@@ -287,8 +341,13 @@ class EditorPage(BasePage):
         nav_card.add(self.navigator)
         lay.addWidget(nav_card)
 
-        obj_card = Card(tr("editor.objects_on_image", "Đối tượng trên ảnh"), "", "target",
-                        margins=(12, 11, 12, 12), spacing=8)
+        obj_card = Card(
+            tr("editor.objects_on_image", "Đối tượng trên ảnh"),
+            "",
+            "target",
+            margins=(12, 11, 12, 12),
+            spacing=8,
+        )
         self.object_list = QListWidget()
         self.object_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.object_list.itemSelectionChanged.connect(self._on_object_list_selection)
@@ -297,18 +356,35 @@ class EditorPage(BasePage):
         obj_card.add(self.object_list, 1)
         lay.addWidget(obj_card, 1)
 
-        info_card = Card(tr("editor.properties", "Thuộc tính"), "", "sliders", margins=(12, 11, 12, 12), spacing=8)
+        info_card = Card(
+            tr("editor.properties", "Thuộc tính"),
+            "",
+            "sliders",
+            margins=(12, 11, 12, 12),
+            spacing=8,
+        )
         self.obj_class_combo = combo([])
         self.obj_class_combo.currentIndexChanged.connect(self._apply_class_combo)
         info_card.add(Field(tr("editor.class", "Lớp"), self.obj_class_combo, label_width=88))
         self.obj_conf = dspin(1.0, 0.0, 1.0, 0.01, 3, width=90)
         self.obj_conf.valueChanged.connect(self._apply_confidence)
         info_card.add(Field(tr("editor.confidence", "Độ tin cậy"), self.obj_conf, label_width=88))
-        self.obj_info = label(tr("editor.no_object_selected", "Chưa chọn đối tượng nào"), size=11.5,
-                              color=COLORS["text_mute"], wrap=True)
+        self.obj_info = label(
+            tr("editor.no_object_selected", "Chưa chọn đối tượng nào"),
+            size=11.5,
+            color=COLORS["text_mute"],
+            wrap=True,
+        )
         info_card.add(self.obj_info)
-        self.apply_track_btn = ghost_button(tr("editor.apply_track", "Áp dụng sửa đổi cho track"), "layers")
-        self.apply_track_btn.setToolTip(tr("editor.apply_track_tip", "Đổi lớp của tất cả các đối tượng thuộc cùng track trong dự án"))
+        self.apply_track_btn = ghost_button(
+            tr("editor.apply_track", "Áp dụng sửa đổi cho track"), "layers"
+        )
+        self.apply_track_btn.setToolTip(
+            tr(
+                "editor.apply_track_tip",
+                "Đổi lớp của tất cả các đối tượng thuộc cùng track trong dự án",
+            )
+        )
         self.apply_track_btn.clicked.connect(self._apply_class_to_track)
         self.apply_track_btn.setVisible(False)
         info_card.add(self.apply_track_btn)
@@ -317,32 +393,42 @@ class EditorPage(BasePage):
         self.status_row = QHBoxLayout()
         self.status_row.setSpacing(7)
         self.mark_review_btn = ghost_button(tr("editor.mark_review", "Cần xem lại"), "alert")
-        self.mark_review_btn.setToolTip(tr("editor.mark_review_tip", "Đánh dấu đối tượng đang chọn là cần xem lại"))
+        self.mark_review_btn.setToolTip(
+            tr("editor.mark_review_tip", "Đánh dấu đối tượng đang chọn là cần xem lại")
+        )
         self.mark_review_btn.clicked.connect(lambda: self._set_ann_status(ANN_REVIEW))
         self.mark_ok_btn = ghost_button(tr("editor.mark_ok", "Đã duyệt"), "check")
-        self.mark_ok_btn.setToolTip(tr("editor.mark_ok_tip", "Đánh dấu đối tượng đang chọn là đã duyệt"))
+        self.mark_ok_btn.setToolTip(
+            tr("editor.mark_ok_tip", "Đánh dấu đối tượng đang chọn là đã duyệt")
+        )
         self.mark_ok_btn.clicked.connect(lambda: self._set_ann_status(ANN_APPROVED))
         self.status_row.addWidget(self.mark_review_btn)
         self.status_row.addWidget(self.mark_ok_btn)
         info_card.add(self.status_row)
         lay.addWidget(info_card)
 
-        view_card = Card(tr("editor.display_card", "Hiển thị"), "", "eye", margins=(12, 11, 12, 12), spacing=8)
+        view_card = Card(
+            tr("editor.display_card", "Hiển thị"), "", "eye", margins=(12, 11, 12, 12), spacing=8
+        )
         from app.views.widgets.common import ToggleSwitch
+
         self.show_conf_toggle = ToggleSwitch(cfg.get("annotation.show_confidence", True))
         self.show_label_toggle = ToggleSwitch(cfg.get("annotation.show_labels", True))
-        for text, toggle in ((tr("editor.show_confidence", "Hiện độ tin cậy"), self.show_conf_toggle),
-                             (tr("editor.show_class_name", "Hiện tên lớp"), self.show_label_toggle)):
+        for text, toggle in (
+            (tr("editor.show_confidence", "Hiện độ tin cậy"), self.show_conf_toggle),
+            (tr("editor.show_class_name", "Hiện tên lớp"), self.show_label_toggle),
+        ):
             r = QHBoxLayout()
             r.addWidget(label(text, size=12, color=COLORS["text_dim"]))
             r.addStretch(1)
             r.addWidget(toggle)
             view_card.add(r)
             toggle.toggled.connect(self._apply_view_settings)
-        self.opacity_slider = SliderField(cfg.get("annotation.fill_opacity", 0.35),
-                                          0.0, 0.9, 2)
+        self.opacity_slider = SliderField(cfg.get("annotation.fill_opacity", 0.35), 0.0, 0.9, 2)
         self.opacity_slider.valueChanged.connect(self._apply_view_settings)
-        view_card.add(Field(tr("editor.fill_opacity", "Độ đậm"), self.opacity_slider, label_width=88))
+        view_card.add(
+            Field(tr("editor.fill_opacity", "Độ đậm"), self.opacity_slider, label_width=88)
+        )
         lay.addWidget(view_card)
         return wrap
 
@@ -388,8 +474,11 @@ class EditorPage(BasePage):
         self.image_list.set_images(self._images)
         self._reload_classes()
         if self._images:
-            target = self._image_id if any(i.id == self._image_id for i in self._images) \
+            target = (
+                self._image_id
+                if any(i.id == self._image_id for i in self._images)
                 else self._images[0].id
+            )
             self.image_list.select_id(target)
             if target != self._image_id:
                 self.load_image(target)
@@ -453,7 +542,8 @@ class EditorPage(BasePage):
         self.pos_label.setText(f"{idx + 1} / {len(self._images)}")
         status_text, color = IMAGE_STATUS_LABEL.get(rec.status, ("", COLORS["text_mute"]))
         self.header.set_subtitle(
-            f"{rec.filename}   •   {rec.width}x{rec.height}   •   {status_text}")
+            f"{rec.filename}   •   {rec.width}x{rec.height}   •   {status_text}"
+        )
 
     def _external_image_change(self, image_id: int) -> None:
         if image_id and image_id != self._image_id and self.isVisible():
@@ -478,8 +568,8 @@ class EditorPage(BasePage):
         self.repo.replace_annotations(self._image_id, anns)
         self._dirty = False
         self.image_list.update_item(
-            self._image_id, n_objects=len(anns),
-            status=self.repo.image(self._image_id).status)
+            self._image_id, n_objects=len(anns), status=self.repo.image(self._image_id).status
+        )
         self.ctrl.notify_annotations_changed(self._image_id)
         if toast:
             self.toast(f"Đã lưu {len(anns)} đối tượng.", "success")
@@ -533,8 +623,9 @@ class EditorPage(BasePage):
 
     def _navigate_to(self, image_point: QPointF) -> None:
         c = self.canvas
-        c._offset = QPointF(c.width() / 2 - image_point.x() * c.scale,
-                            c.height() / 2 - image_point.y() * c.scale)
+        c._offset = QPointF(
+            c.width() / 2 - image_point.x() * c.scale, c.height() / 2 - image_point.y() * c.scale
+        )
         c.update()
         self._sync_navigator()
 
@@ -547,11 +638,14 @@ class EditorPage(BasePage):
             show_labels=self.show_label_toggle.isChecked(),
             fill_opacity=self.opacity_slider.value(),
         )
-        cfg.update_section("annotation", {
-            "show_confidence": self.show_conf_toggle.isChecked(),
-            "show_labels": self.show_label_toggle.isChecked(),
-            "fill_opacity": self.opacity_slider.value(),
-        })
+        cfg.update_section(
+            "annotation",
+            {
+                "show_confidence": self.show_conf_toggle.isChecked(),
+                "show_labels": self.show_label_toggle.isChecked(),
+                "fill_opacity": self.opacity_slider.value(),
+            },
+        )
 
     # ======================================================== DANH SACH OBJ ==
     def _refresh_object_list(self) -> None:
@@ -562,8 +656,7 @@ class EditorPage(BasePage):
             conf = f"{a.confidence:.2f}" if a.confidence < 1.0 else "manual"
             track_str = f" [T#{a.track_id}]" if a.track_id is not None else ""
             item = QListWidgetItem(f"  #{i + 1}  {name}{track_str}   ·   {conf}")
-            item.setIcon(_color_icon(self.canvas.class_colors.get(
-                a.class_id, COLORS["accent"])))
+            item.setIcon(_color_icon(self.canvas.class_colors.get(a.class_id, COLORS["accent"])))
             item.setData(OBJ_ROLE, i)
             item.setSizeHint(QSize(0, 27))
             if a.status == ANN_REVIEW:
@@ -579,8 +672,9 @@ class EditorPage(BasePage):
         self._update_object_info(sorted(indices))
 
     def _update_object_info(self, indices) -> None:
-        anns = [self.canvas.annotations[i] for i in indices
-                if 0 <= i < len(self.canvas.annotations)]
+        anns = [
+            self.canvas.annotations[i] for i in indices if 0 <= i < len(self.canvas.annotations)
+        ]
         if not anns:
             self.obj_info.setText("Chưa chọn đối tượng nào")
             self.obj_class_combo.setEnabled(False)
@@ -604,12 +698,14 @@ class EditorPage(BasePage):
             self.obj_info.setText(
                 f"Mã: {a.id or 'mới'}{track_text}   ·   {len(a.points()) or 4} đỉnh\n"
                 f"Kích thước: {a.width:.0f} × {a.height:.0f} px\n"
-                f"Diện tích: {a.area:,.0f} px²")
+                f"Diện tích: {a.area:,.0f} px²"
+            )
             self.apply_track_btn.setVisible(a.track_id is not None)
         else:
             total = sum(x.area for x in anns)
             self.obj_info.setText(
-                f"Đang chọn {len(anns)} đối tượng\nTổng diện tích: {total:,.0f} px²")
+                f"Đang chọn {len(anns)} đối tượng\nTổng diện tích: {total:,.0f} px²"
+            )
             self.apply_track_btn.setVisible(False)
 
     def _object_menu(self, pos) -> None:
@@ -618,15 +714,17 @@ class EditorPage(BasePage):
         menu = QMenu(self)
         act_del = menu.addAction(icons.icon("trash", COLORS["danger"], 16), "Xoá")
         act_merge = menu.addAction(icons.icon("merge", COLORS["text_dim"], 16), "Gộp vùng")
-        act_simplify = menu.addAction(icons.icon("sparkle", COLORS["text_dim"], 16),
-                                      "Giản lược")
-        act_topoly = menu.addAction(icons.icon("polygon", COLORS["text_dim"], 16),
-                                    "Chuyển thành polygon")
+        act_simplify = menu.addAction(icons.icon("sparkle", COLORS["text_dim"], 16), "Giản lược")
+        act_topoly = menu.addAction(
+            icons.icon("polygon", COLORS["text_dim"], 16), "Chuyển thành polygon"
+        )
         selected_anns = self.canvas.selected_annotations()
         act_track = None
         if selected_anns and selected_anns[0].track_id is not None:
             menu.addSeparator()
-            act_track = menu.addAction(icons.icon("layers", COLORS["accent"], 16), "Áp dụng sửa đổi cho track")
+            act_track = menu.addAction(
+                icons.icon("layers", COLORS["accent"], 16), "Áp dụng sửa đổi cho track"
+            )
 
         chosen = menu.exec(self.object_list.mapToGlobal(pos))
         if chosen == act_del:
@@ -681,7 +779,7 @@ class EditorPage(BasePage):
         self._refresh_object_list()
         self.toast(
             f"Đã cập nhật {updated_count} nhãn thuộc Track #{track_id} thành lớp '{class_name}'.",
-            "success"
+            "success",
         )
 
     def _apply_class_combo(self) -> None:
@@ -723,7 +821,7 @@ class EditorPage(BasePage):
             self._assign_class_to_selection(item)
 
     def _add_class(self) -> None:
-        name, ok = QInputDialog.getText(self, "Thêm lớp", "Tên lớp:")
+        name, ok = QInputDialog.getText(self, tr("editor.add_class_title", "Thêm lớp"), tr("editor.class_name_label", "Tên lớp:"))
         if not ok or not name.strip():
             return
         self.repo.add_class(name.strip())
@@ -735,23 +833,25 @@ class EditorPage(BasePage):
             return
         cid = int(item.data(CLASS_ROLE))
         menu = QMenu(self)
-        act_rename = menu.addAction(icons.icon("pen", COLORS["text_dim"], 16), "Đổi tên")
-        act_color = menu.addAction(icons.icon("sparkle", COLORS["text_dim"], 16), "Đổi màu")
-        act_hide = menu.addAction(icons.icon("eye_off", COLORS["text_dim"], 16), "Ẩn / hiện")
+        act_rename = menu.addAction(icons.icon("pen", COLORS["text_dim"], 16), tr("common.rename", "Đổi tên"))
+        act_color = menu.addAction(icons.icon("sparkle", COLORS["text_dim"], 16), tr("common.change_color", "Đổi màu"))
+        act_hide = menu.addAction(icons.icon("eye_off", COLORS["text_dim"], 16), tr("common.hide_show", "Ẩn / hiện"))
         menu.addSeparator()
-        act_del = menu.addAction(icons.icon("trash", COLORS["danger"], 16), "Xoá lớp")
+        act_del = menu.addAction(icons.icon("trash", COLORS["danger"], 16), tr("common.delete_class", "Xoá lớp"))
         chosen = menu.exec(self.class_list.mapToGlobal(pos))
 
         if chosen == act_rename:
-            name, ok = QInputDialog.getText(self, "Đổi tên lớp", "Tên mới:",
-                                            text=item.text().strip())
+            name, ok = QInputDialog.getText(
+                self, tr("editor.rename_class_title", "Đổi tên lớp"), tr("editor.new_name_label", "Tên mới:"), text=item.text().strip()
+            )
             if ok and name.strip():
                 self.repo.update_class(cid, name=name.strip())
                 self.ctrl.notify_classes_changed()
         elif chosen == act_color:
             cd = self.repo.class_by_id(cid)
-            color = QColorDialog.getColor(QColor(cd.color if cd else "#7C5CFF"), self,
-                                          "Chọn màu cho lớp")
+            color = QColorDialog.getColor(
+                QColor(cd.color if cd else "#7C5CFF"), self, tr("editor.choose_class_color", "Chọn màu cho lớp")
+            )
             if color.isValid():
                 self.repo.update_class(cid, color=color.name())
                 self.ctrl.notify_classes_changed()
@@ -762,9 +862,11 @@ class EditorPage(BasePage):
                 self.ctrl.notify_classes_changed()
         elif chosen == act_del:
             from PySide6.QtWidgets import QMessageBox
-            if QMessageBox.question(
-                    self, "Xoá lớp",
-                    "Xoá lớp này và toàn bộ nhãn thuộc nó?") == QMessageBox.Yes:
+
+            if (
+                QMessageBox.question(self, tr("editor.delete_class_title", "Xoá lớp"), tr("editor.delete_class_confirm", "Xoá lớp này và toàn bộ nhãn thuộc nó?"))
+                == QMessageBox.Yes
+            ):
                 self.repo.delete_class(cid)
                 self.ctrl.notify_classes_changed()
                 self.ctrl.notify_images_changed()
@@ -774,7 +876,7 @@ class EditorPage(BasePage):
         if not self._image_id or not self.repo:
             return
         if not self.ctrl.engine.loaded:
-            self.toast("Hãy nạp model ở trang Auto Label trước.", "warning")
+            self.toast(tr("editor.load_model_first", "Hãy nạp model ở trang Auto Label trước."), "warning")
             return
         rec = self.repo.image(self._image_id)
         if rec is None:
@@ -787,28 +889,36 @@ class EditorPage(BasePage):
             min_area_px=cfg.get("inference.min_area_px", 24),
         )
         self.autolabel_btn.setEnabled(False)
-        self._set_status("Đang suy luận …")
+        self._set_status(tr("editor.inferring", "Đang suy luận …"))
         worker = SingleImageInferWorker(self.ctrl.engine, rec.path, icfg)
-        self.ctrl.run_worker("infer_one", worker,
-                             on_done=self._on_single_infer,
-                             on_fail=lambda _m: self.autolabel_btn.setEnabled(True))
+        self.ctrl.run_worker(
+            "infer_one",
+            worker,
+            on_done=self._on_single_infer,
+            on_fail=lambda _m: self.autolabel_btn.setEnabled(True),
+        )
 
     def _on_single_infer(self, detections) -> None:
         self.autolabel_btn.setEnabled(True)
         if not detections:
-            self._set_status("Không tìm thấy đối tượng nào")
+            self._set_status(tr("editor.no_objects_found", "Không tìm thấy đối tượng nào"))
             return
         self.canvas.push_undo()
         classes = {c.name: c for c in self.repo.classes(refresh=True)}
         new_anns = list(self.canvas.annotations)
         for d in detections:
-            cd = classes.get(d.class_name) or self.repo.add_class(
-                d.class_name or "object")
+            cd = classes.get(d.class_name) or self.repo.add_class(d.class_name or "object")
             classes[cd.name] = cd
             a = Annotation(
-                image_id=self._image_id, class_id=cd.id, class_name=cd.name,
-                shape=d.shape, bbox=list(d.bbox), polygon=list(d.polygon),
-                confidence=d.confidence, status="auto", source="yolo",
+                image_id=self._image_id,
+                class_id=cd.id,
+                class_name=cd.name,
+                shape=d.shape,
+                bbox=list(d.bbox),
+                polygon=list(d.polygon),
+                confidence=d.confidence,
+                status="auto",
+                source="yolo",
             )
             a.recompute()
             new_anns.append(a)
@@ -817,7 +927,7 @@ class EditorPage(BasePage):
         self._dirty = True
         self._reload_classes()
         self._refresh_object_list()
-        self._set_status(f"Đã thêm {len(detections)} đối tượng từ model")
+        self._set_status(tr("editor.added_objects_count", "Đã thêm {count} đối tượng từ model", count=len(detections)))
 
     # ================================================================= HOOKS ==
     def on_hide(self) -> None:

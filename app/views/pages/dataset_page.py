@@ -1,21 +1,21 @@
 """Trang Dataset Manager: duyet, loc, don dep va quan ly anh + class."""
+
 from __future__ import annotations
 
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
-from app.i18n import tr
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
     QHeaderView,
+    QMenu,
     QMessageBox,
+    QScrollArea,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QScrollArea,
-    QMenu,
     QWidget,
 )
 
@@ -23,11 +23,11 @@ from app.config import cfg
 from app.constants import (
     COLORS,
     IMG_APPROVED,
-    IMG_AUTO,
     IMG_REVIEW,
     IMG_UNLABELED,
     PAGE_EDITOR,
 )
+from app.i18n import tr
 from app.theme import icons
 from app.views.pages.base_page import BasePage
 from app.views.widgets.charts import BarChart, DonutChart, Series
@@ -39,7 +39,6 @@ from app.views.widgets.common import (
     combo,
     danger_button,
     ghost_button,
-    hline,
     label,
     primary_button,
 )
@@ -80,14 +79,32 @@ class DatasetPage(BasePage):
     def _build_stats(self) -> None:
         row = QHBoxLayout()
         row.setSpacing(11)
-        self.stat_total = StatCard("image", "0", tr("dataset.total_images", "Tổng số ảnh"), COLORS["accent"])
-        self.stat_labeled = StatCard("check_circle", "0", tr("dataset.labeled_images", "Đã gán nhãn"), COLORS["success"])
-        self.stat_unlabeled = StatCard("alert", "0", tr("dataset.unlabeled_images", "Chưa gán nhãn"), COLORS["warning"])
-        self.stat_objects = StatCard("target", "0", tr("dataset.total_objects", "Tổng đối tượng"), COLORS["info"])
-        self.stat_classes = StatCard("layers", "0", tr("dataset.classes_count", "Số lớp"), COLORS["accent_hi"])
-        self.stat_dup = StatCard("copy", "0", tr("dataset.duplicate_images", "Ảnh trùng"), COLORS["danger"])
-        for w in (self.stat_total, self.stat_labeled, self.stat_unlabeled,
-                  self.stat_objects, self.stat_classes, self.stat_dup):
+        self.stat_total = StatCard(
+            "image", "0", tr("dataset.total_images", "Tổng số ảnh"), COLORS["accent"]
+        )
+        self.stat_labeled = StatCard(
+            "check_circle", "0", tr("dataset.labeled_images", "Đã gán nhãn"), COLORS["success"]
+        )
+        self.stat_unlabeled = StatCard(
+            "alert", "0", tr("dataset.unlabeled_images", "Chưa gán nhãn"), COLORS["warning"]
+        )
+        self.stat_objects = StatCard(
+            "target", "0", tr("dataset.total_objects", "Tổng đối tượng"), COLORS["info"]
+        )
+        self.stat_classes = StatCard(
+            "layers", "0", tr("dataset.classes_count", "Số lớp"), COLORS["accent_hi"]
+        )
+        self.stat_dup = StatCard(
+            "copy", "0", tr("dataset.duplicate_images", "Ảnh trùng"), COLORS["danger"]
+        )
+        for w in (
+            self.stat_total,
+            self.stat_labeled,
+            self.stat_unlabeled,
+            self.stat_objects,
+            self.stat_classes,
+            self.stat_dup,
+        ):
             row.addWidget(w)
         self.stat_unlabeled.clicked.connect(lambda: self._set_filter("unlabeled"))
         self.stat_dup.clicked.connect(lambda: self._set_filter("duplicate"))
@@ -101,13 +118,15 @@ class DatasetPage(BasePage):
         bar = QHBoxLayout()
         bar.setSpacing(7)
         self.filter_buttons = {}
-        for key, text in (("all", tr("editor.filter_all", "Tất cả")),
-                          ("labeled", tr("dataset.labeled_images", "Đã gán nhãn")),
-                          ("unlabeled", tr("dataset.unlabeled_images", "Chưa gán nhãn")),
-                          ("review", tr("editor.filter_review", "Cần xem lại")),
-                          ("approved", tr("editor.filter_approved", "Đã duyệt")),
-                          ("duplicate", tr("dataset.duplicate_images", "Trùng")),
-                          ("blurry", "Mờ")):
+        for key, text in (
+            ("all", tr("editor.filter_all", "Tất cả")),
+            ("labeled", tr("dataset.labeled_images", "Đã gán nhãn")),
+            ("unlabeled", tr("dataset.unlabeled_images", "Chưa gán nhãn")),
+            ("review", tr("editor.filter_review", "Cần xem lại")),
+            ("approved", tr("editor.filter_approved", "Đã duyệt")),
+            ("duplicate", tr("dataset.duplicate_images", "Trùng")),
+            ("blurry", "Mờ"),
+        ):
             b = chip_button(text)
             b.setChecked(key == "all")
             b.clicked.connect(lambda _c=False, k=key: self._set_filter(k))
@@ -118,12 +137,18 @@ class DatasetPage(BasePage):
         self.search.setFixedWidth(210)
         self.search.textChanged.connect(self.refresh)
         bar.addWidget(self.search)
-        self.size_combo = combo([(118, tr("dataset.size_small", "Nhỏ")),
-                                 (150, tr("dataset.size_medium", "Vừa")),
-                                 (198, tr("dataset.size_large", "Lớn"))], current=150)
+        self.size_combo = combo(
+            [
+                (118, tr("dataset.size_small", "Nhỏ")),
+                (150, tr("dataset.size_medium", "Vừa")),
+                (198, tr("dataset.size_large", "Lớn")),
+            ],
+            current=150,
+        )
         self.size_combo.setFixedWidth(88)
         self.size_combo.currentIndexChanged.connect(
-            lambda: self.gallery.set_cell_size(self.size_combo.currentData()))
+            lambda: self.gallery.set_cell_size(self.size_combo.currentData())
+        )
         bar.addWidget(self.size_combo)
         card.add(bar)
 
@@ -134,7 +159,11 @@ class DatasetPage(BasePage):
 
         actions = QHBoxLayout()
         actions.setSpacing(8)
-        self.sel_label = label(tr("dataset.no_images_selected", "Chưa chọn ảnh nào"), size=11.5, color=COLORS["text_mute"])
+        self.sel_label = label(
+            tr("dataset.no_images_selected", "Chưa chọn ảnh nào"),
+            size=11.5,
+            color=COLORS["text_mute"],
+        )
         actions.addWidget(self.sel_label)
         actions.addStretch(1)
         self.approve_btn = ghost_button(tr("dataset.approve", "Duyệt"), "check")
@@ -170,21 +199,24 @@ class DatasetPage(BasePage):
         table_card = Card(tr("dataset.class_details", "Chi tiết từng lớp"), "", "list")
         self.class_table = QTableWidget(0, 6)
         self.class_table.setHorizontalHeaderLabels(
-            [tr("dataset.col_class", "Lớp"),
-             tr("dataset.col_images", "Ảnh"),
-             tr("dataset.col_objects", "Đối tượng"),
-             tr("dataset.col_masks", "Mask"),
-             tr("dataset.col_avg_area", "Diện tích TB"),
-             tr("dataset.col_coverage", "Độ phủ")])
+            [
+                tr("dataset.col_class", "Lớp"),
+                tr("dataset.col_images", "Ảnh"),
+                tr("dataset.col_objects", "Đối tượng"),
+                tr("dataset.col_masks", "Mask"),
+                tr("dataset.col_avg_area", "Diện tích TB"),
+                tr("dataset.col_coverage", "Độ phủ"),
+            ]
+        )
         self.class_table.verticalHeader().setVisible(False)
         self.class_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.class_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.class_table.setAlternatingRowColors(True)
-        self.class_table.horizontalHeader().setSectionResizeMode(
-            0, QHeaderView.Stretch)
+        self.class_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         for c in range(1, 6):
             self.class_table.horizontalHeader().setSectionResizeMode(
-                c, QHeaderView.ResizeToContents)
+                c, QHeaderView.ResizeToContents
+            )
         self.class_table.setMinimumHeight(200)
         table_card.add(self.class_table)
         lay.addWidget(table_card, 1)
@@ -220,12 +252,14 @@ class DatasetPage(BasePage):
         self.gallery.set_images(self._images)
 
         stats = repo.class_stats()
-        self.class_bar.set_data([
-            Series(s["name"], s["objects"], s["color"]) for s in stats if s["objects"]
-        ])
+        self.class_bar.set_data(
+            [Series(s["name"], s["objects"], s["color"]) for s in stats if s["objects"]]
+        )
         self.class_donut.set_data(
             [Series(s["name"], s["images"], s["color"]) for s in stats if s["images"]],
-            f"{info.n_images:,}", tr("dashboard.images_unit", "ảnh"))
+            f"{info.n_images:,}",
+            tr("dashboard.images_unit", "ảnh"),
+        )
 
         self.class_table.setRowCount(len(stats))
         for r, s in enumerate(stats):
@@ -235,10 +269,8 @@ class DatasetPage(BasePage):
             self.class_table.setItem(r, 1, QTableWidgetItem(f"{s['images']:,}"))
             self.class_table.setItem(r, 2, QTableWidgetItem(f"{s['objects']:,}"))
             self.class_table.setItem(r, 3, QTableWidgetItem(f"{s['masks']:,}"))
-            self.class_table.setItem(
-                r, 4, QTableWidgetItem(f"{int(s['avg_area']):,} px²"))
-            self.class_table.setItem(
-                r, 5, QTableWidgetItem(f"{s['coverage'] * 100:.1f}%"))
+            self.class_table.setItem(r, 4, QTableWidgetItem(f"{int(s['avg_area']):,} px²"))
+            self.class_table.setItem(r, 5, QTableWidgetItem(f"{s['coverage'] * 100:.1f}%"))
 
     def _filtered_images(self) -> list:
         if not self.repo:
@@ -266,7 +298,9 @@ class DatasetPage(BasePage):
         if not ids:
             self.sel_label.setText(tr("dataset.no_images_selected", "Chưa chọn ảnh nào"))
         else:
-            self.sel_label.setText(tr("dataset.selected_count", "Đang chọn {count} ảnh", count=f"{len(ids):,}"))
+            self.sel_label.setText(
+                tr("dataset.selected_count", "Đang chọn {count} ảnh", count=f"{len(ids):,}")
+            )
 
     def _open_in_editor(self, image_id: int) -> None:
         self.ctrl.set_current_image(image_id)
@@ -302,21 +336,22 @@ class DatasetPage(BasePage):
 
     def _cleanup_menu(self) -> None:
         menu = QMenu(self)
-        a_dup = menu.addAction(icons.icon("copy", COLORS["warning"], 16),
-                               "Xoá tất cả ảnh trùng")
-        a_blur = menu.addAction(icons.icon("alert", COLORS["warning"], 16),
-                                "Xoá ảnh mờ dưới ngưỡng")
-        a_empty = menu.addAction(icons.icon("image", COLORS["text_dim"], 16),
-                                 "Xoá ảnh chưa gán nhãn")
+        a_dup = menu.addAction(icons.icon("copy", COLORS["warning"], 16), "Xoá tất cả ảnh trùng")
+        a_blur = menu.addAction(
+            icons.icon("alert", COLORS["warning"], 16), "Xoá ảnh mờ dưới ngưỡng"
+        )
+        a_empty = menu.addAction(
+            icons.icon("image", COLORS["text_dim"], 16), "Xoá ảnh chưa gán nhãn"
+        )
         menu.addSeparator()
-        a_missing = menu.addAction(icons.icon("refresh", COLORS["text_dim"], 16),
-                                   "Gỡ ảnh không còn tồn tại trên ổ đĩa")
-        a_recount = menu.addAction(icons.icon("target", COLORS["text_dim"], 16),
-                                   "Tính lại số đối tượng")
-        a_backup = menu.addAction(icons.icon("save", COLORS["text_dim"], 16),
-                                  "Sao lưu project")
-        chosen = menu.exec(self.cleanup_btn.mapToGlobal(
-            self.cleanup_btn.rect().bottomLeft()))
+        a_missing = menu.addAction(
+            icons.icon("refresh", COLORS["text_dim"], 16), "Gỡ ảnh không còn tồn tại trên ổ đĩa"
+        )
+        a_recount = menu.addAction(
+            icons.icon("target", COLORS["text_dim"], 16), "Tính lại số đối tượng"
+        )
+        a_backup = menu.addAction(icons.icon("save", COLORS["text_dim"], 16), "Sao lưu project")
+        chosen = menu.exec(self.cleanup_btn.mapToGlobal(self.cleanup_btn.rect().bottomLeft()))
 
         if chosen == a_dup:
             ids = [im.id for im in self.repo.images() if im.is_duplicate]
@@ -343,8 +378,7 @@ class DatasetPage(BasePage):
         if not ids:
             self.toast(f"Không có {what} nào.", "info")
             return
-        if QMessageBox.question(self, "Xác nhận",
-                                f"Xoá {len(ids):,} {what}?") != QMessageBox.Yes:
+        if QMessageBox.question(self, "Xác nhận", f"Xoá {len(ids):,} {what}?") != QMessageBox.Yes:
             return
         n = self.repo.delete_images(ids)
         self.toast(f"Đã xoá {n:,} ảnh.", "success")

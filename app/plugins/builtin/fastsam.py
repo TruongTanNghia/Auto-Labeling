@@ -1,4 +1,5 @@
 """Plugin FastSAM - segment toan anh, nhanh hon SAM nhieu lan."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -106,8 +107,12 @@ class FastSamPlugin(AnnotatorPlugin):
         if self._model is None:
             self.load(ctx)
         source = ctx.image if ctx.image is not None else ctx.image_path
-        kwargs = dict(imgsz=int(self.config("imgsz", 1024)), conf=ctx.confidence,
-                      verbose=False, retina_masks=True)
+        kwargs = dict(
+            imgsz=int(self.config("imgsz", 1024)),
+            conf=ctx.confidence,
+            verbose=False,
+            retina_masks=True,
+        )
         mode = self.config("mode", "refine")
 
         if mode == "refine" and ctx.detections:
@@ -129,12 +134,15 @@ class FastSamPlugin(AnnotatorPlugin):
         if mode == "refine" and ctx.detections:
             out = []
             for i, det in enumerate(ctx.detections):
-                new_det = Detection(class_id=det.class_id, class_name=det.class_name,
-                                    confidence=det.confidence, bbox=list(det.bbox),
-                                    shape=det.shape)
+                new_det = Detection(
+                    class_id=det.class_id,
+                    class_name=det.class_name,
+                    confidence=det.confidence,
+                    bbox=list(det.bbox),
+                    shape=det.shape,
+                )
                 if i < len(data):
-                    polys = mask_to_polygons((data[i] > 0.5).astype(np.uint8),
-                                             min_area, simplify)
+                    polys = mask_to_polygons((data[i] > 0.5).astype(np.uint8), min_area, simplify)
                     if polys:
                         big = max(polys, key=len)
                         new_det.polygon = [float(v) for v in np.asarray(big).flatten()]
@@ -150,10 +158,17 @@ class FastSamPlugin(AnnotatorPlugin):
             for p in polys:
                 arr = np.asarray(p, dtype=np.float32)
                 det = Detection(
-                    class_id=0, class_name=name, confidence=0.5,
-                    polygon=[float(v) for v in arr.flatten()], shape=SHAPE_POLYGON,
-                    bbox=[float(arr[:, 0].min()), float(arr[:, 1].min()),
-                          float(arr[:, 0].max()), float(arr[:, 1].max())],
+                    class_id=0,
+                    class_name=name,
+                    confidence=0.5,
+                    polygon=[float(v) for v in arr.flatten()],
+                    shape=SHAPE_POLYGON,
+                    bbox=[
+                        float(arr[:, 0].min()),
+                        float(arr[:, 1].min()),
+                        float(arr[:, 0].max()),
+                        float(arr[:, 1].max()),
+                    ],
                 )
                 out.append(det)
         return out

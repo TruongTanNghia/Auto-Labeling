@@ -1,4 +1,5 @@
 """Lop co so cho moi trang: header + vung noi dung (cuon duoc tuy chon)."""
+
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
@@ -16,8 +17,7 @@ class BasePage(QWidget):
     ICON = ""
     NEEDS_PROJECT = True
 
-    def __init__(self, controller: AppController, parent=None,
-                 scrollable: bool = True) -> None:
+    def __init__(self, controller: AppController, parent=None, scrollable: bool = True) -> None:
         super().__init__(parent)
         self.ctrl = controller
         self._built = False
@@ -54,9 +54,14 @@ class BasePage(QWidget):
 
         # Man hinh yeu cau mo project - PHAI co loi thoat that su
         from app.i18n import tr
+
         self.no_project = EmptyState(
-            "folder_open", tr("main.no_project", "Chưa mở project nào"),
-            tr("page.no_project_desc", "Mọi thao tác đều nằm trong một project. Hãy tạo project mới hoặc mở project có sẵn để bắt đầu."),
+            "folder_open",
+            tr("main.no_project", "Chưa mở project nào"),
+            tr(
+                "page.no_project_desc",
+                "Mọi thao tác đều nằm trong một project. Hãy tạo project mới hoặc mở project có sẵn để bắt đầu.",
+            ),
             action_text=tr("main.new_project", "Tạo project mới"),
             action2_text=tr("main.open_project", "Mở project có sẵn"),
         )
@@ -101,11 +106,19 @@ class BasePage(QWidget):
         if self.ctrl.has_project:
             return True
         from PySide6.QtWidgets import QMessageBox
+
         from app.i18n import tr
+
         ret = QMessageBox.question(
-            self, tr("main.no_project", "Chưa có project"),
-            tr("page.create_project_prompt", "Mọi dữ liệu đều nằm trong một project. Tạo project mới ngay bây giờ?"),
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+            self,
+            tr("main.no_project", "Chưa có project"),
+            tr(
+                "page.create_project_prompt",
+                "Mọi dữ liệu đều nằm trong một project. Tạo project mới ngay bây giờ?",
+            ),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes,
+        )
         if ret != QMessageBox.Yes:
             return False
         self._request_new_project()

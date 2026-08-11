@@ -18,6 +18,9 @@ source .venv/bin/activate
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements-dev.txt
 
+# Cài đặt pre-commit hook để tự động kiểm tra code trước khi commit
+pip install pre-commit && pre-commit install
+
 python main.py
 ```
 
@@ -49,7 +52,7 @@ Bộ test chạy **offscreen** (không cần màn hình) và **không cần GPU*
 - Tính năng annotation mới nên hoạt động trên hình học Shapely thật (xem `canvas.py`), không chỉ vẽ đè lên ảnh.
 - Plugin mới kế thừa `AnnotatorPlugin` trong `app/plugins/base.py`; khai báo dependency trong `PluginInfo.requires` để ứng dụng báo thiếu thư viện thay vì crash.
 - Thêm test vào `tests/test_pipeline.py` cho nghiệp vụ mới (theo mẫu `check("ten", fn)` có sẵn).
-- Lint: CI chạy `ruff` — lỗi nghiêm trọng (cú pháp, tên chưa định nghĩa) sẽ làm fail build.
+- **Chuẩn hóa code (Lint & Format)**: Sử dụng `pre-commit` để tự động kiểm tra trước khi commit (`pre-commit run --all-files`). CI chạy `ruff check .` và `ruff format --check .` để đảm bảo chất lượng code.
 
 ## Báo lỗi
 

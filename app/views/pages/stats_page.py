@@ -1,9 +1,10 @@
 """Trang Statistics & Export: bieu do thong ke + xuat dataset."""
+
 from __future__ import annotations
 
 import os
 from pathlib import Path
-from app.i18n import tr
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -20,6 +21,7 @@ from PySide6.QtWidgets import (
 from app.config import cfg
 from app.constants import COLORS, EXPORT_FORMATS, LABEL_W_WIDE, get_export_formats
 from app.core.exporters import ExportConfig
+from app.i18n import tr
 from app.views.pages.base_page import BasePage
 from app.views.widgets.charts import (
     BarChart,
@@ -95,6 +97,7 @@ class StatsPage(BasePage):
         from PySide6.QtWidgets import QPushButton
 
         from app.theme import icons
+
         for key, text, icon_name in (
             ("overview", tr("stats.tab_overview", "Tổng quan"), "dashboard"),
             ("classes", tr("stats.tab_classes", "Phân bố lớp"), "layers"),
@@ -134,6 +137,7 @@ class StatsPage(BasePage):
 
     def _scroll(self, inner: QWidget) -> QWidget:
         from PySide6.QtWidgets import QScrollArea
+
         area = QScrollArea()
         area.setWidgetResizable(True)
         area.setFrameShape(QScrollArea.NoFrame)
@@ -150,10 +154,18 @@ class StatsPage(BasePage):
 
         grid = QGridLayout()
         grid.setSpacing(11)
-        self.s_images = StatCard("image", "0", tr("stats.total_images", "Tổng số ảnh"), COLORS["accent"])
-        self.s_objects = StatCard("target", "0", tr("stats.total_objects", "Tổng đối tượng"), COLORS["info"])
-        self.s_masks = StatCard("polygon", "0", tr("stats.total_masks", "Tổng số mask"), COLORS["success"])
-        self.s_avg = StatCard("chart", "0", tr("stats.objects_per_image", "Đối tượng / ảnh"), COLORS["warning"])
+        self.s_images = StatCard(
+            "image", "0", tr("stats.total_images", "Tổng số ảnh"), COLORS["accent"]
+        )
+        self.s_objects = StatCard(
+            "target", "0", tr("stats.total_objects", "Tổng đối tượng"), COLORS["info"]
+        )
+        self.s_masks = StatCard(
+            "polygon", "0", tr("stats.total_masks", "Tổng số mask"), COLORS["success"]
+        )
+        self.s_avg = StatCard(
+            "chart", "0", tr("stats.objects_per_image", "Đối tượng / ảnh"), COLORS["warning"]
+        )
         for i, s in enumerate((self.s_images, self.s_objects, self.s_masks, self.s_avg)):
             grid.addWidget(s, 0, i)
         lay.addLayout(grid)
@@ -166,7 +178,11 @@ class StatsPage(BasePage):
         c1.add(self.ov_donut)
         row.addWidget(c1, 1)
 
-        c2 = Card(tr("stats.size_distribution", "Phân bố kích thước đối tượng"), tr("stats.size_unit_hint", "Diện tích tính bằng px²"), "chart")
+        c2 = Card(
+            tr("stats.size_distribution", "Phân bố kích thước đối tượng"),
+            tr("stats.size_unit_hint", "Diện tích tính bằng px²"),
+            "chart",
+        )
         self.ov_hist = Histogram()
         self.ov_hist.setMinimumHeight(230)
         c2.add(self.ov_hist)
@@ -219,16 +235,25 @@ class StatsPage(BasePage):
         c2.add(self.cls_img_bar)
         row.addWidget(c2, 1)
 
-        c3 = Card(tr("stats.data_balance", "Độ cân bằng dữ liệu"), tr("stats.data_balance_sub", "Tỷ lệ ảnh có chứa lớp đó"), "target")
+        c3 = Card(
+            tr("stats.data_balance", "Độ cân bằng dữ liệu"),
+            tr("stats.data_balance_sub", "Tỷ lệ ảnh có chứa lớp đó"),
+            "target",
+        )
         self.cls_cov = BarChart(horizontal=True)
         self.cls_cov.setMinimumHeight(230)
         c3.add(self.cls_cov)
         row.addWidget(c3, 1)
         lay.addLayout(row)
 
-        c4 = Card(tr("stats.conf_dist", "Phân bố độ tin cậy"), tr("stats.conf_dist_sub", "Độ tin cậy của các dự đoán từ model"), "sliders")
-        self.conf_hist = Histogram(color=COLORS["info"],
-                                   x_labels=["0.0", "0.25", "0.5", "0.75", "1.0"])
+        c4 = Card(
+            tr("stats.conf_dist", "Phân bố độ tin cậy"),
+            tr("stats.conf_dist_sub", "Độ tin cậy của các dự đoán từ model"),
+            "sliders",
+        )
+        self.conf_hist = Histogram(
+            color=COLORS["info"], x_labels=["0.0", "0.25", "0.5", "0.75", "1.0"]
+        )
         self.conf_hist.setMinimumHeight(200)
         c4.add(self.conf_hist)
         lay.addWidget(c4)
@@ -242,7 +267,11 @@ class StatsPage(BasePage):
         lay.setContentsMargins(0, 0, 6, 0)
         lay.setSpacing(12)
 
-        c1 = Card(tr("stats.mask_box_area_dist", "Phân bố diện tích mask / box"), tr("stats.x_axis_area", "Trục ngang: diện tích px²"), "crop")
+        c1 = Card(
+            tr("stats.mask_box_area_dist", "Phân bố diện tích mask / box"),
+            tr("stats.x_axis_area", "Trục ngang: diện tích px²"),
+            "crop",
+        )
         self.size_hist = Histogram()
         self.size_hist.setMinimumHeight(250)
         c1.add(self.size_hist)
@@ -268,19 +297,28 @@ class StatsPage(BasePage):
         lay.setContentsMargins(0, 0, 6, 0)
         lay.setSpacing(12)
 
-        c1 = Card(tr("stats.heatmap_title", "Bản đồ nhiệt vị trí đối tượng"),
-                  tr("stats.heatmap_sub", "Mật độ tâm đối tượng theo khung ảnh chuẩn hoá"), "grid")
+        c1 = Card(
+            tr("stats.heatmap_title", "Bản đồ nhiệt vị trí đối tượng"),
+            tr("stats.heatmap_sub", "Mật độ tâm đối tượng theo khung ảnh chuẩn hoá"),
+            "grid",
+        )
         self.heatmap = Heatmap()
         self.heatmap.setMinimumHeight(360)
         c1.add(self.heatmap)
         row = QHBoxLayout()
         row.setSpacing(9)
-        row.addWidget(label(tr("stats.grid_res", "Độ phân giải lưới"), size=12, color=COLORS["text_dim"]))
+        row.addWidget(
+            label(tr("stats.grid_res", "Độ phân giải lưới"), size=12, color=COLORS["text_dim"])
+        )
         self.grid_spin = spin(24, 6, 64, 2, width=90)
         self.grid_spin.valueChanged.connect(self.refresh)
         row.addWidget(self.grid_spin)
-        row.addWidget(label(tr("stats.color_palette", "Bảng màu"), size=12, color=COLORS["text_dim"]))
-        self.cmap_combo = combo([("purple", tr("stats.cmap_purple", "Tím")), ("fire", tr("stats.cmap_fire", "Nóng"))])
+        row.addWidget(
+            label(tr("stats.color_palette", "Bảng màu"), size=12, color=COLORS["text_dim"])
+        )
+        self.cmap_combo = combo(
+            [("purple", tr("stats.cmap_purple", "Tím")), ("fire", tr("stats.cmap_fire", "Nóng"))]
+        )
         self.cmap_combo.currentIndexChanged.connect(self._apply_cmap)
         row.addWidget(self.cmap_combo)
         row.addStretch(1)
@@ -288,9 +326,17 @@ class StatsPage(BasePage):
         lay.addWidget(c1, 1)
 
         c2 = Card(tr("stats.meaning", "Ý nghĩa"), "", "help")
-        c2.add(label(
-            tr("stats.heatmap_meaning_desc", "Vùng sáng cho biết đối tượng thường xuất hiện ở đó. Nếu đối tượng chỉ tập trung một góc, model có thể học nhầm vị trí thay vì đặc trưng — nên bổ sung dữ liệu đa dạng hơn hoặc bật tăng cường dịch chuyển khi huấn luyện."),
-            size=12, color=COLORS["text_mute"], wrap=True))
+        c2.add(
+            label(
+                tr(
+                    "stats.heatmap_meaning_desc",
+                    "Vùng sáng cho biết đối tượng thường xuất hiện ở đó. Nếu đối tượng chỉ tập trung một góc, model có thể học nhầm vị trí thay vì đặc trưng — nên bổ sung dữ liệu đa dạng hơn hoặc bật tăng cường dịch chuyển khi huấn luyện.",
+                ),
+                size=12,
+                color=COLORS["text_mute"],
+                wrap=True,
+            )
+        )
         lay.addWidget(c2)
         return self._scroll(w)
 
@@ -307,15 +353,25 @@ class StatsPage(BasePage):
 
         grid = QGridLayout()
         grid.setSpacing(11)
-        self.q_dup = StatCard("copy", "0", tr("stats.dup_images", "Ảnh trùng lặp"), COLORS["warning"])
+        self.q_dup = StatCard(
+            "copy", "0", tr("stats.dup_images", "Ảnh trùng lặp"), COLORS["warning"]
+        )
         self.q_blur = StatCard("alert", "0", tr("stats.blurry_images", "Ảnh mờ"), COLORS["danger"])
-        self.q_dark = StatCard("eye_off", "0", tr("stats.dark_images", "Ảnh thiếu sáng"), COLORS["info"])
-        self.q_ok = StatCard("check_circle", "0", tr("stats.valid_images", "Ảnh đạt chuẩn"), COLORS["success"])
+        self.q_dark = StatCard(
+            "eye_off", "0", tr("stats.dark_images", "Ảnh thiếu sáng"), COLORS["info"]
+        )
+        self.q_ok = StatCard(
+            "check_circle", "0", tr("stats.valid_images", "Ảnh đạt chuẩn"), COLORS["success"]
+        )
         for i, s in enumerate((self.q_ok, self.q_dup, self.q_blur, self.q_dark)):
             grid.addWidget(s, 0, i)
         lay.addLayout(grid)
 
-        c1 = Card(tr("stats.sharpness_dist", "Phân bố độ nét"), tr("stats.sharpness_dist_sub", "Đo bằng variance of Laplacian"), "sparkle")
+        c1 = Card(
+            tr("stats.sharpness_dist", "Phân bố độ nét"),
+            tr("stats.sharpness_dist_sub", "Đo bằng variance of Laplacian"),
+            "sparkle",
+        )
         self.blur_hist = Histogram(color=COLORS["warning"])
         self.blur_hist.setMinimumHeight(220)
         c1.add(self.blur_hist)
@@ -339,6 +395,7 @@ class StatsPage(BasePage):
         fmt_card = Card(tr("stats.export_fmt", "Định dạng xuất"), "", "download")
         self.fmt_group = QButtonGroup(self)
         from app.views.widgets.common import chip_button
+
         self.fmt_buttons = {}
         fgrid = QGridLayout()
         fgrid.setSpacing(8)
@@ -369,7 +426,9 @@ class StatsPage(BasePage):
         orow.setContentsMargins(0, 0, 0, 0)
         orow.setSpacing(8)
         self.out_edit = QLineEdit()
-        self.out_edit.setPlaceholderText(tr("stats.out_dir_placeholder", "Mặc định: thư mục exports của project"))
+        self.out_edit.setPlaceholderText(
+            tr("stats.out_dir_placeholder", "Mặc định: thư mục exports của project")
+        )
         browse = browse_button()
         browse.clicked.connect(self._choose_out)
         orow.addWidget(self.out_edit, 1)
@@ -377,13 +436,35 @@ class StatsPage(BasePage):
         cfg_card.add(Field(tr("stats.out_dir", "Thư mục xuất"), out_row, label_width=LABEL_W_WIDE))
 
         self.val_slider = SliderField(0.2, 0.0, 0.5, 2)
-        cfg_card.add(Field(tr("train.val_split", "Tỷ lệ tập kiểm định"), self.val_slider, label_width=LABEL_W_WIDE))
+        cfg_card.add(
+            Field(
+                tr("train.val_split", "Tỷ lệ tập kiểm định"),
+                self.val_slider,
+                label_width=LABEL_W_WIDE,
+            )
+        )
         self.test_slider = SliderField(0.0, 0.0, 0.3, 2)
-        cfg_card.add(Field(tr("stats.test_split", "Tỷ lệ tập kiểm tra"), self.test_slider, label_width=LABEL_W_WIDE))
+        cfg_card.add(
+            Field(
+                tr("stats.test_split", "Tỷ lệ tập kiểm tra"),
+                self.test_slider,
+                label_width=LABEL_W_WIDE,
+            )
+        )
         self.seed_spin = spin(42, 0, 99999, width=110)
-        cfg_card.add(Field(tr("stats.random_seed", "Seed ngẫu nhiên"), self.seed_spin, label_width=LABEL_W_WIDE))
+        cfg_card.add(
+            Field(
+                tr("stats.random_seed", "Seed ngẫu nhiên"), self.seed_spin, label_width=LABEL_W_WIDE
+            )
+        )
         self.minconf_slider = SliderField(0.0, 0.0, 0.99, 2)
-        cfg_card.add(Field(tr("stats.min_conf", "Độ tin cậy tối thiểu"), self.minconf_slider, label_width=LABEL_W_WIDE))
+        cfg_card.add(
+            Field(
+                tr("stats.min_conf", "Độ tin cậy tối thiểu"),
+                self.minconf_slider,
+                label_width=LABEL_W_WIDE,
+            )
+        )
 
         cfg_card.add(hline())
         self.only_approved = ToggleSwitch(False)
@@ -392,14 +473,26 @@ class StatsPage(BasePage):
         self.copy_images = ToggleSwitch(True)
         self.flat_layout = ToggleSwitch(False)
         for text, toggle, hint in (
-            (tr("train.approved_only", "Chỉ huấn luyện trên ảnh đã duyệt"), self.only_approved,
-             tr("stats.approved_only_hint", "Bỏ qua ảnh máy gán nhãn hoặc cần xem lại")),
+            (
+                tr("train.approved_only", "Chỉ huấn luyện trên ảnh đã duyệt"),
+                self.only_approved,
+                tr("stats.approved_only_hint", "Bỏ qua ảnh máy gán nhãn hoặc cần xem lại"),
+            ),
             (tr("extract.remove_dup", "Loại ảnh trùng lặp"), self.excl_dup, ""),
             (tr("extract.detect_blur", "Loại ảnh mờ"), self.excl_blur, ""),
-            (tr("stats.copy_image_files", "Sao chép file ảnh"), self.copy_images,
-             tr("stats.copy_image_files_hint", "Tắt để chỉ sinh file nhãn — nhanh hơn, tiết kiệm ổ đĩa")),
-            (tr("stats.no_split", "Không chia train / val"), self.flat_layout,
-             tr("stats.no_split_hint", "Xuất tất cả vào một thư mục “all” thay vì chia bộ")),
+            (
+                tr("stats.copy_image_files", "Sao chép file ảnh"),
+                self.copy_images,
+                tr(
+                    "stats.copy_image_files_hint",
+                    "Tắt để chỉ sinh file nhãn — nhanh hơn, tiết kiệm ổ đĩa",
+                ),
+            ),
+            (
+                tr("stats.no_split", "Không chia train / val"),
+                self.flat_layout,
+                tr("stats.no_split_hint", "Xuất tất cả vào một thư mục “all” thay vì chia bộ"),
+            ),
         ):
             r = QHBoxLayout()
             col = QVBoxLayout()
@@ -418,7 +511,9 @@ class StatsPage(BasePage):
         row.setSpacing(9)
         self.run_export_btn = primary_button(tr("stats.start_export", "Bắt đầu xuất"), "download")
         self.run_export_btn.clicked.connect(self.run_export)
-        self.open_out_btn = ghost_button(tr("stats.open_result_dir", "Mở thư mục kết quả"), "folder_open")
+        self.open_out_btn = ghost_button(
+            tr("stats.open_result_dir", "Mở thư mục kết quả"), "folder_open"
+        )
         self.open_out_btn.clicked.connect(self._open_result)
         self.open_out_btn.setEnabled(False)
         row.addWidget(self.run_export_btn)
@@ -451,7 +546,7 @@ class StatsPage(BasePage):
         self.fmt_hint.setText(hint)
 
     def _choose_out(self) -> None:
-        d = QFileDialog.getExistingDirectory(self, "Chọn thư mục xuất")
+        d = QFileDialog.getExistingDirectory(self, tr("stats.choose_export_dir", "Chọn thư mục xuất"))
         if d:
             self.out_edit.setText(d)
 
@@ -474,37 +569,45 @@ class StatsPage(BasePage):
 
         self.ov_donut.set_data(
             [Series(s["name"], s["objects"], s["color"]) for s in stats if s["objects"]],
-            f"{info.n_objects:,}", "objects")
+            f"{info.n_objects:,}",
+            "objects",
+        )
         edges, hist = repo.area_histogram(28)
         self.ov_hist.set_data(hist, edges)
 
         segments = []
-        for key, color in (("approved", COLORS["success"]), ("review", COLORS["warning"]),
-                           ("auto", COLORS["info"]), ("unlabeled", COLORS["text_mute"])):
+        for key, color in (
+            ("approved", COLORS["success"]),
+            ("review", COLORS["warning"]),
+            ("auto", COLORS["info"]),
+            ("unlabeled", COLORS["text_mute"]),
+        ):
             n = counts.get(key, 0)
             self.ov_legends[key].set_value(f"{n:,}")
             if n:
                 segments.append((n, color))
         self.ov_bar.set_segments(segments)
         t_stats = repo.track_stats()
-        self.ov_info.set_pairs([
-            ("Tên project", info.name),
-            ("Thư mục", info.root_dir),
-            ("Loại bài toán", info.task),
-            ("Tạo lúc", info.created_at),
-            ("Cập nhật", info.updated_at),
-            ("Số lớp", str(info.n_classes)),
-            ("Tổng diện tích mask", f"{repo.total_mask_area():,.0f} px²"),
-            ("Số track", f"{t_stats['n_tracks']:,}"),
-            ("Độ dài track trung bình", f"{t_stats['avg_track_len']:.1f} nhãn/track"),
-        ])
+        self.ov_info.set_pairs(
+            [
+                (tr("stats.project_name", "Tên project"), info.name),
+                (tr("stats.project_dir", "Thư mục"), info.root_dir),
+                (tr("stats.task_type", "Loại bài toán"), info.task),
+                (tr("stats.created_at", "Tạo lúc"), info.created_at),
+                (tr("stats.updated_at", "Cập nhật"), info.updated_at),
+                (tr("stats.num_classes", "Số lớp"), str(info.n_classes)),
+                (tr("stats.total_mask_area", "Tổng diện tích mask"), f"{repo.total_mask_area():,.0f} px²"),
+                (tr("stats.total_tracks", "Số track"), f"{t_stats['n_tracks']:,}"),
+                (tr("stats.avg_track_len", "Độ dài track trung bình"), f"{t_stats['avg_track_len']:.1f} nhãn/track"),
+            ]
+        )
 
         # --- classes ---
         self.cls_bar.set_data([Series(s["name"], s["objects"], s["color"]) for s in stats])
-        self.cls_img_bar.set_data([Series(s["name"], s["images"], s["color"])
-                                   for s in stats])
-        self.cls_cov.set_data([Series(s["name"], round(s["coverage"], 1), s["color"])
-                               for s in stats])
+        self.cls_img_bar.set_data([Series(s["name"], s["images"], s["color"]) for s in stats])
+        self.cls_cov.set_data(
+            [Series(s["name"], round(s["coverage"], 1), s["color"]) for s in stats]
+        )
         self.conf_hist.set_data(repo.confidence_histogram(20))
 
         # --- size ---
@@ -518,15 +621,17 @@ class StatsPage(BasePage):
                 counts_pi[min(bins - 1, v)] += 1
             self.perimg_hist.x_labels = ["0", str(bins // 2), f"{bins - 1}+"]
             self.perimg_hist.set_data(counts_pi)
-        areas_edges, areas_counts = edges, hist
+        areas_edges = edges
         if areas_edges:
-            self.size_info.set_pairs([
-                ("Diện tích nhỏ nhất", f"{areas_edges[0]:,.0f} px²"),
-                ("Diện tích lớn nhất", f"{areas_edges[-1]:,.0f} px²"),
-                ("Đối tượng / ảnh — trung bình", f"{avg:.2f}"),
-                ("Đối tượng / ảnh — nhiều nhất", str(max(per_img) if per_img else 0)),
-                ("Tổng số mask polygon", f"{n_masks:,}"),
-            ])
+            self.size_info.set_pairs(
+                [
+                    (tr("stats.min_area", "Diện tích nhỏ nhất"), f"{areas_edges[0]:,.0f} px²"),
+                    (tr("stats.max_area", "Diện tích lớn nhất"), f"{areas_edges[-1]:,.0f} px²"),
+                    (tr("stats.avg_obj_per_img", "Đối tượng / ảnh — trung bình"), f"{avg:.2f}"),
+                    (tr("stats.max_obj_per_img", "Đối tượng / ảnh — nhiều nhất"), str(max(per_img) if per_img else 0)),
+                    (tr("stats.total_polygon_masks", "Tổng số mask polygon"), f"{n_masks:,}"),
+                ]
+            )
 
         # --- heatmap ---
         self.heatmap.set_matrix(repo.object_heatmap(self.grid_spin.value()))
@@ -541,17 +646,15 @@ class StatsPage(BasePage):
         self.q_ok.set_value(f"{max(0, info.n_images - q['duplicate'] - q['blurry']):,}")
 
         images = repo.images()
-        self.blur_hist.set_data(*_hist([im.blur_score for im in images
-                                        if im.blur_score > 0], 26))
-        self.bright_hist.set_data(*_hist([im.brightness for im in images
-                                          if im.brightness > 0], 26))
+        self.blur_hist.set_data(*_hist([im.blur_score for im in images if im.blur_score > 0], 26))
+        self.bright_hist.set_data(*_hist([im.brightness for im in images if im.brightness > 0], 26))
 
     # ================================================================ EXPORT ==
     def run_export(self) -> None:
         if not self.repo:
             return
         if self.ctrl.is_running("export"):
-            self.toast("Đang xuất, vui lòng đợi.", "warning")
+            self.toast(tr("stats.exporting_wait", "Đang xuất, vui lòng đợi."), "warning")
             return
         out_dir = self.out_edit.text().strip() or str(self.repo.sub("exports"))
         ecfg = ExportConfig(
@@ -574,11 +677,12 @@ class StatsPage(BasePage):
         cfg.save()
 
         self.export_log.clear()
-        self.progress.start("Đang xuất dataset …")
+        self.progress.start(tr("stats.exporting_progress", "Đang xuất dataset …"))
         self.run_export_btn.setEnabled(False)
         worker = ExportWorker(self.repo, ecfg)
         self.ctrl.run_worker(
-            "export", worker,
+            "export",
+            worker,
             on_progress=self.progress.set_progress,
             on_stage=self.progress.set_stage,
             on_log=self._log,
@@ -588,21 +692,21 @@ class StatsPage(BasePage):
 
     def _log(self, text: str) -> None:
         self.export_log.appendPlainText(text)
-        self.export_log.verticalScrollBar().setValue(
-            self.export_log.verticalScrollBar().maximum())
+        self.export_log.verticalScrollBar().setValue(self.export_log.verticalScrollBar().maximum())
 
     def _on_export_done(self, result) -> None:
         self.run_export_btn.setEnabled(True)
-        self.progress.finish("Xuất dataset hoàn tất")
+        self.progress.finish(tr("stats.export_done", "Xuất dataset hoàn tất"))
         if result is None:
             return
         self._result_dir = result.output_dir
         self.open_out_btn.setEnabled(True)
         splits = ", ".join(f"{k}={v}" for k, v in result.splits.items())
-        self._log(f"Thư mục: {result.output_dir}")
+        self._log(f"{tr('stats.log_dir', 'Thư mục')}: {result.output_dir}")
         self.toast(
-            f"Đã xuất {result.n_images:,} ảnh / {result.n_objects:,} đối tượng ({splits}).",
-            "success")
+            tr("stats.exported_summary", "Đã xuất {n_images} ảnh / {n_objects} đối tượng ({splits}).", n_images=f"{result.n_images:,}", n_objects=f"{result.n_objects:,}", splits=splits),
+            "success",
+        )
 
     def _open_result(self) -> None:
         path = getattr(self, "_result_dir", "")

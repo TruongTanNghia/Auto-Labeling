@@ -4,6 +4,7 @@
 - SSIM (dung scikit-image neu co, khong thi dung ban tu cai dat)
 - do net (variance of Laplacian), do sang trung binh, do tuong phan
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -13,6 +14,7 @@ import numpy as np
 
 try:  # scikit-image nhanh va chinh xac hon
     from skimage.metrics import structural_similarity as _sk_ssim
+
     _HAS_SKIMAGE = True
 except Exception:  # pragma: no cover
     _HAS_SKIMAGE = False
@@ -79,9 +81,9 @@ def _ssim_fallback(a: np.ndarray, b: np.ndarray) -> float:
 # ---------------------------------------------------------------- QUALITY ---
 @dataclass
 class QualityReport:
-    blur_score: float = 0.0      # variance of Laplacian - cang cao cang net
-    brightness: float = 0.0      # 0..255
-    contrast: float = 0.0        # do lech chuan cua kenh xam
+    blur_score: float = 0.0  # variance of Laplacian - cang cao cang net
+    brightness: float = 0.0  # 0..255
+    contrast: float = 0.0  # do lech chuan cua kenh xam
     is_blurry: bool = False
     is_dark: bool = False
     is_bright: bool = False
@@ -92,12 +94,24 @@ class QualityReport:
         return not (self.is_blurry or self.is_dark or self.is_bright)
 
 
-def analyze(image: np.ndarray, blur_threshold: float = 60.0,
-            dark_threshold: float = 45.0, bright_threshold: float = 235.0) -> QualityReport:
+def analyze(
+    image: np.ndarray,
+    blur_threshold: float = 60.0,
+    dark_threshold: float = 45.0,
+    bright_threshold: float = 235.0,
+) -> QualityReport:
     gray = _to_gray(image)
-    small = gray if max(gray.shape) <= 720 else cv2.resize(
-        gray, (0, 0), fx=720 / max(gray.shape), fy=720 / max(gray.shape),
-        interpolation=cv2.INTER_AREA)
+    small = (
+        gray
+        if max(gray.shape) <= 720
+        else cv2.resize(
+            gray,
+            (0, 0),
+            fx=720 / max(gray.shape),
+            fy=720 / max(gray.shape),
+            interpolation=cv2.INTER_AREA,
+        )
+    )
 
     rep = QualityReport()
     rep.blur_score = float(cv2.Laplacian(small, cv2.CV_64F).var())
@@ -130,14 +144,19 @@ class DuplicateFilter:
     method: 'phash' | 'ssim' | 'phash+ssim'
     """
 
-    def __init__(self, method: str = "phash+ssim", phash_distance: int = 6,
-                 ssim_threshold: float = 0.965, keep_thumbs: int = 40) -> None:
+    def __init__(
+        self,
+        method: str = "phash+ssim",
+        phash_distance: int = 6,
+        ssim_threshold: float = 0.965,
+        keep_thumbs: int = 40,
+    ) -> None:
         self.method = method
         self.phash_distance = phash_distance
         self.ssim_threshold = ssim_threshold
         self.keep_thumbs = keep_thumbs
-        self._hashes: list[tuple[str, int]] = []          # (hash, image_key)
-        self._thumbs: list[tuple[int, np.ndarray]] = []   # (image_key, thumbnail)
+        self._hashes: list[tuple[str, int]] = []  # (hash, image_key)
+        self._thumbs: list[tuple[int, np.ndarray]] = []  # (image_key, thumbnail)
         self.n_duplicates = 0
 
     def reset(self) -> None:
@@ -163,8 +182,11 @@ class DuplicateFilter:
 
         if use_ssim:
             thumb = _thumb(image)
-            pool = self._thumbs if candidate_key < 0 else [
-                t for t in self._thumbs if t[0] == candidate_key]
+            pool = (
+                self._thumbs
+                if candidate_key < 0
+                else [t for t in self._thumbs if t[0] == candidate_key]
+            )
             for old_key, old_thumb in reversed(pool):
                 if ssim(thumb, old_thumb, resize_to=128) >= self.ssim_threshold:
                     self.n_duplicates += 1

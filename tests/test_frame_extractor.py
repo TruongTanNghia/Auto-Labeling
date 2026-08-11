@@ -1,7 +1,9 @@
 """Kiem thu FrameExtractor va 5 che do cat frame từ video."""
+
 from __future__ import annotations
 
 from pathlib import Path
+
 import pytest
 
 from app.constants import (

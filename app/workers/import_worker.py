@@ -1,4 +1,5 @@
 """Worker: nhap dataset da gan nhan san (YOLO / COCO)."""
+
 from __future__ import annotations
 
 from app.core.importers import DatasetImporter, ImportConfig, ImportResult
@@ -7,8 +8,7 @@ from app.workers.base import BaseWorker
 
 
 class ImportWorker(BaseWorker):
-    def __init__(self, repo: ProjectRepository, config: ImportConfig,
-                 parent=None) -> None:
+    def __init__(self, repo: ProjectRepository, config: ImportConfig, parent=None) -> None:
         super().__init__(parent)
         self.repo = repo
         self.cfg = config

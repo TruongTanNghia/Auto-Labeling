@@ -1,4 +1,5 @@
 """Engine suy luan YOLO (Ultralytics): detect / segment / obb / pose + custom model."""
+
 from __future__ import annotations
 
 import os
@@ -18,11 +19,17 @@ log = get_logger(__name__)
 def device_info() -> dict:
     """Thong tin GPU/CPU, khong bat buoc phai co torch."""
     info = {
-        "cuda": False, "name": "CPU", "count": 0, "total_gb": 0.0,
-        "used_gb": 0.0, "torch": "", "cuda_version": "",
+        "cuda": False,
+        "name": "CPU",
+        "count": 0,
+        "total_gb": 0.0,
+        "used_gb": 0.0,
+        "torch": "",
+        "cuda_version": "",
     }
     try:
         import torch
+
         info["torch"] = torch.__version__
         info["cuda"] = bool(torch.cuda.is_available())
         info["cuda_version"] = torch.version.cuda or ""
@@ -30,8 +37,8 @@ def device_info() -> dict:
             info["count"] = torch.cuda.device_count()
             props = torch.cuda.get_device_properties(0)
             info["name"] = props.name
-            info["total_gb"] = round(props.total_memory / 1024 ** 3, 1)
-            info["used_gb"] = round(torch.cuda.memory_reserved(0) / 1024 ** 3, 1)
+            info["total_gb"] = round(props.total_memory / 1024**3, 1)
+            info["used_gb"] = round(torch.cuda.memory_reserved(0) / 1024**3, 1)
     except Exception as exc:  # pragma: no cover
         log.debug("Khong lay duoc thong tin GPU: %s", exc)
     return info
@@ -76,6 +83,7 @@ def configure_ultralytics() -> None:
     os.environ.setdefault("YOLO_AUTOINSTALL", "false")
     try:
         import ultralytics.utils.checks as _checks
+
         _checks.AUTOINSTALL = False
     except Exception:
         pass
@@ -85,11 +93,13 @@ def configure_ultralytics() -> None:
 
         from app.utils.paths import ensure_dir, user_data_dir, weights_dir
 
-        SETTINGS.update({
-            "weights_dir": str(weights_dir()),
-            "datasets_dir": str(ensure_dir(user_data_dir() / "datasets")),
-            "sync": False,
-        })
+        SETTINGS.update(
+            {
+                "weights_dir": str(weights_dir()),
+                "datasets_dir": str(ensure_dir(user_data_dir() / "datasets")),
+                "sync": False,
+            }
+        )
     except Exception as exc:  # pragma: no cover
         log.debug("Khong dat duoc thu muc weights cho Ultralytics: %s", exc)
 
@@ -147,8 +157,12 @@ def purge_corrupt_weight(path: str) -> bool:
     try:
         p = Path(path)
         from app.utils.paths import weights_dir
-        if p.exists() and p.suffix == ".pt" and (
-                p.parent == weights_dir() or p.stat().st_size < 1_000_000):
+
+        if (
+            p.exists()
+            and p.suffix == ".pt"
+            and (p.parent == weights_dir() or p.stat().st_size < 1_000_000)
+        ):
             p.unlink()
             log.warning("Da xoa file trong so hong: %s", p)
             return True
@@ -168,20 +182,21 @@ def available_devices() -> list[tuple[str, str]]:
 # --------------------------------------------------------------- KET QUA ----
 @dataclass
 class Detection:
-    class_id: int = 0                 # chi so class trong model
+    class_id: int = 0  # chi so class trong model
     class_name: str = ""
     confidence: float = 0.0
     bbox: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0, 0.0])
-    polygon: list[float] = field(default_factory=list)   # [x1,y1,x2,y2,...] pixel
-    keypoints: list[float] = field(default_factory=list) # [x,y,v, ...]
+    polygon: list[float] = field(default_factory=list)  # [x1,y1,x2,y2,...] pixel
+    keypoints: list[float] = field(default_factory=list)  # [x,y,v, ...]
     shape: str = SHAPE_BBOX
     track_id: int | None = None
 
     @property
     def area(self) -> float:
         if len(self.polygon) >= 6:
-            pts = [(self.polygon[i], self.polygon[i + 1])
-                   for i in range(0, len(self.polygon) - 1, 2)]
+            pts = [
+                (self.polygon[i], self.polygon[i + 1]) for i in range(0, len(self.polygon) - 1, 2)
+            ]
             s = 0.0
             for i in range(len(pts)):
                 x1, y1 = pts[i]
@@ -200,16 +215,16 @@ class InferenceConfig:
     half: bool = False
     agnostic_nms: bool = False
     retina_masks: bool = True
-    polygon_simplify: float = 0.0025    # ti le so voi chu vi (0 = khong don gian hoa)
+    polygon_simplify: float = 0.0025  # ti le so voi chu vi (0 = khong don gian hoa)
     min_area_px: float = 24.0
     class_filter: list[int] = field(default_factory=list)
     # --- Suy luan cat lat (SAHI) ---
     sahi_enabled: bool = False
-    sahi_slice_size: int = 640          # chieu rong/cao moi o (px)
-    sahi_overlap: float = 0.2           # ti le chong lan giua cac o (0.0 - 0.5)
+    sahi_slice_size: int = 640  # chieu rong/cao moi o (px)
+    sahi_overlap: float = 0.2  # ti le chong lan giua cac o (0.0 - 0.5)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "InferenceConfig":
+    def from_dict(cls, data: dict) -> InferenceConfig:
         known = set(cls.__dataclass_fields__)
         return cls(**{k: v for k, v in data.items() if k in known})
 
@@ -238,8 +253,10 @@ class YoloEngine:
     def describe(self) -> str:
         if not self.loaded:
             return "Chua nap model"
-        return (f"{Path(self.weights).name} | task={self.task} | "
-                f"device={self.device} | {len(self.names)} class")
+        return (
+            f"{Path(self.weights).name} | task={self.task} | "
+            f"device={self.device} | {len(self.names)} class"
+        )
 
     def reset_tracker(self) -> None:
         """Reset trang thai theo doi truoc khi chay chuoi frame moi."""
@@ -248,22 +265,23 @@ class YoloEngine:
                 self.model.predictor.trackers = None
 
     # ------------------------------------------------------------------ nap --
-    def load(self, weights: str, task: str = "detect", device: str = "auto",
-             log_cb=None) -> None:
+    def load(self, weights: str, task: str = "detect", device: str = "auto", log_cb=None) -> None:
         try:
             from ultralytics import YOLO
         except ImportError as exc:
-            raise RuntimeError(
-                "Chua cai ultralytics. Chay: pip install ultralytics"
-            ) from exc
+            raise RuntimeError("Chua cai ultralytics. Chay: pip install ultralytics") from exc
 
         weights = str(weights).strip()
         if not weights:
             raise ValueError("Chua chon file trong so.")
 
         resolved_dev = resolve_device(device)
-        if (self.loaded and self.weights == weights and self.task == task
-                and self.device == resolved_dev):
+        if (
+            self.loaded
+            and self.weights == weights
+            and self.task == task
+            and self.device == resolved_dev
+        ):
             return  # da nap roi
 
         _log = log_cb or (lambda *_: None)
@@ -283,6 +301,7 @@ class YoloEngine:
         except Exception as exc:
             # File .pt tai do dang -> xoa va tai lai mot lan
             from app.utils.paths import weights_dir
+
             candidate = weights if Path(weights).exists() else str(weights_dir() / weights)
             if purge_corrupt_weight(candidate):
                 _log(f"File trong so hong, dang tai lai: {Path(candidate).name}")
@@ -330,7 +349,7 @@ class YoloEngine:
         local = weights_dir() / p.name
         if local.exists():
             return str(local)
-        if p.parent == Path("."):        # chi la ten model chuan -> tai ve weights_dir
+        if p.parent == Path("."):  # chi la ten model chuan -> tai ve weights_dir
             if log_cb:
                 log_cb(f"Chua co '{p.name}' - se tai ve {weights_dir()}")
             downloaded = download_asset(p.name, log_cb)
@@ -343,6 +362,7 @@ class YoloEngine:
         self._loaded = False
         try:
             import torch
+
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
         except Exception:
@@ -356,8 +376,12 @@ class YoloEngine:
         cfg = config or InferenceConfig()
 
         kwargs = dict(
-            conf=float(cfg.confidence), iou=float(cfg.iou), max_det=int(cfg.max_det),
-            imgsz=int(cfg.imgsz), verbose=False, device=self.device,
+            conf=float(cfg.confidence),
+            iou=float(cfg.iou),
+            max_det=int(cfg.max_det),
+            imgsz=int(cfg.imgsz),
+            verbose=False,
+            device=self.device,
             agnostic_nms=bool(cfg.agnostic_nms),
         )
         if cfg.half and self.device != "cpu":
@@ -372,17 +396,28 @@ class YoloEngine:
             return []
         return self._parse(results[0], cfg)
 
-    def track(self, source, tracker: str = "botsort.yaml", config: InferenceConfig | None = None,
-              persist: bool = True) -> list[Detection]:
+    def track(
+        self,
+        source,
+        tracker: str = "botsort.yaml",
+        config: InferenceConfig | None = None,
+        persist: bool = True,
+    ) -> list[Detection]:
         """Suy luan ket hop tracking doi tuong qua frame."""
         if not self.loaded:
             raise RuntimeError("Model chua duoc nap.")
         cfg = config or InferenceConfig()
 
         kwargs = dict(
-            conf=float(cfg.confidence), iou=float(cfg.iou), max_det=int(cfg.max_det),
-            imgsz=int(cfg.imgsz), verbose=False, device=self.device,
-            agnostic_nms=bool(cfg.agnostic_nms), tracker=tracker, persist=persist,
+            conf=float(cfg.confidence),
+            iou=float(cfg.iou),
+            max_det=int(cfg.max_det),
+            imgsz=int(cfg.imgsz),
+            verbose=False,
+            device=self.device,
+            agnostic_nms=bool(cfg.agnostic_nms),
+            tracker=tracker,
+            persist=persist,
         )
         if cfg.half and self.device != "cpu":
             kwargs["half"] = True
@@ -396,15 +431,21 @@ class YoloEngine:
             return []
         return self._parse(results[0], cfg)
 
-    def predict_batch(self, sources: list, config: InferenceConfig | None = None
-                      ) -> list[list[Detection]]:
+    def predict_batch(
+        self, sources: list, config: InferenceConfig | None = None
+    ) -> list[list[Detection]]:
         if not self.loaded:
             raise RuntimeError("Model chua duoc nap.")
         cfg = config or InferenceConfig()
         kwargs = dict(
-            conf=float(cfg.confidence), iou=float(cfg.iou), max_det=int(cfg.max_det),
-            imgsz=int(cfg.imgsz), verbose=False, device=self.device,
-            agnostic_nms=bool(cfg.agnostic_nms), stream=False,
+            conf=float(cfg.confidence),
+            iou=float(cfg.iou),
+            max_det=int(cfg.max_det),
+            imgsz=int(cfg.imgsz),
+            verbose=False,
+            device=self.device,
+            agnostic_nms=bool(cfg.agnostic_nms),
+            stream=False,
         )
         if cfg.class_filter:
             kwargs["classes"] = list(cfg.class_filter)
@@ -434,10 +475,17 @@ class YoloEngine:
                 pts = poly.reshape(-1, 2)
                 flat = [float(v) for v in pts.flatten()]
                 xs, ys = pts[:, 0], pts[:, 1]
-                t_id = int(obb_track_ids[i]) if obb_track_ids is not None and i < len(obb_track_ids) else None
+                t_id = (
+                    int(obb_track_ids[i])
+                    if obb_track_ids is not None and i < len(obb_track_ids)
+                    else None
+                )
                 det = Detection(
-                    class_id=int(cid), class_name=self.names.get(int(cid), str(cid)),
-                    confidence=float(conf), shape=SHAPE_OBB, polygon=flat,
+                    class_id=int(cid),
+                    class_name=self.names.get(int(cid), str(cid)),
+                    confidence=float(conf),
+                    shape=SHAPE_OBB,
+                    polygon=flat,
                     bbox=[float(xs.min()), float(ys.min()), float(xs.max()), float(ys.max())],
                     track_id=t_id,
                 )
@@ -474,7 +522,8 @@ class YoloEngine:
             cid = int(clss[i])
             t_id = int(track_ids[i]) if track_ids is not None and i < len(track_ids) else None
             det = Detection(
-                class_id=cid, class_name=self.names.get(cid, str(cid)),
+                class_id=cid,
+                class_name=self.names.get(cid, str(cid)),
                 confidence=float(confs[i]),
                 bbox=[float(v) for v in xyxy[i]],
                 shape=SHAPE_BBOX,
@@ -495,20 +544,20 @@ class YoloEngine:
 
     # -------------------------------------------------------- SAHI helpers --
     @staticmethod
-    def _cross_tile_nms(dets: list["Detection"], iou_thr: float,
-                        task: str) -> list["Detection"]:
+    def _cross_tile_nms(dets: list[Detection], iou_thr: float, task: str) -> list[Detection]:
         """Greedy NMS xuyen o: loai box/polygon trung lap tu nhieu o khac nhau."""
         if len(dets) <= 1:
             return dets
 
         # Nhom theo class_id de chi so sanh cung class
         from collections import defaultdict
+
         by_class: dict[int, list] = defaultdict(list)
         for d in dets:
             by_class[d.class_id].append(d)
 
-        kept: list["Detection"] = []
-        use_poly = (task == "segment")
+        kept: list[Detection] = []
+        use_poly = task == "segment"
 
         for cls_dets in by_class.values():
             cls_dets = sorted(cls_dets, key=lambda d: d.confidence, reverse=True)
@@ -518,11 +567,14 @@ class YoloEngine:
             if use_poly:
                 try:
                     from shapely.geometry import Polygon as ShPoly
+
                     sh_polys = []
                     for d in cls_dets:
                         if len(d.polygon) >= 6:
-                            pts = [(d.polygon[i], d.polygon[i+1])
-                                   for i in range(0, len(d.polygon) - 1, 2)]
+                            pts = [
+                                (d.polygon[i], d.polygon[i + 1])
+                                for i in range(0, len(d.polygon) - 1, 2)
+                            ]
                             try:
                                 sh_polys.append(ShPoly(pts).buffer(0))
                             except Exception:
@@ -561,8 +613,10 @@ class YoloEngine:
                     else:
                         # Fallback: IoU box
                         ca = max(0.0, cx2 - cx1) * max(0.0, cy2 - cy1)
-                        ix1 = max(bx1, cx1); iy1 = max(by1, cy1)
-                        ix2 = min(bx2, cx2); iy2 = min(by2, cy2)
+                        ix1 = max(bx1, cx1)
+                        iy1 = max(by1, cy1)
+                        ix2 = min(bx2, cx2)
+                        iy2 = min(by2, cy2)
                         inter = max(0.0, ix2 - ix1) * max(0.0, iy2 - iy1)
                         union = ba + ca - inter
                         iou = inter / union if union > 0 else 0.0
@@ -573,8 +627,9 @@ class YoloEngine:
         return kept
 
     @staticmethod
-    def _merge_boundary_polygons(dets: list["Detection"], img_w: int, img_h: int,
-                                  merge_dist: float = 8.0) -> list["Detection"]:
+    def _merge_boundary_polygons(
+        dets: list[Detection], img_w: int, img_h: int, merge_dist: float = 8.0
+    ) -> list[Detection]:
         """Gop cac manh polygon cung class nam sat ranh gioi o vao mot polygon lien tuc.
 
         Chi xu ly khi Shapely kha dung. Neu khong the gop, giu nguyen 2 manh cu.
@@ -594,12 +649,17 @@ class YoloEngine:
             """True neu co diem nao nam cach bien anh <= merge_dist."""
             for i in range(0, len(poly_flat) - 1, 2):
                 x, y = poly_flat[i], poly_flat[i + 1]
-                if (x <= merge_dist or y <= merge_dist
-                        or x >= img_w - merge_dist or y >= img_h - merge_dist):
+                if (
+                    x <= merge_dist
+                    or y <= merge_dist
+                    or x >= img_w - merge_dist
+                    or y >= img_h - merge_dist
+                ):
                     return True
             return False
 
         from collections import defaultdict
+
         boundary_by_class: dict[int, list[int]] = defaultdict(list)
         interior_idx: list[int] = []
 
@@ -609,9 +669,9 @@ class YoloEngine:
             else:
                 interior_idx.append(idx)
 
-        result: list["Detection"] = [dets[i] for i in interior_idx]
+        result: list[Detection] = [dets[i] for i in interior_idx]
 
-        for cls_id, idxs in boundary_by_class.items():
+        for _cls_id, idxs in boundary_by_class.items():
             if len(idxs) == 1:
                 result.append(dets[idxs[0]])
                 continue
@@ -619,8 +679,10 @@ class YoloEngine:
             sh_polys = []
             valid_idxs = []
             for i in idxs:
-                pts = [(dets[i].polygon[k], dets[i].polygon[k+1])
-                       for k in range(0, len(dets[i].polygon) - 1, 2)]
+                pts = [
+                    (dets[i].polygon[k], dets[i].polygon[k + 1])
+                    for k in range(0, len(dets[i].polygon) - 1, 2)
+                ]
                 try:
                     p = ShPoly(pts).buffer(0)
                     if p.is_valid and not p.is_empty:
@@ -649,6 +711,7 @@ class YoloEngine:
                 # Lay Detection co confidence cao nhat de ke thua metadata
                 base = max((dets[i] for i in valid_idxs), key=lambda d: d.confidence)
                 import copy
+
                 merged_det = copy.copy(base)
                 merged_det.polygon = flat
                 xs = [flat[k] for k in range(0, len(flat), 2)]
@@ -661,8 +724,9 @@ class YoloEngine:
 
         return result
 
-    def slice_predict(self, source, config: "InferenceConfig | None" = None,
-                      progress_cb=None) -> list["Detection"]:
+    def slice_predict(
+        self, source, config: InferenceConfig | None = None, progress_cb=None
+    ) -> list[Detection]:
         """Suy luan cat lat: chia anh thanh cac o chong lan, inference tung o,
         dich toa do ve anh goc, gop bang NMS xuyen o.
 
@@ -674,7 +738,6 @@ class YoloEngine:
         Returns:
             list[Detection] voi toa do theo khong gian anh goc.
         """
-        import cv2
         cfg = config or InferenceConfig()
         slice_size = max(64, int(cfg.sahi_slice_size))
         overlap = max(0.0, min(0.9, float(cfg.sahi_overlap)))
@@ -685,6 +748,7 @@ class YoloEngine:
             img_bgr = source
         else:
             from app.core.image_quality import imread_unicode
+
             img_bgr = imread_unicode(str(source))
             if img_bgr is None:
                 log.warning("slice_predict: khong doc duoc anh %s", source)
@@ -718,10 +782,16 @@ class YoloEngine:
 
         # Tao config tam thoi khong co sahi de tranh de quy
         tile_cfg = InferenceConfig(
-            confidence=cfg.confidence, iou=cfg.iou, max_det=cfg.max_det,
-            imgsz=cfg.imgsz, half=cfg.half, agnostic_nms=cfg.agnostic_nms,
-            retina_masks=cfg.retina_masks, polygon_simplify=cfg.polygon_simplify,
-            min_area_px=cfg.min_area_px, class_filter=list(cfg.class_filter),
+            confidence=cfg.confidence,
+            iou=cfg.iou,
+            max_det=cfg.max_det,
+            imgsz=cfg.imgsz,
+            half=cfg.half,
+            agnostic_nms=cfg.agnostic_nms,
+            retina_masks=cfg.retina_masks,
+            polygon_simplify=cfg.polygon_simplify,
+            min_area_px=cfg.min_area_px,
+            class_filter=list(cfg.class_filter),
             sahi_enabled=False,
         )
 
@@ -739,8 +809,10 @@ class YoloEngine:
             # Dich toa do ve anh goc
             for d in tile_dets:
                 d.bbox = [
-                    d.bbox[0] + x0, d.bbox[1] + y0,
-                    d.bbox[2] + x0, d.bbox[3] + y0,
+                    d.bbox[0] + x0,
+                    d.bbox[1] + y0,
+                    d.bbox[2] + x0,
+                    d.bbox[3] + y0,
                 ]
                 if d.polygon:
                     shifted = []
@@ -763,7 +835,9 @@ class YoloEngine:
 
         log.debug(
             "slice_predict: %d o, %d det truoc NMS, %d sau NMS+merge",
-            total, len(all_dets), len(merged),
+            total,
+            len(all_dets),
+            len(merged),
         )
         return merged
 
@@ -775,6 +849,7 @@ def simplify_polygon(points: np.ndarray, ratio: float = 0.0025) -> np.ndarray:
         return points
     try:
         import cv2
+
         cnt = points.reshape(-1, 1, 2).astype(np.float32)
         peri = cv2.arcLength(cnt, True)
         approx = cv2.approxPolyDP(cnt, ratio * peri, True)
@@ -785,10 +860,12 @@ def simplify_polygon(points: np.ndarray, ratio: float = 0.0025) -> np.ndarray:
     return points
 
 
-def mask_to_polygons(mask: np.ndarray, min_area: float = 20.0,
-                     simplify: float = 0.0025) -> list[np.ndarray]:
+def mask_to_polygons(
+    mask: np.ndarray, min_area: float = 20.0, simplify: float = 0.0025
+) -> list[np.ndarray]:
     """Chuyen mask nhi phan thanh danh sach polygon (dung cho brush/eraser)."""
     import cv2
+
     m = (mask > 0).astype(np.uint8)
     contours, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     polys = []
@@ -802,6 +879,7 @@ def mask_to_polygons(mask: np.ndarray, min_area: float = 20.0,
 
 def polygons_to_mask(polygons, width: int, height: int) -> np.ndarray:
     import cv2
+
     mask = np.zeros((height, width), dtype=np.uint8)
     for poly in polygons:
         pts = np.asarray(poly, dtype=np.int32).reshape(-1, 2)

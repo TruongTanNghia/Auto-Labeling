@@ -3,6 +3,7 @@
 Moi trang UI chi noi chuyen voi controller nay: mo/tao project, chay worker,
 phat tin hieu khi du lieu thay doi. Nho vay View khong dung truc tiep vao DB.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -23,13 +24,13 @@ log = get_logger(__name__)
 class AppController(QObject):
     """Trang thai ung dung + dieu phoi tac vu nen."""
 
-    projectOpened = Signal(object)       # ProjectRepository
+    projectOpened = Signal(object)  # ProjectRepository
     projectClosed = Signal()
-    projectChanged = Signal()            # du lieu anh/annotation thay doi
+    projectChanged = Signal()  # du lieu anh/annotation thay doi
     classesChanged = Signal()
     imagesChanged = Signal()
-    annotationsChanged = Signal(int)     # image_id
-    statusMessage = Signal(str, str)     # text, kind (info/success/warning/error)
+    annotationsChanged = Signal(int)  # image_id
+    statusMessage = Signal(str, str)  # text, kind (info/success/warning/error)
     busyChanged = Signal(bool)
     modelChanged = Signal()
     currentImageChanged = Signal(int)
@@ -54,8 +55,9 @@ class AppController(QObject):
     def project_name(self) -> str:
         return self.repo.info.name if self.repo else ""
 
-    def create_project(self, name: str, parent_dir: str = "", description: str = "",
-                       task: str = "segment") -> ProjectRepository | None:
+    def create_project(
+        self, name: str, parent_dir: str = "", description: str = "", task: str = "segment"
+    ) -> ProjectRepository | None:
         parent_dir = parent_dir or cfg.get("general.projects_dir") or str(default_projects_dir())
         root = Path(parent_dir) / _safe_name(name)
         if (root / PROJECT_DB_NAME).exists():
@@ -125,12 +127,14 @@ class AppController(QObject):
             path = Path(p)
             if not path.exists():
                 continue
-            out.append({
-                "path": str(path),
-                "name": path.parent.name,
-                "dir": str(path.parent),
-                "mtime": path.stat().st_mtime,
-            })
+            out.append(
+                {
+                    "path": str(path),
+                    "name": path.parent.name,
+                    "dir": str(path.parent),
+                    "mtime": path.stat().st_mtime,
+                }
+            )
         return out
 
     # ============================================================= AUTOSAVE ==
@@ -201,8 +205,16 @@ class AppController(QObject):
         return f"torch {d['torch'] or 'chua cai'}"
 
     # ============================================================== WORKER ===
-    def run_worker(self, key: str, worker: BaseWorker, on_done=None, on_fail=None,
-                   on_progress=None, on_log=None, on_stage=None) -> BaseWorker | None:
+    def run_worker(
+        self,
+        key: str,
+        worker: BaseWorker,
+        on_done=None,
+        on_fail=None,
+        on_progress=None,
+        on_log=None,
+        on_stage=None,
+    ) -> BaseWorker | None:
         """Chay worker, dam bao moi 'key' chi co mot tac vu tai mot thoi diem."""
         old = self._workers.get(key)
         if old is not None and old.isRunning():
@@ -267,6 +279,7 @@ class AppController(QObject):
         self.cancel_all()
         try:
             from app.plugins.base import registry
+
             registry.unload_all()
         except Exception:
             pass

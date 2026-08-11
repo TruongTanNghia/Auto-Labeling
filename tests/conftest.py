@@ -1,4 +1,5 @@
 """Cau hinh pytest: cach ly moi truong va dinh nghia cac fixture dung chung."""
+
 from __future__ import annotations
 
 import os
@@ -36,6 +37,7 @@ def cleanup_sandbox():
 def qapp():
     """Fixture cung cap QApplication offscreen cho toàn bo pytest session."""
     from PySide6.QtWidgets import QApplication
+
     app = QApplication.instance() or QApplication([])
     return app
 
@@ -87,7 +89,7 @@ def repo(tmp_dir: Path, sample_data):
     r.add_images_bulk(res.saved)
 
     c1, c2 = r.add_class("crack"), r.add_class("rust")
-    for k, im in enumerate(r.images()[:6]):
+    for _k, im in enumerate(r.images()[:6]):
         anns = []
         for j, cd in enumerate((c1, c2)):
             a = Annotation(
@@ -98,7 +100,9 @@ def repo(tmp_dir: Path, sample_data):
                 status="auto",
                 source="yolo",
             )
-            a.set_points([(20 + j * 40, 20), (100 + j * 40, 30), (110 + j * 40, 90), (25 + j * 40, 80)])
+            a.set_points(
+                [(20 + j * 40, 20), (100 + j * 40, 30), (110 + j * 40, 90), (25 + j * 40, 80)]
+            )
             anns.append(a)
         r.replace_annotations(im.id, anns)
     r.refresh_stats()

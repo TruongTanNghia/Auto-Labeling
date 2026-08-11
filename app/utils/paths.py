@@ -1,4 +1,5 @@
 """Quan ly duong dan cua ung dung."""
+
 from __future__ import annotations
 
 import os

@@ -1,7 +1,9 @@
 """Kiem thu ProjectRepository va thong ke co so du lieu."""
+
 from __future__ import annotations
 
 from pathlib import Path
+
 from app.models.repository import ProjectRepository
 
 
@@ -23,6 +25,7 @@ def test_add_images_and_annotations(repo: ProjectRepository):
 
 def test_legacy_database_migration(tmp_dir: Path):
     import sqlite3
+
     from app.models.database import Database
 
     db_file = tmp_dir / "legacy.alsdb"
@@ -47,4 +50,3 @@ def test_legacy_database_migration(tmp_dir: Path):
     db = Database(db_file)
     cols = [r[1] for r in db._conn.execute("PRAGMA table_info(annotation)").fetchall()]
     assert "track_id" in cols
-

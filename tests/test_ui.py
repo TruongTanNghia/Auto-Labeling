@@ -1,7 +1,9 @@
 """Kiem thu giao dien lazy, chuyen trang, luong cat frame -> autolabel va i18n."""
+
 from __future__ import annotations
 
 from pathlib import Path
+
 from app.constants import NAV_ITEMS
 from app.controllers.app_controller import AppController
 from app.core.frame_extractor import ExtractConfig, FrameExtractor, scan_folder_records
@@ -67,9 +69,7 @@ def test_extract_to_autolabel(qapp, sample_data, tmp_dir: Path):
         old_ids = {im.id for im in ctrl.repo.images()}
         assert len(old_ids) == 3
 
-        cfg_ex = ExtractConfig(
-            every_n_frames=6, remove_similar=False, blur_detection=False
-        )
+        cfg_ex = ExtractConfig(every_n_frames=6, remove_similar=False, blur_detection=False)
         res = FrameExtractor(cfg_ex).extract(video, tmp_dir / "flow_frames")
         ctrl.repo.add_images_bulk(res.saved)
         assert res.n_saved > 0
@@ -128,4 +128,3 @@ def test_editor_page_initialization_on_show(qapp, tmp_dir: Path):
         ctrl.shutdown()
         win.deleteLater()
         qapp.processEvents()
-

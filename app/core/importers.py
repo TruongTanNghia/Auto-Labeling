@@ -11,10 +11,10 @@ class moi thi tu tao moi — khong can can thiep thu cong.
 Anh khong tim thay tren dia: bo qua, ghi log canh bao,
 tiep tuc nhap cac anh con lai.
 """
+
 from __future__ import annotations
 
 import json
-import shutil
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -32,9 +32,9 @@ _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
 
 @dataclass
 class ImportConfig:
-    fmt: str = "yolo_seg"       # "yolo_seg" | "yolo_det" | "coco"
-    dataset_dir: str = ""       # thu muc goc cua dataset
-    copy_images: bool = True    # sao chep anh vao thu muc images/ cua project
+    fmt: str = "yolo_seg"  # "yolo_seg" | "yolo_det" | "coco"
+    dataset_dir: str = ""  # thu muc goc cua dataset
+    copy_images: bool = True  # sao chep anh vao thu muc images/ cua project
     source_tag: str = "import"  # gia tri ghi vao truong source cua Annotation
 
 
@@ -79,12 +79,13 @@ class DatasetImporter:
         label_files = list(root.rglob("labels/**/*.txt"))
         if not label_files:
             label_files = list(root.rglob("*.txt"))
-            label_files = [f for f in label_files
-                           if f.name not in ("classes.txt", "data.yaml")]
+            label_files = [f for f in label_files if f.name not in ("classes.txt", "data.yaml")]
         n_ann = 0
         for lf in label_files:
             try:
-                lines = [l for l in lf.read_text(encoding="utf-8").splitlines() if l.strip()]
+                lines = [
+                    line for line in lf.read_text(encoding="utf-8").splitlines() if line.strip()
+                ]
                 n_ann += len(lines)
             except Exception:
                 pass
@@ -162,13 +163,12 @@ class DatasetImporter:
         return result
 
     # ========================================================= YOLO PARSER ==
-    def _run_yolo(self, root: Path, result: ImportResult,
-                  progress_cb, _log) -> None:
+    def _run_yolo(self, root: Path, result: ImportResult, progress_cb, _log) -> None:
         class_names, _ = _load_yolo_classes(root)
         _log(f"Doc duoc {len(class_names)} class: {class_names}")
 
         # Tao / gop class
-        class_map: dict[int, int] = {}   # yolo_index -> repo class_id
+        class_map: dict[int, int] = {}  # yolo_index -> repo class_id
         for i, name in enumerate(class_names):
             cd = self._ensure_class(name, result)
             class_map[i] = cd.id
@@ -177,10 +177,7 @@ class DatasetImporter:
         label_files = sorted(root.rglob("labels/**/*.txt"))
         if not label_files:
             # flat layout: .txt nam cung cap voi anh
-            label_files = sorted(
-                f for f in root.rglob("*.txt")
-                if f.name not in ("classes.txt",)
-            )
+            label_files = sorted(f for f in root.rglob("*.txt") if f.name not in ("classes.txt",))
 
         total = len(label_files)
         seg = self.cfg.fmt != "yolo_det"
@@ -203,8 +200,11 @@ class DatasetImporter:
 
             anns: list[Annotation] = []
             try:
-                lines = [l.strip() for l in
-                         lf.read_text(encoding="utf-8").splitlines() if l.strip()]
+                lines = [
+                    line.strip()
+                    for line in lf.read_text(encoding="utf-8").splitlines()
+                    if line.strip()
+                ]
             except Exception as exc:
                 _log(f"[CANH BAO] Doc nhan loi {lf.name}: {exc}")
                 result.n_skipped += 1
@@ -230,10 +230,12 @@ class DatasetImporter:
                         poly.append(vals[k] * w)
                         poly.append(vals[k + 1] * h)
                     a = Annotation(
-                        image_id=0, class_id=class_id,
+                        image_id=0,
+                        class_id=class_id,
                         shape=SHAPE_POLYGON,
                         polygon=poly,
-                        confidence=1.0, status=ANN_AUTO,
+                        confidence=1.0,
+                        status=ANN_AUTO,
                         source=self.cfg.source_tag,
                     )
                     a.recompute()
@@ -247,10 +249,12 @@ class DatasetImporter:
                     x2 = (cx + bw / 2) * w
                     y2 = (cy + bh / 2) * h
                     a = Annotation(
-                        image_id=0, class_id=class_id,
+                        image_id=0,
+                        class_id=class_id,
                         shape=SHAPE_BBOX,
                         bbox=[x1, y1, x2, y2],
-                        confidence=1.0, status=ANN_AUTO,
+                        confidence=1.0,
+                        status=ANN_AUTO,
                         source=self.cfg.source_tag,
                     )
                     a.area = max(0.0, (x2 - x1) * (y2 - y1))
@@ -265,8 +269,7 @@ class DatasetImporter:
                 progress_cb(done, total, img_path.name)
 
     # ========================================================= COCO PARSER ==
-    def _run_coco(self, root: Path, result: ImportResult,
-                  progress_cb, _log) -> None:
+    def _run_coco(self, root: Path, result: ImportResult, progress_cb, _log) -> None:
         json_files = sorted(root.rglob("*.json"))
         if not json_files:
             raise FileNotFoundError("Khong tim thay file JSON trong thu muc.")
@@ -290,9 +293,7 @@ class DatasetImporter:
                 cat_map[cat["id"]] = cd.id
 
             # Map image_id -> image info
-            img_info: dict[int, dict] = {
-                im["id"]: im for im in data.get("images", [])
-            }
+            img_info: dict[int, dict] = {im["id"]: im for im in data.get("images", [])}
 
             # Nhom annotation theo image_id
             ann_by_img: dict[int, list[dict]] = {}
@@ -322,7 +323,7 @@ class DatasetImporter:
                     class_id = cat_map.get(raw.get("category_id", -1))
                     if class_id is None:
                         continue
-                    bbox_raw = raw.get("bbox", [])   # [x, y, w, h] COCO format
+                    bbox_raw = raw.get("bbox", [])  # [x, y, w, h] COCO format
                     if len(bbox_raw) == 4:
                         x1 = float(bbox_raw[0])
                         y1 = float(bbox_raw[1])
@@ -339,20 +340,26 @@ class DatasetImporter:
 
                     if len(poly) >= 6:
                         a = Annotation(
-                            image_id=0, class_id=class_id,
-                            shape=SHAPE_POLYGON, polygon=poly,
+                            image_id=0,
+                            class_id=class_id,
+                            shape=SHAPE_POLYGON,
+                            polygon=poly,
                             bbox=[x1, y1, x2, y2],
                             confidence=float(raw.get("score", 1.0)),
-                            status=ANN_AUTO, source=self.cfg.source_tag,
+                            status=ANN_AUTO,
+                            source=self.cfg.source_tag,
                         )
                         a.recompute()
                     else:
                         a = Annotation(
-                            image_id=0, class_id=class_id,
-                            shape=SHAPE_BBOX, bbox=[x1, y1, x2, y2],
+                            image_id=0,
+                            class_id=class_id,
+                            shape=SHAPE_BBOX,
+                            bbox=[x1, y1, x2, y2],
                             confidence=float(raw.get("score", 1.0)),
                             area=max(0.0, (x2 - x1) * (y2 - y1)),
-                            status=ANN_AUTO, source=self.cfg.source_tag,
+                            status=ANN_AUTO,
+                            source=self.cfg.source_tag,
                         )
                     anns.append(a)
 
@@ -379,15 +386,17 @@ class DatasetImporter:
             return self.repo.copy_into_project(src, "images")
         return src
 
-    def _write_image(self, img_path: Path, w: int, h: int,
-                     anns: list[Annotation], result: ImportResult) -> int:
+    def _write_image(
+        self, img_path: Path, w: int, h: int, anns: list[Annotation], result: ImportResult
+    ) -> int:
         """Them anh vao DB neu chua co, ghi de annotation, tra ve image_id."""
         existing = self.repo.image_by_path(str(img_path))
         if existing:
             img_id = existing.id
         else:
-            img_id = self.repo.add_image(str(img_path), width=w, height=h,
-                                         source=self.cfg.source_tag)
+            img_id = self.repo.add_image(
+                str(img_path), width=w, height=h, source=self.cfg.source_tag
+            )
         if not img_id:
             return 0
         for a in anns:
@@ -416,6 +425,7 @@ def _load_yolo_classes(root: Path) -> tuple[list[str], Path | None]:
                     if rest.startswith("["):
                         # names: [a, b, c]
                         import ast
+
                         names = [str(x).strip() for x in ast.literal_eval(rest)]
                         in_names = False
                     continue
@@ -434,8 +444,11 @@ def _load_yolo_classes(root: Path) -> tuple[list[str], Path | None]:
     # Fallback: classes.txt
     for cfile in root.rglob("classes.txt"):
         try:
-            names = [l.strip() for l in cfile.read_text(
-                encoding="utf-8").splitlines() if l.strip()]
+            names = [
+                line.strip()
+                for line in cfile.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
             if names:
                 return names, cfile
         except Exception:
@@ -509,6 +522,7 @@ def _image_size(path: Path) -> tuple[int, int]:
     """Doc kich thuoc anh. Tra ve (0, 0) neu loi."""
     try:
         import cv2
+
         img = cv2.imread(str(path))
         if img is not None:
             return img.shape[1], img.shape[0]
@@ -516,6 +530,7 @@ def _image_size(path: Path) -> tuple[int, int]:
         pass
     try:
         from PIL import Image as PilImage
+
         with PilImage.open(path) as im:
             return im.size  # (width, height)
     except Exception:

@@ -1,4 +1,5 @@
 """Cat frame tu video theo nhieu che do + loc chat luong ngay trong lucghi."""
+
 from __future__ import annotations
 
 import time
@@ -47,10 +48,10 @@ class ExtractConfig:
     blur_threshold: float = 60.0
     lowlight_filter: bool = False
     lowlight_threshold: float = 45.0
-    keep_rejected: bool = False   # van luu anh bi loai (danh dau) thay vi bo han
+    keep_rejected: bool = False  # van luu anh bi loai (danh dau) thay vi bo han
 
     @classmethod
-    def from_dict(cls, data: dict) -> "ExtractConfig":
+    def from_dict(cls, data: dict) -> ExtractConfig:
         known = {f for f in cls.__dataclass_fields__}
         return cls(**{k: v for k, v in data.items() if k in known})
 
@@ -97,10 +98,12 @@ def probe_video(path: str | Path) -> VideoInfo | None:
         fourcc = int(cap.get(cv2.CAP_PROP_FOURCC) or 0)
         codec = "".join(chr((fourcc >> 8 * i) & 0xFF) for i in range(4)).strip("\x00 ")
         info = VideoInfo(
-            path=str(path), filename=path.name,
+            path=str(path),
+            filename=path.name,
             width=int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0),
             height=int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0),
-            fps=round(fps, 2), frame_count=n,
+            fps=round(fps, 2),
+            frame_count=n,
             duration=(n / fps) if fps > 0 else 0.0,
             size_bytes=path.stat().st_size if path.exists() else 0,
             codec=codec,
@@ -126,7 +129,7 @@ def estimate_output(info: VideoInfo, config: ExtractConfig) -> int:
         step = max(1, int(round(info.fps * max(0.01, config.every_n_seconds))))
         n = span // step
     elif config.mode == MODE_ADAPTIVE_MOTION:
-        n = int(span * 0.18)     # uoc luong kinh nghiem
+        n = int(span * 0.18)  # uoc luong kinh nghiem
     elif config.mode == MODE_SCENE_DETECT:
         n = max(1, int(span * 0.03))
     else:
@@ -148,8 +151,14 @@ class FrameExtractor:
         self._cancelled = True
 
     # ---------------------------------------------------------------- run --
-    def extract(self, video_path: str | Path, output_dir: str | Path,
-                progress_cb=None, log_cb=None, preview_cb=None) -> ExtractResult:
+    def extract(
+        self,
+        video_path: str | Path,
+        output_dir: str | Path,
+        progress_cb=None,
+        log_cb=None,
+        preview_cb=None,
+    ) -> ExtractResult:
         cfg = self.cfg
         out_dir = ensure_dir(output_dir)
         result = ExtractResult(output_dir=str(out_dir))
@@ -168,12 +177,14 @@ class FrameExtractor:
             cap.set(cv2.CAP_PROP_POS_FRAMES, start_f)
 
         step_frames = self._step_size(fps)
-        dedup = DuplicateFilter(cfg.similarity_method, cfg.phash_distance,
-                                cfg.ssim_threshold) if cfg.remove_similar else None
+        dedup = (
+            DuplicateFilter(cfg.similarity_method, cfg.phash_distance, cfg.ssim_threshold)
+            if cfg.remove_similar
+            else None
+        )
 
         prev_gray: np.ndarray | None = None
         prev_hist: np.ndarray | None = None
-        stem = Path(video_path).stem
         idx = start_f
         saved_no = 0
         expected = max(1, end_f - start_f) if end_f > start_f else max(1, total)
@@ -194,13 +205,15 @@ class FrameExtractor:
             cur_index = idx
             idx += 1
 
-            take = self._should_take(frame, cur_index - start_f, step_frames,
-                                     prev_gray, prev_hist)
+            take = self._should_take(frame, cur_index - start_f, step_frames, prev_gray, prev_hist)
             keep, prev_gray, prev_hist = take
 
             if progress_cb and result.n_read % 5 == 0:
-                progress_cb(min(expected, cur_index - start_f + 1), expected,
-                            f"Doc frame {cur_index}/{end_f or total} - da luu {result.n_saved}")
+                progress_cb(
+                    min(expected, cur_index - start_f + 1),
+                    expected,
+                    f"Doc frame {cur_index}/{end_f or total} - da luu {result.n_saved}",
+                )
 
             if not keep:
                 continue
@@ -241,14 +254,21 @@ class FrameExtractor:
                 continue
 
             h, w = frame.shape[:2]
-            result.saved.append({
-                "path": str(fpath), "width": w, "height": h,
-                "source": str(video_path), "frame_index": cur_index,
-                "timestamp": cur_index / fps if fps else 0.0,
-                "blur_score": blur_v, "brightness": bright_v,
-                "is_duplicate": dup_of >= 0, "dup_of": 0,
-                "rejected": rejected_reason,
-            })
+            result.saved.append(
+                {
+                    "path": str(fpath),
+                    "width": w,
+                    "height": h,
+                    "source": str(video_path),
+                    "frame_index": cur_index,
+                    "timestamp": cur_index / fps if fps else 0.0,
+                    "blur_score": blur_v,
+                    "brightness": bright_v,
+                    "is_duplicate": dup_of >= 0,
+                    "dup_of": 0,
+                    "rejected": rejected_reason,
+                }
+            )
             result.n_saved += 1
 
             if preview_cb and result.n_saved % 10 == 1:
@@ -277,8 +297,9 @@ class FrameExtractor:
             return max(1, int(round(fps * max(0.01, cfg.every_n_seconds))))
         return 1
 
-    def _should_take(self, frame, rel_index: int, step: int,
-                     prev_gray, prev_hist) -> tuple[bool, np.ndarray | None, np.ndarray | None]:
+    def _should_take(
+        self, frame, rel_index: int, step: int, prev_gray, prev_hist
+    ) -> tuple[bool, np.ndarray | None, np.ndarray | None]:
         cfg = self.cfg
         mode = cfg.mode
 
@@ -335,16 +356,20 @@ class FrameExtractor:
 
 
 # --------------------------------------------------- loc thu muc anh co san --
-def scan_folder_records(paths, dedup_cfg: ExtractConfig | None = None,
-                        progress_cb=None, log_cb=None, cancel_check=None) -> ExtractResult:
+def scan_folder_records(
+    paths, dedup_cfg: ExtractConfig | None = None, progress_cb=None, log_cb=None, cancel_check=None
+) -> ExtractResult:
     """Phan tich mot danh sach anh co san: do chat luong + danh dau trung."""
     from app.core.image_quality import imread_unicode
 
     cfg = dedup_cfg or ExtractConfig()
     result = ExtractResult()
     t0 = time.time()
-    dedup = DuplicateFilter(cfg.similarity_method, cfg.phash_distance,
-                            cfg.ssim_threshold) if cfg.remove_similar else None
+    dedup = (
+        DuplicateFilter(cfg.similarity_method, cfg.phash_distance, cfg.ssim_threshold)
+        if cfg.remove_similar
+        else None
+    )
     total = len(paths)
     for i, p in enumerate(paths):
         if cancel_check and cancel_check():
@@ -368,12 +393,21 @@ def scan_folder_records(paths, dedup_cfg: ExtractConfig | None = None,
         if rep.is_dark:
             result.n_dark += 1
 
-        result.saved.append({
-            "path": str(p), "width": w, "height": h, "source": str(Path(p).parent),
-            "frame_index": -1, "timestamp": 0.0,
-            "blur_score": rep.blur_score, "brightness": rep.brightness,
-            "is_duplicate": is_dup, "dup_of": 0, "rejected": "",
-        })
+        result.saved.append(
+            {
+                "path": str(p),
+                "width": w,
+                "height": h,
+                "source": str(Path(p).parent),
+                "frame_index": -1,
+                "timestamp": 0.0,
+                "blur_score": rep.blur_score,
+                "brightness": rep.brightness,
+                "is_duplicate": is_dup,
+                "dup_of": 0,
+                "rejected": "",
+            }
+        )
         result.n_saved += 1
         if progress_cb and (i % 5 == 0 or i == total - 1):
             progress_cb(i + 1, total, f"Phan tich {i + 1}/{total} - {Path(p).name}")

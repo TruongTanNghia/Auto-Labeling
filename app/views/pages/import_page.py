@@ -1,4 +1,5 @@
 """Trang Import: nạp video hoặc thư mục ảnh vào project."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -51,7 +52,7 @@ class ImportPage(BasePage):
     # Cho phép chọn file trước khi có project; lúc bấm nạp mới hỏi tạo project.
     NEEDS_PROJECT = False
 
-    videosSelected = Signal(list)   # gửi sang trang Frame Extractor
+    videosSelected = Signal(list)  # gửi sang trang Frame Extractor
     navigate = Signal(str)
 
     def __init__(self, controller, parent=None) -> None:
@@ -63,7 +64,9 @@ class ImportPage(BasePage):
     # ================================================================ BUILD ==
     def build(self) -> None:
         self.add_video_btn = primary_button(tr("import.add_video", "Thêm video"), "video")
-        self.add_folder_btn = ghost_button(tr("import.add_folder", "Thêm thư mục ảnh"), "folder_open")
+        self.add_folder_btn = ghost_button(
+            tr("import.add_folder", "Thêm thư mục ảnh"), "folder_open"
+        )
         self.add_video_btn.clicked.connect(self.choose_videos)
         self.add_folder_btn.clicked.connect(self.choose_folder)
         self.header.add_action(self.add_folder_btn)
@@ -84,15 +87,21 @@ class ImportPage(BasePage):
         self._update_counts()
 
     def _build_left(self) -> QWidget:
-        card = Card(tr("import.source_card", "Nguồn dữ liệu"),
-                    tr("import.source_card_sub", "Những gì bạn vừa chọn sẽ hiện ở đây"), "layers")
+        card = Card(
+            tr("import.source_card", "Nguồn dữ liệu"),
+            tr("import.source_card_sub", "Những gì bạn vừa chọn sẽ hiện ở đây"),
+            "layers",
+        )
 
-        self.drop_hint = QLabel(tr("import.drop_hint", "Kéo thả video, ảnh hoặc cả thư mục vào đây"))
+        self.drop_hint = QLabel(
+            tr("import.drop_hint", "Kéo thả video, ảnh hoặc cả thư mục vào đây")
+        )
         self.drop_hint.setAlignment(Qt.AlignCenter)
         self.drop_hint.setMinimumHeight(46)
         self.drop_hint.setStyleSheet(
             f"color: {COLORS['text_mute']}; font-size: 12.5px;"
-            f"border: 1.5px dashed {COLORS['border_hi']}; border-radius: 10px;")
+            f"border: 1.5px dashed {COLORS['border_hi']}; border-radius: 10px;"
+        )
         card.add(self.drop_hint)
 
         self.source_list = QListWidget()
@@ -110,7 +119,9 @@ class ImportPage(BasePage):
         btn_row.addWidget(self.remove_btn)
         btn_row.addWidget(self.clear_btn)
         btn_row.addStretch(1)
-        self.count_label = label(tr("import.count_empty", "Chưa có gì"), size=12, color=COLORS["text_mute"])
+        self.count_label = label(
+            tr("import.count_empty", "Chưa có gì"), size=12, color=COLORS["text_mute"]
+        )
         btn_row.addWidget(self.count_label)
         card.add(btn_row)
         return card
@@ -123,13 +134,16 @@ class ImportPage(BasePage):
 
         # --- Xem trước ---
         self.preview_card = Card(tr("import.preview_card", "Xem trước"), "", "image")
-        self.preview_label = QLabel(tr("import.preview_hint", "Chọn một mục ở bên trái để xem trước"))
+        self.preview_label = QLabel(
+            tr("import.preview_hint", "Chọn một mục ở bên trái để xem trước")
+        )
         self.preview_label.setAlignment(Qt.AlignCenter)
         self.preview_label.setMinimumHeight(200)
         self.preview_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.preview_label.setStyleSheet(
             f"background: {COLORS['bg']}; border: 1px solid {COLORS['border']};"
-            f"border-radius: 10px; color: {COLORS['text_mute']};")
+            f"border-radius: 10px; color: {COLORS['text_mute']};"
+        )
         self.preview_card.add(self.preview_label, 1)
         self.info_grid = KeyValueGrid()
         self.preview_card.add(self.info_grid)
@@ -141,7 +155,9 @@ class ImportPage(BasePage):
         action_card.add(self.status_label)
         action_card.add(hline())
 
-        self.import_images_btn = primary_button(tr("import.btn_import", "Nạp ảnh vào project"), "import")
+        self.import_images_btn = primary_button(
+            tr("import.btn_import", "Nạp ảnh vào project"), "import"
+        )
         self.import_images_btn.clicked.connect(self.import_images)
         action_card.add(self.import_images_btn)
 
@@ -154,10 +170,16 @@ class ImportPage(BasePage):
         self.copy_toggle = ToggleSwitch(False)
         self.dedup_toggle = ToggleSwitch(True)
         for text, hint, toggle in (
-            (tr("import.opt_copy", "Sao chép ảnh vào thư mục project"),
-             tr("import.opt_copy_hint", "Giữ nguyên vị trí gốc nếu tắt"), self.copy_toggle),
-            (tr("import.opt_dedup", "Phát hiện ảnh trùng khi nạp"),
-             tr("import.opt_dedup_hint", "So sánh bằng perceptual hash + SSIM"), self.dedup_toggle),
+            (
+                tr("import.opt_copy", "Sao chép ảnh vào thư mục project"),
+                tr("import.opt_copy_hint", "Giữ nguyên vị trí gốc nếu tắt"),
+                self.copy_toggle,
+            ),
+            (
+                tr("import.opt_dedup", "Phát hiện ảnh trùng khi nạp"),
+                tr("import.opt_dedup_hint", "So sánh bằng perceptual hash + SSIM"),
+                self.dedup_toggle,
+            ),
         ):
             r = QHBoxLayout()
             col = QVBoxLayout()
@@ -188,10 +210,12 @@ class ImportPage(BasePage):
         self._ds_path_edit = QLineEdit()
         self._ds_path_edit.setReadOnly(True)
         self._ds_path_edit.setPlaceholderText(
-            tr("import.dataset_dir_placeholder", "Chưa chọn thư mục dataset"))
+            tr("import.dataset_dir_placeholder", "Chưa chọn thư mục dataset")
+        )
         self._ds_path_edit.setStyleSheet(
             f"background:{COLORS['bg']}; border:1px solid {COLORS['border']};"
-            f"border-radius:6px; padding:4px 8px; color:{COLORS['text_dim']}; font-size:12px;")
+            f"border-radius:6px; padding:4px 8px; color:{COLORS['text_dim']}; font-size:12px;"
+        )
         dir_btn = ghost_button(tr("import.choose_dataset_dir", "Chọn thư mục"), "folder_open")
         dir_btn.clicked.connect(self._choose_dataset_dir)
         dir_row.addWidget(self._ds_path_edit, 1)
@@ -200,15 +224,17 @@ class ImportPage(BasePage):
 
         # Dropdown định dạng
         fmt_row = QHBoxLayout()
-        fmt_row.addWidget(label(tr("import.dataset_fmt", "Định dạng:"), size=12,
-                                color=COLORS["text_dim"]))
+        fmt_row.addWidget(
+            label(tr("import.dataset_fmt", "Định dạng:"), size=12, color=COLORS["text_dim"])
+        )
         self._ds_fmt_combo = QComboBox()
         self._ds_fmt_combo.addItem("YOLO Segmentation", "yolo_seg")
         self._ds_fmt_combo.addItem("YOLO Detection", "yolo_det")
         self._ds_fmt_combo.addItem("COCO JSON", "coco")
         self._ds_fmt_combo.setStyleSheet(
             f"background:{COLORS['bg']}; border:1px solid {COLORS['border']};"
-            f"border-radius:6px; padding:3px 8px; color:{COLORS['text']}; font-size:12px;")
+            f"border-radius:6px; padding:3px 8px; color:{COLORS['text']}; font-size:12px;"
+        )
         fmt_row.addWidget(self._ds_fmt_combo)
         fmt_row.addStretch(1)
         card.add(fmt_row)
@@ -222,7 +248,9 @@ class ImportPage(BasePage):
         btn_row = QHBoxLayout()
         self._ds_preview_btn = ghost_button(tr("import.dataset_preview", "Xem trước"), "eye")
         self._ds_preview_btn.clicked.connect(self._preview_dataset)
-        self._ds_import_btn = primary_button(tr("import.dataset_import", "Nhập vào project"), "import")
+        self._ds_import_btn = primary_button(
+            tr("import.dataset_import", "Nhập vào project"), "import"
+        )
         self._ds_import_btn.clicked.connect(self._import_dataset)
         btn_row.addWidget(self._ds_preview_btn)
         btn_row.addWidget(self._ds_import_btn)
@@ -237,8 +265,12 @@ class ImportPage(BasePage):
         Widget con (QListWidget, QLabel) mặc định "nuốt" sự kiện thả, khiến kéo
         file vào đúng chỗ tự nhiên nhất lại không ăn gì.
         """
-        for w in (self.source_list, self.source_list.viewport(),
-                  self.preview_label, self.drop_hint):
+        for w in (
+            self.source_list,
+            self.source_list.viewport(),
+            self.preview_label,
+            self.drop_hint,
+        ):
             w.setAcceptDrops(True)
             w.installEventFilter(self)
 
@@ -293,18 +325,27 @@ class ImportPage(BasePage):
         if images:
             self.add_images(images)
         if not videos and not images:
-            self.toast(tr("import.no_files_found", "Không tìm thấy video hoặc ảnh nào trong thứ vừa thả."), "warning")
+            self.toast(
+                tr("import.no_files_found", "Không tìm thấy video hoặc ảnh nào trong thứ vừa thả."),
+                "warning",
+            )
 
     # ============================================================== ACTIONS ==
     def choose_videos(self) -> None:
         patterns = " ".join(f"*{e}" for e in VIDEO_EXTS)
         files, _ = QFileDialog.getOpenFileNames(
-            self, tr("import.choose_videos_title", "Chọn video"), "", f"Video ({patterns});;Tất cả file (*)")
+            self,
+            tr("import.choose_videos_title", "Chọn video"),
+            "",
+            f"Video ({patterns});;Tất cả file (*)",
+        )
         if files:
             self.add_videos(files)
 
     def choose_folder(self) -> None:
-        d = QFileDialog.getExistingDirectory(self, tr("import.choose_folder_title", "Chọn thư mục chứa ảnh"))
+        d = QFileDialog.getExistingDirectory(
+            self, tr("import.choose_folder_title", "Chọn thư mục chứa ảnh")
+        )
         if not d:
             return
         found = scan_images(d)
@@ -320,9 +361,12 @@ class ImportPage(BasePage):
                 continue
             self.videos.append(p)
             info = probe_video(p)
-            sub = (f"{info.resolution}  ·  {info.fps:g} fps  ·  "
-                   f"{human_duration(info.duration)}  ·  {human_size(info.size_bytes)}"
-                   if info else tr("import.unreadable_video", "Không đọc được video này"))
+            sub = (
+                f"{info.resolution}  ·  {info.fps:g} fps  ·  "
+                f"{human_duration(info.duration)}  ·  {human_size(info.size_bytes)}"
+                if info
+                else tr("import.unreadable_video", "Không đọc được video này")
+            )
             item = QListWidgetItem(f"{Path(p).name}\n{sub}")
             item.setIcon(icons.icon("video", COLORS["accent_hi"], 20))
             item.setData(ROLE_KIND, "video")
@@ -333,27 +377,41 @@ class ImportPage(BasePage):
             added += 1
         self._update_counts()
         if added:
-            self.toast(tr("import.added_videos", "Đã thêm {count} video. Bước tiếp theo: cắt frame.", count=added), "success")
+            self.toast(
+                tr(
+                    "import.added_videos",
+                    "Đã thêm {count} video. Bước tiếp theo: cắt frame.",
+                    count=added,
+                ),
+                "success",
+            )
             self.source_list.setCurrentRow(self.source_list.count() - 1)
 
     def add_images(self, paths) -> None:
         new = [p for p in paths if p not in self.image_files]
         if not new:
-            self.toast(tr("import.images_already_in_list", "Những ảnh này đã có trong danh sách rồi."), "info")
+            self.toast(
+                tr("import.images_already_in_list", "Những ảnh này đã có trong danh sách rồi."),
+                "info",
+            )
             return
         self.image_files.extend(new)
 
         folders: dict[str, int] = {}
         for p in new:
             folders[str(Path(p).parent)] = folders.get(str(Path(p).parent), 0) + 1
-        existing = {self.source_list.item(i).data(ROLE_VALUE)
-                    for i in range(self.source_list.count())
-                    if self.source_list.item(i).data(ROLE_KIND) == "folder"}
-        for folder, n in folders.items():
+        existing = {
+            self.source_list.item(i).data(ROLE_VALUE)
+            for i in range(self.source_list.count())
+            if self.source_list.item(i).data(ROLE_KIND) == "folder"
+        }
+        for folder, _n in folders.items():
             if folder in existing:
                 continue
             total = sum(1 for p in self.image_files if str(Path(p).parent) == folder)
-            item = QListWidgetItem(f"{Path(folder).name}\n{tr('import.images_count_unit', '{count} ảnh', count=total)}  ·  {folder}")
+            item = QListWidgetItem(
+                f"{Path(folder).name}\n{tr('import.images_count_unit', '{count} ảnh', count=total)}  ·  {folder}"
+            )
             item.setIcon(icons.icon("folder_open", COLORS["success"], 20))
             item.setData(ROLE_KIND, "folder")
             item.setData(ROLE_VALUE, folder)
@@ -366,15 +424,17 @@ class ImportPage(BasePage):
     def _remove_selected(self) -> None:
         items = self.source_list.selectedItems()
         if not items:
-            self.toast(tr("import.select_item_to_remove", "Hãy chọn mục muốn bỏ ở danh sách bên trái."), "info")
+            self.toast(
+                tr("import.select_item_to_remove", "Hãy chọn mục muốn bỏ ở danh sách bên trái."),
+                "info",
+            )
             return
         for item in items:
             kind, value = item.data(ROLE_KIND), item.data(ROLE_VALUE)
             if kind == "video" and value in self.videos:
                 self.videos.remove(value)
             elif kind == "folder":
-                self.image_files = [p for p in self.image_files
-                                    if str(Path(p).parent) != value]
+                self.image_files = [p for p in self.image_files if str(Path(p).parent) != value]
             self.source_list.takeItem(self.source_list.row(item))
         self._update_counts()
 
@@ -384,7 +444,9 @@ class ImportPage(BasePage):
         self.image_files.clear()
         self._update_counts()
         self.preview_label.setPixmap(QPixmap())
-        self.preview_label.setText(tr("import.preview_hint", "Chọn một mục ở bên trái để xem trước"))
+        self.preview_label.setText(
+            tr("import.preview_hint", "Chọn một mục ở bên trái để xem trước")
+        )
         self.info_grid.set_pairs([])
 
     # ======================================================== TRANG THAI UI ==
@@ -395,7 +457,9 @@ class ImportPage(BasePage):
             parts.append(tr("import.v_count", "{count} video", count=n_v))
         if n_i:
             parts.append(tr("import.i_count", "{count} ảnh", count=f"{n_i:,}"))
-        self.count_label.setText("  ·  ".join(parts) if parts else tr("import.count_empty", "Chưa có gì"))
+        self.count_label.setText(
+            "  ·  ".join(parts) if parts else tr("import.count_empty", "Chưa có gì")
+        )
         self.drop_hint.setVisible(not parts)
 
         has_project = self.ctrl.has_project
@@ -406,20 +470,40 @@ class ImportPage(BasePage):
 
         # Giải thích rõ bước tiếp theo - đây là chỗ người dùng hay mắc kẹt
         if not n_v and not n_i:
-            msg = tr("import.msg_empty", "Chưa chọn gì. Dùng nút <b>Thêm video</b> / <b>Thêm thư mục ảnh</b> "
-                     "ở trên, hoặc kéo thả file vào cửa sổ.")
+            msg = tr(
+                "import.msg_empty",
+                "Chưa chọn gì. Dùng nút <b>Thêm video</b> / <b>Thêm thư mục ảnh</b> "
+                "ở trên, hoặc kéo thả file vào cửa sổ.",
+            )
         elif n_v and not n_i:
-            msg = tr("import.msg_only_video", "Đã chọn <b>{count} video</b>. Video <u>không</u> nạp thẳng vào project "
-                     "— phải cắt thành ảnh trước. Bấm <b>Cắt frame từ video</b> để sang bước đó.", count=n_v)
+            msg = tr(
+                "import.msg_only_video",
+                "Đã chọn <b>{count} video</b>. Video <u>không</u> nạp thẳng vào project "
+                "— phải cắt thành ảnh trước. Bấm <b>Cắt frame từ video</b> để sang bước đó.",
+                count=n_v,
+            )
         elif n_i and not n_v:
-            msg = tr("import.msg_only_images", "Đã chọn <b>{count} ảnh</b>. Bấm <b>Nạp ảnh vào project</b> để đưa "
-                     "vào project và bắt đầu gán nhãn.", count=f"{n_i:,}")
+            msg = tr(
+                "import.msg_only_images",
+                "Đã chọn <b>{count} ảnh</b>. Bấm <b>Nạp ảnh vào project</b> để đưa "
+                "vào project và bắt đầu gán nhãn.",
+                count=f"{n_i:,}",
+            )
         else:
-            msg = tr("import.msg_mixed", "Đã chọn <b>{count_v} video</b> và <b>{count_i} ảnh</b>. Nạp ảnh trước, "
-                     "rồi sang bước cắt frame cho video.", count_v=n_v, count_i=f"{n_i:,}")
+            msg = tr(
+                "import.msg_mixed",
+                "Đã chọn <b>{count_v} video</b> và <b>{count_i} ảnh</b>. Nạp ảnh trước, "
+                "rồi sang bước cắt frame cho video.",
+                count_v=n_v,
+                count_i=f"{n_i:,}",
+            )
         if not has_project:
-            msg += tr("import.msg_no_project", "<br><span style='color:%s'>Chưa mở project — bấm nút bên dưới sẽ "
-                      "hỏi tạo project trước.</span>", color=COLORS["warning"])
+            msg += tr(
+                "import.msg_no_project",
+                "<br><span style='color:%s'>Chưa mở project — bấm nút bên dưới sẽ "
+                "hỏi tạo project trước.</span>",
+                color=COLORS["warning"],
+            )
         self.status_label.setText(msg)
 
     def _go_extract(self) -> None:
@@ -454,15 +538,17 @@ class ImportPage(BasePage):
             self.info_grid.set_pairs([])
             return
         self._set_preview(_grab_frame(path, info.frame_count // 3 if info.frame_count else 0))
-        self.info_grid.set_pairs([
-            (tr("import.file_name", "Tên file"), info.filename),
-            (tr("import.resolution", "Độ phân giải"), info.resolution),
-            (tr("import.fps", "FPS"), f"{info.fps:g}"),
-            (tr("import.duration", "Thời lượng"), human_duration(info.duration)),
-            (tr("import.total_frames", "Tổng số frame"), f"{info.frame_count:,}"),
-            (tr("import.codec", "Codec"), info.codec or "?"),
-            (tr("import.file_size", "Dung lượng"), human_size(info.size_bytes)),
-        ])
+        self.info_grid.set_pairs(
+            [
+                (tr("import.file_name", "Tên file"), info.filename),
+                (tr("import.resolution", "Độ phân giải"), info.resolution),
+                (tr("import.fps", "FPS"), f"{info.fps:g}"),
+                (tr("import.duration", "Thời lượng"), human_duration(info.duration)),
+                (tr("import.total_frames", "Tổng số frame"), f"{info.frame_count:,}"),
+                (tr("import.codec", "Codec"), info.codec or "?"),
+                (tr("import.file_size", "Dung lượng"), human_size(info.size_bytes)),
+            ]
+        )
 
     def _preview_folder(self, folder: str) -> None:
         files = [p for p in self.image_files if str(Path(p).parent) == folder]
@@ -478,23 +564,31 @@ class ImportPage(BasePage):
             except OSError:
                 pass
         est = total_size / max(1, len(sample)) * len(files)
-        self.info_grid.set_pairs([
-            (tr("import.folder_name", "Thư mục"), Path(folder).name),
-            (tr("import.image_count", "Số ảnh"), f"{len(files):,}"),
-            (tr("import.first_image_size", "Kích thước ảnh đầu"),
-             f"{pm.width()} x {pm.height()}" if not pm.isNull() else "?"),
-            (tr("import.est_size", "Dung lượng (ước tính)"), human_size(est)),
-        ])
+        self.info_grid.set_pairs(
+            [
+                (tr("import.folder_name", "Thư mục"), Path(folder).name),
+                (tr("import.image_count", "Số ảnh"), f"{len(files):,}"),
+                (
+                    tr("import.first_image_size", "Kích thước ảnh đầu"),
+                    f"{pm.width()} x {pm.height()}" if not pm.isNull() else "?",
+                ),
+                (tr("import.est_size", "Dung lượng (ước tính)"), human_size(est)),
+            ]
+        )
 
     def _set_preview(self, pm: QPixmap) -> None:
         if pm.isNull():
             self.preview_label.setPixmap(QPixmap())
             self.preview_label.setText(tr("import.cannot_read_image", "Không đọc được ảnh"))
             return
-        self.preview_label.setPixmap(pm.scaled(
-            max(320, self.preview_label.width() - 12),
-            max(180, self.preview_label.height() - 12),
-            Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        self.preview_label.setPixmap(
+            pm.scaled(
+                max(320, self.preview_label.width() - 12),
+                max(180, self.preview_label.height() - 12),
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation,
+            )
+        )
 
     # ============================================================== IMPORT ==
     def import_images(self) -> None:
@@ -510,14 +604,25 @@ class ImportPage(BasePage):
         ecfg.remove_similar = self.dedup_toggle.isChecked()
         ecfg.blur_detection = True
         ecfg.lowlight_filter = False
-        ecfg.keep_rejected = True   # chỉ đánh dấu, không loại bỏ khi nạp thủ công
+        ecfg.keep_rejected = True  # chỉ đánh dấu, không loại bỏ khi nạp thủ công
 
-        worker = ScanFolderWorker(self.ctrl.repo, list(self.image_files), ecfg,
-                                  copy_into_project=self.copy_toggle.isChecked())
-        self.progress.start(tr("import.loading_progress", "Đang nạp {count} ảnh vào project ...", count=f"{len(self.image_files):,}"))
+        worker = ScanFolderWorker(
+            self.ctrl.repo,
+            list(self.image_files),
+            ecfg,
+            copy_into_project=self.copy_toggle.isChecked(),
+        )
+        self.progress.start(
+            tr(
+                "import.loading_progress",
+                "Đang nạp {count} ảnh vào project ...",
+                count=f"{len(self.image_files):,}",
+            )
+        )
         self.import_images_btn.setEnabled(False)
         self.ctrl.run_worker(
-            "scan", worker,
+            "scan",
+            worker,
             on_progress=self.progress.set_progress,
             on_stage=self.progress.set_stage,
             on_done=self._on_import_done,
@@ -529,8 +634,7 @@ class ImportPage(BasePage):
         if result is None:
             self._update_counts()
             return
-        self.toast(
-            f"(trùng: {result.n_duplicate}, mờ: {result.n_blurry}).", "success")
+        self.toast(tr("import.imported_toast", "Đã nạp ảnh thành công (trùng: {dup}, mờ: {blur}).", dup=result.n_duplicate, blur=result.n_blurry), "success")
         self.image_files.clear()
         for i in reversed(range(self.source_list.count())):
             if self.source_list.item(i).data(ROLE_KIND) == "folder":
@@ -541,7 +645,8 @@ class ImportPage(BasePage):
     # ======================================================= DATASET IMPORT ==
     def _choose_dataset_dir(self) -> None:
         d = QFileDialog.getExistingDirectory(
-            self, tr("import.choose_dataset_dir_title", "Chọn thư mục dataset"))
+            self, tr("import.choose_dataset_dir_title", "Chọn thư mục dataset")
+        )
         if d:
             self._ds_dir = d
             self._ds_path_edit.setText(d)
@@ -556,18 +661,26 @@ class ImportPage(BasePage):
         info = DatasetImporter(None, cfg).preview()  # type: ignore[arg-type]
         if "error" in info:
             _danger = COLORS["danger"]
-            self._ds_preview_label.setText(
-                f"<span style='color:{_danger}'>{info['error']}</span>")
+            self._ds_preview_label.setText(f"<span style='color:{_danger}'>{info['error']}</span>")
             self._ds_preview_label.setVisible(True)
             return
         lines = [
-            tr("import.dataset_preview_images", "Số ảnh phát hiện: <b>{n}</b>",
-               n=info.get("n_images", 0)),
-            tr("import.dataset_preview_anns", "Số vùng nhãn: <b>{n}</b>",
-               n=info.get("n_annotations", 0)),
-            tr("import.dataset_preview_cls_new",
-               "Class mới sẽ thêm: <b>{n}</b> &nbsp;·&nbsp; Gộp vào class cũ: <b>{m}</b>",
-               n=info.get("n_classes_new", 0), m=info.get("n_classes_merge", 0)),
+            tr(
+                "import.dataset_preview_images",
+                "Số ảnh phát hiện: <b>{n}</b>",
+                n=info.get("n_images", 0),
+            ),
+            tr(
+                "import.dataset_preview_anns",
+                "Số vùng nhãn: <b>{n}</b>",
+                n=info.get("n_annotations", 0),
+            ),
+            tr(
+                "import.dataset_preview_cls_new",
+                "Class mới sẽ thêm: <b>{n}</b> &nbsp;·&nbsp; Gộp vào class cũ: <b>{m}</b>",
+                n=info.get("n_classes_new", 0),
+                m=info.get("n_classes_merge", 0),
+            ),
         ]
         self._ds_preview_label.setText("<br>".join(lines))
         self._ds_preview_label.setVisible(True)
@@ -590,11 +703,16 @@ class ImportPage(BasePage):
         )
         worker = ImportWorker(self.ctrl.repo, cfg)
         self.progress.start(
-            tr("import.dataset_loading", "Đang nhập dataset {fmt} ...",
-               fmt=self._ds_fmt_combo.currentText()))
+            tr(
+                "import.dataset_loading",
+                "Đang nhập dataset {fmt} ...",
+                fmt=self._ds_fmt_combo.currentText(),
+            )
+        )
         self._ds_import_btn.setEnabled(False)
         self.ctrl.run_worker(
-            "dataset_import", worker,
+            "dataset_import",
+            worker,
             on_progress=self.progress.set_progress,
             on_stage=self.progress.set_stage,
             on_done=self._on_dataset_import_done,
@@ -626,6 +744,7 @@ class ImportPage(BasePage):
 def _grab_frame(path: str, index: int = 0) -> QPixmap:
     try:
         import cv2
+
         cap = cv2.VideoCapture(str(path))
         if not cap.isOpened():
             return QPixmap()
@@ -637,7 +756,6 @@ def _grab_frame(path: str, index: int = 0) -> QPixmap:
             return QPixmap()
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         h, w, ch = rgb.shape
-        return QPixmap.fromImage(
-            QImage(rgb.data, w, h, ch * w, QImage.Format_RGB888).copy())
+        return QPixmap.fromImage(QImage(rgb.data, w, h, ch * w, QImage.Format_RGB888).copy())
     except Exception:
         return QPixmap()
