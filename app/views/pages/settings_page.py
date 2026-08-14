@@ -373,10 +373,35 @@ class SettingsPage(BasePage):
         card.add(
             Field(tr("settings.model.task", "Nhiệm vụ"), self.m_task, label_width=LABEL_W_WIDE)
         )
-        self.m_weights = QLineEdit(cfg.get("model.weights", "yolo11n-seg.pt"))
+
+        # Presets YOLO
+        yolo_presets = [
+            ("yolo11n-seg.pt", "YOLO11 Nano — Siêu nhanh (6 MB)"),
+            ("yolo11s-seg.pt", "YOLO11 Small — Cân bằng (22 MB)"),
+            ("yolo11m-seg.pt", "YOLO11 Medium — Độ chính xác cao (50 MB)"),
+            ("yolo11l-seg.pt", "YOLO11 Large — Mạnh mẽ (85 MB)"),
+            ("yolo11x-seg.pt", "YOLO11 Extra Large — Tốt nhất (120 MB)"),
+            ("yolov8n-seg.pt", "YOLOv8 Nano — Ổn định (7 MB)"),
+            ("yolov8x-seg.pt", "YOLOv8 Extra Large (140 MB)"),
+        ]
+        cur_w = cfg.get("model.weights", "yolo11m-seg.pt")
+        self.m_preset_combo = combo(
+            yolo_presets,
+            current=cur_w if any(w == cur_w for w, _ in yolo_presets) else "yolo11m-seg.pt",
+        )
+        self.m_preset_combo.currentIndexChanged.connect(self._on_yolo_preset_changed)
         card.add(
             Field(
-                tr("settings.model.weights", "Trọng số"), self.m_weights, label_width=LABEL_W_WIDE
+                tr("settings.model.preset_select", "Chọn mô hình YOLO sẵn có"),
+                self.m_preset_combo,
+                label_width=LABEL_W_WIDE,
+            )
+        )
+
+        self.m_weights = QLineEdit(cfg.get("model.weights", "yolo11m-seg.pt"))
+        card.add(
+            Field(
+                tr("settings.model.weights", "Tên tệp trọng số"), self.m_weights, label_width=LABEL_W_WIDE
             )
         )
 
@@ -419,6 +444,8 @@ class SettingsPage(BasePage):
         )
         lay.addWidget(card)
 
+
+
         gpu_card = Card(tr("settings.model.current_device", "Thiết bị hiện tại"), "", "bolt")
         d = device_info()
         gpu_card.add(
@@ -442,6 +469,11 @@ class SettingsPage(BasePage):
         lay.addWidget(gpu_card)
         lay.addStretch(1)
         return self._scroll(w)
+
+    def _on_yolo_preset_changed(self, idx: int) -> None:
+        val = self.m_preset_combo.currentData()
+        if val:
+            self.m_weights.setText(val)
 
     def _pick_weights(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -551,6 +583,8 @@ class SettingsPage(BasePage):
         lay = QVBoxLayout(w)
         lay.setContentsMargins(0, 0, 6, 0)
         lay.setSpacing(12)
+
+
 
         card = Card(tr("settings.annotation.display", "Hiển thị trên vùng vẽ"), "", "eye")
         self.a_conf = ToggleSwitch(cfg.get("annotation.show_confidence", True))
@@ -1021,6 +1055,7 @@ class SettingsPage(BasePage):
                 "half": self.m_half.isChecked(),
             },
         )
+
         cfg.update_section(
             "inference",
             {

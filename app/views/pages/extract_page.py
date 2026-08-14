@@ -7,11 +7,13 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QButtonGroup,
     QFileDialog,
+    QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPlainTextEdit,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -360,9 +362,17 @@ class ExtractPage(BasePage):
 
     # --------------------------------------------------------------- right --
     def _build_right(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+
         wrap = QWidget()
+        wrap.setStyleSheet("background: transparent;")
         lay = QVBoxLayout(wrap)
-        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setContentsMargins(0, 0, 4, 0)
         lay.setSpacing(12)
 
         self.video_card = Card(tr("extract.processing_video", "Video đang xử lý"), "", "video")
@@ -420,7 +430,9 @@ class ExtractPage(BasePage):
         self.log_view.setMinimumHeight(150)
         self.log_card.add(self.log_view)
         lay.addWidget(self.log_card, 1)
-        return wrap
+
+        scroll.setWidget(wrap)
+        return scroll
 
     # ================================================================ LOGIC ==
     def set_videos(self, paths: list[str]) -> None:

@@ -147,6 +147,15 @@ class AppController(QObject):
 
     def refresh_settings(self) -> None:
         self._apply_autosave_interval()
+        w_name = cfg.get("model.custom_weights") or cfg.get("model.weights", "yolo11m-seg.pt")
+        task = cfg.get("model.task", "segment")
+        dev = cfg.get("model.device", "auto")
+        if self.engine.loaded and self.engine.weights != w_name:
+            try:
+                self.engine.load(w_name, task=task, device=dev)
+                log.info("Cập nhật mô hình theo Cài đặt: %s", w_name)
+            except Exception as exc:
+                log.warning("Không nạp được mô hình mới: %s", exc)
 
     def _do_autosave(self) -> None:
         if self.repo is None:

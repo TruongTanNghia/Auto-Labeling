@@ -56,7 +56,7 @@ def pick_sam_weights(preferred: str = "auto") -> tuple[str, str]:
 class SamRefiner(AnnotatorPlugin):
     info = PluginInfo(
         key="sam",
-        name=tr("plugins.sam.name", "SAM Refiner (3 / 2)"),
+        name=tr("plugins.sam.name", "Chọn thông minh (SAM 2 / SAM 1)"),
         version="1.1",
         author="AutoLabel Studio AI",
         description=tr(

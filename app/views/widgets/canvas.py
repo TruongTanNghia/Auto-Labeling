@@ -41,6 +41,7 @@ except Exception:  # pragma: no cover
 
 # ------------------------------------------------------------------- TOOLS ---
 TOOL_SELECT = "select"
+TOOL_SMART_SELECT = "smart_select"
 TOOL_POLYGON = "polygon"
 TOOL_BRUSH = "brush"
 TOOL_ERASER = "eraser"
@@ -71,6 +72,7 @@ class AnnotationCanvas(QWidget):
     viewChanged = Signal()
     newShapeCreated = Signal(int)  # index cua shape moi
     doubleClickedEmpty = Signal()
+    smartSelectTriggered = Signal(object)  # dict: {"point": ..., "bbox": ...}
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -97,6 +99,8 @@ class AnnotationCanvas(QWidget):
         self._panning = False
         self._pan_start = QPoint()
         self._space_held = False
+        self._empty_drag = False
+        self._empty_drag_start = QPoint()
 
         # --- trang thai chon / sua ---
         self.tool = TOOL_SELECT
@@ -112,9 +116,12 @@ class AnnotationCanvas(QWidget):
         self._draft: list[QPointF] = []
         self._draft_cursor = QPointF()
         self._bbox_start: QPointF | None = None
+        self._smart_start: QPointF | None = None
         self._brush_path: list[QPointF] = []
         self.brush_size = 20.0
         self._split_line: list[QPointF] = []
+        self._processing = False
+        self._processing_msg = ""
 
         # --- undo/redo ---
         self._undo: list[list[Annotation]] = []
@@ -284,20 +291,41 @@ class AnnotationCanvas(QWidget):
             return
         self.cancel_draft()
         self.tool = tool
-        cursors = {
-            TOOL_SELECT: Qt.ArrowCursor,
-            TOOL_POLYGON: Qt.CrossCursor,
-            TOOL_BBOX: Qt.CrossCursor,
-            TOOL_BRUSH: Qt.BlankCursor,
-            TOOL_ERASER: Qt.BlankCursor,
-            TOOL_SPLIT: Qt.CrossCursor,
-            TOOL_PAN: Qt.OpenHandCursor,
-        }
-        self.setCursor(cursors.get(tool, Qt.ArrowCursor))
+        if not self._processing:
+            cursors = {
+                TOOL_SELECT: Qt.ArrowCursor,
+                TOOL_SMART_SELECT: Qt.CrossCursor,
+                TOOL_POLYGON: Qt.CrossCursor,
+                TOOL_BBOX: Qt.CrossCursor,
+                TOOL_BRUSH: Qt.BlankCursor,
+                TOOL_ERASER: Qt.BlankCursor,
+                TOOL_SPLIT: Qt.CrossCursor,
+                TOOL_PAN: Qt.OpenHandCursor,
+            }
+            self.setCursor(cursors.get(tool, Qt.ArrowCursor))
+        self.update()
+
+    def set_processing(self, processing: bool, msg: str = "") -> None:
+        self._processing = processing
+        self._processing_msg = msg
+        if processing and self.tool == TOOL_SMART_SELECT:
+            self.setCursor(Qt.BusyCursor)
+        else:
+            cursors = {
+                TOOL_SELECT: Qt.ArrowCursor,
+                TOOL_SMART_SELECT: Qt.CrossCursor,
+                TOOL_POLYGON: Qt.CrossCursor,
+                TOOL_BBOX: Qt.CrossCursor,
+                TOOL_BRUSH: Qt.BlankCursor,
+                TOOL_ERASER: Qt.BlankCursor,
+                TOOL_SPLIT: Qt.CrossCursor,
+                TOOL_PAN: Qt.OpenHandCursor,
+            }
+            self.setCursor(cursors.get(self.tool, Qt.ArrowCursor))
         self.update()
 
     def cancel_draft(self) -> None:
-        had = bool(self._draft or self._brush_path or self._split_line or self._bbox_start)
+        had = bool(self._draft or self._brush_path or self._split_line or self._bbox_start or self._smart_start)
         self._reset_transient()
         self.update()
         if had:
@@ -308,6 +336,7 @@ class AnnotationCanvas(QWidget):
         self._brush_path = []
         self._split_line = []
         self._bbox_start = None
+        self._smart_start = None
         self._drag_vertex = (-1, -1)
         self._drag_shape = False
 
@@ -487,6 +516,32 @@ class AnnotationCanvas(QWidget):
         self._draw_draft(p)
         self._draw_brush_cursor(p)
 
+        # --- overlay dang xu ly ---
+        self._draw_processing_overlay(p)
+
+    def _draw_processing_overlay(self, p: QPainter) -> None:
+        if not self._processing:
+            return
+        msg = self._processing_msg or tr("canvas.processing", "Ảnh đang được xử lý, vui lòng thử lại sau.")
+        f = QFont("Segoe UI", 9)
+        f.setBold(True)
+        p.setFont(f)
+        fm = p.fontMetrics()
+        tw = fm.horizontalAdvance(msg) + 36
+        th = 32
+        x = (self.width() - tw) / 2
+        y = 16
+        rect = QRectF(x, y, tw, th)
+
+        path = QPainterPath()
+        path.addRoundedRect(rect, 6, 6)
+        p.setPen(QPen(QColor(COLORS.get("accent", "#7C5CFF")), 1.5))
+        p.setBrush(QColor(18, 22, 30, 230))
+        p.drawPath(path)
+
+        p.setPen(QPen(QColor("#FFFFFF")))
+        p.drawText(rect, Qt.AlignCenter, msg)
+
     def _color_of(self, ann: Annotation) -> QColor:
         if not self.style.show_class_color:
             return QColor(COLORS["accent"])
@@ -558,8 +613,7 @@ class AnnotationCanvas(QWidget):
         text = name
         if self.style.show_confidence and ann.confidence < 1.0:
             text += f" {ann.confidence:.2f}"
-        f = QFont()
-        f.setPointSize(8)
+        f = QFont("Segoe UI", 8)
         f.setBold(True)
         p.setFont(f)
         fm = p.fontMetrics()
@@ -611,6 +665,16 @@ class AnnotationCanvas(QWidget):
             fill.setAlphaF(0.22)
             p.setBrush(fill)
             p.setPen(QPen(accent, 1.8, Qt.DashLine))
+            p.drawRect(rect)
+
+        if self.tool == TOOL_SMART_SELECT and self._smart_start is not None:
+            a = self.to_screen(self._smart_start)
+            b = self._draft_cursor
+            rect = QRectF(a, b).normalized()
+            fill = QColor(COLORS["accent_hi"])
+            fill.setAlphaF(0.25)
+            p.setBrush(fill)
+            p.setPen(QPen(QColor(COLORS["accent_hi"]), 2.0, Qt.DashLine))
             p.drawRect(rect)
 
         if self.tool in (TOOL_BRUSH, TOOL_ERASER) and len(self._brush_path) >= 1:
@@ -679,15 +743,43 @@ class AnnotationCanvas(QWidget):
         if self.tool == TOOL_SELECT:
             self._press_select(pos, img_pt, ev.modifiers())
         elif self.tool == TOOL_POLYGON:
-            self._draft.append(img_pt)
+            v = self._vertex_at(pos)
+            if v[0] >= 0:
+                self.push_undo()
+                self._drag_vertex = v
+                return
+            idx = self._hit_test(pos)
+            if idx >= 0 and idx in self.selected:
+                self.push_undo()
+                self._drag_shape = True
+                self._drag_origin = img_pt
+                self._shape_snapshot = [self.annotations[i].clone() for i in sorted(self.selected)]
+                return
+            self._empty_drag = True
+            self._empty_drag_start = pos.toPoint()
             self._draft_cursor = pos
-            self.statusMessage.emit(
-                tr("canvas.drawing_polygon", "Polygon: {count} đỉnh — chuột phải hoặc Enter để đóng hình", count=len(self._draft))
-            )
-            self.update()
         elif self.tool == TOOL_BBOX:
             self._bbox_start = img_pt
             self._draft_cursor = pos
+        elif self.tool == TOOL_SMART_SELECT:
+            if self._processing:
+                self.statusMessage.emit(tr("canvas.is_processing_wait", "Ảnh đang được xử lý, vui lòng thử lại sau."))
+                return
+            v = self._vertex_at(pos)
+            if v[0] >= 0:
+                self.push_undo()
+                self._drag_vertex = v
+                return
+            idx = self._hit_test(pos)
+            if idx >= 0 and idx in self.selected:
+                self.push_undo()
+                self._drag_shape = True
+                self._drag_origin = img_pt
+                self._shape_snapshot = [self.annotations[i].clone() for i in sorted(self.selected)]
+                return
+            self._smart_start = img_pt
+            self._draft_cursor = pos
+            self.update()
         elif self.tool in (TOOL_BRUSH, TOOL_ERASER):
             self._brush_path = [img_pt]
             self.update()
@@ -700,6 +792,13 @@ class AnnotationCanvas(QWidget):
         pos = ev.position()
         img_pt = self.to_image(pos)
         self._draft_cursor = pos
+
+        if self._empty_drag:
+            if (pos.toPoint() - self._empty_drag_start).manhattanLength() >= 5:
+                self._panning = True
+                self._pan_start = self._empty_drag_start
+                self._empty_drag = False
+                self.setCursor(Qt.ClosedHandCursor)
 
         if self._panning:
             delta = pos.toPoint() - self._pan_start
@@ -758,7 +857,7 @@ class AnnotationCanvas(QWidget):
             self.update()
             return
 
-        if self.tool in (TOOL_POLYGON, TOOL_BBOX):
+        if self.tool in (TOOL_POLYGON, TOOL_BBOX, TOOL_SMART_SELECT):
             self.update()
             return
 
@@ -771,13 +870,60 @@ class AnnotationCanvas(QWidget):
 
         if self._panning:
             self._panning = False
+            self._empty_drag = False
             self.setCursor(Qt.OpenHandCursor if self.tool == TOOL_PAN else self._tool_cursor())
             return
 
+        if self._empty_drag:
+            self._empty_drag = False
+            if self.tool == TOOL_POLYGON:
+                self._draft.append(img_pt)
+                self.statusMessage.emit(
+                    tr("canvas.drawing_polygon", "Polygon: {count} đỉnh — chuột phải hoặc Enter để đóng hình", count=len(self._draft))
+                )
+                self.update()
+                return
+
         if self._drag_vertex[0] >= 0:
+            ann_idx, v_idx = self._drag_vertex
             self._drag_vertex = (-1, -1)
+
+            if 0 <= ann_idx < len(self.annotations):
+                ann = self.annotations[ann_idx]
+                pts = ann.effective_points()
+                if len(pts) > 3:
+                    tol = max(10.0, self.style.vertex_size * 1.5)
+                    target_v = -1
+                    for j, (x, y) in enumerate(pts):
+                        if j == v_idx:
+                            continue
+                        sp = self.to_screen(QPointF(x, y))
+                        if abs(sp.x() - pos.x()) <= tol and abs(sp.y() - pos.y()) <= tol:
+                            target_v = j
+                            break
+
+                    if target_v >= 0:
+                        i1, i2 = min(v_idx, target_v), max(v_idx, target_v)
+                        n = len(pts)
+                        count1 = i2 - i1 - 1
+                        count2 = (n - 1 - i2) + i1
+
+                        if count1 <= count2:
+                            new_pts = pts[:i1 + 1] + pts[i2:]
+                        else:
+                            new_pts = pts[i1:i2 + 1]
+
+                        if len(new_pts) >= 3:
+                            self.push_undo()
+                            ann.set_points(new_pts)
+                            ann.recompute()
+                            self.statusMessage.emit(
+                                tr("canvas.merged_vertices", "Đã gộp 2 đỉnh và tự động xoá các đỉnh trung gian")
+                            )
+
             self.annotationsChanged.emit()
             self.selectionChanged.emit(sorted(self.selected))
+            self.update()
             return
 
         if self._drag_shape:
@@ -789,6 +935,31 @@ class AnnotationCanvas(QWidget):
 
         if self.tool == TOOL_BBOX and self._bbox_start is not None:
             self._finish_bbox(img_pt)
+            return
+
+        if self.tool == TOOL_SMART_SELECT and self._smart_start is not None:
+            start_pt = self._smart_start
+            self._smart_start = None
+
+            d = math.hypot(start_pt.x() - img_pt.x(), start_pt.y() - img_pt.y())
+            x1, x2 = sorted([start_pt.x(), img_pt.x()])
+            y1, y2 = sorted([start_pt.y(), img_pt.y()])
+            bw = x2 - x1
+            bh = y2 - y1
+
+            # Bỏ qua nếu chỉ click chuột hoặc kéo khung quá nhỏ
+            if d < 8.0 or bw < 5.0 or bh < 5.0:
+                self.update()
+                return
+
+            bbox = [self._clampx(x1), self._clampy(y1), self._clampx(x2), self._clampy(y2)]
+            target_idx = sorted(self.selected)[0] if self.selected else self._hit_test_bbox(bbox)
+            if target_idx < 0:
+                target_idx = None
+            self.smartSelectTriggered.emit(
+                {"point": None, "bbox": bbox, "target_idx": target_idx}
+            )
+            self.update()
             return
 
         if self.tool in (TOOL_BRUSH, TOOL_ERASER) and self._brush_path:
@@ -883,6 +1054,24 @@ class AnnotationCanvas(QWidget):
                     best, best_area = i, area
         return best
 
+    def _hit_test_bbox(self, bbox: list[float]) -> int:
+        """Tim index annotation giao cat hoac nam trong khung bao (uu tien vung nho nhat)."""
+        x1, y1, x2, y2 = bbox
+        rect = QRectF(x1, y1, x2 - x1, y2 - y1)
+        best, best_area = -1, float("inf")
+        for i, ann in enumerate(self.annotations):
+            if ann.class_id in self.hidden_classes:
+                continue
+            pts = ann.effective_points()
+            if len(pts) < 3:
+                continue
+            poly = QPolygonF([QPointF(x, y) for x, y in pts])
+            if poly.boundingRect().intersects(rect):
+                area = abs(poly.boundingRect().width() * poly.boundingRect().height())
+                if area < best_area:
+                    best, best_area = i, area
+        return best
+
     def _vertex_at(self, pos) -> tuple[int, int]:
         tol = max(6.0, self.style.vertex_size)
         for i in sorted(self.selected):
@@ -903,7 +1092,7 @@ class AnnotationCanvas(QWidget):
             self._hover_idx = idx
             if v[0] >= 0:
                 self.setCursor(Qt.SizeAllCursor)
-            elif idx >= 0:
+            elif idx >= 0 and (self.tool == TOOL_SELECT or idx in self.selected):
                 self.setCursor(Qt.PointingHandCursor)
             else:
                 self.setCursor(self._tool_cursor())
@@ -916,17 +1105,15 @@ class AnnotationCanvas(QWidget):
             self._drag_vertex = v
             return
         idx = self._hit_test(pos)
-        additive = bool(modifiers & (Qt.ControlModifier | Qt.ShiftModifier))
+        # Cấm chọn thêm nhiều đối tượng cùng lúc (chỉ duy trì chọn 1 đối tượng duy nhất)
         if idx < 0:
-            if not additive:
-                self.clear_selection()
+            self.clear_selection()
+            self._empty_drag = True
+            self._empty_drag_start = pos.toPoint()
             return
         if idx not in self.selected:
-            self.select_index(idx, additive)
-        elif additive:
-            self.select_index(idx, True)
-            return
-        # bat dau di chuyen
+            self.select_index(idx, False)
+        # Bắt đầu di chuyển đối tượng được chọn
         self.push_undo()
         self._drag_shape = True
         self._drag_origin = img_pt

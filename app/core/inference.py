@@ -108,16 +108,20 @@ def configure_ultralytics() -> None:
 _DOWNLOAD_LOCK = threading.Lock()
 
 
-def download_asset(name: str, log_cb=None) -> str:
-    """Tai mot trong so chuan cua Ultralytics VE THU MUC WEIGHTS cua ung dung.
+KNOWN_ASSET_SIZES = {
+    "sam_b.pt": 375_258_821,
+    "sam2_b.pt": 148_000_000,
+    "sam3.pt": 400_000_000,
+    "FastSAM-s.pt": 25_000_000,
+    "yolo11n.pt": 5_600_000,
+    "yolo11n-seg.pt": 6_200_000,
+}
 
-    Ultralytics luon tai asset vao THU MUC LAM VIEC hien tai (tham so
-    `download_dir` cua no chi ap dung cho URL day du), nen neu goi thang
-    `YOLO("yolo11n-obb.pt")` thi file .pt se roi vao thu muc dang chay ung dung.
-    Ham nay doi thu muc lam viec trong dung khoang thoi gian tai de file nam
-    dung cho, roi tra ve duong dan tuyet doi.
 
-    Tra ve chuoi rong neu khong tai duoc (de nguoi goi tu xu ly tiep).
+def download_asset(name: str, log_cb=None, progress_cb=None) -> str:
+    """Tải một trọng số chuẩn của Ultralytics VỀ THƯ MỤC WEIGHTS của ứng dụng.
+
+    Theo dõi tiến độ dung lượng tải thực tế và báo cáo phần trăm qua progress_cb/log_cb.
     """
     from app.utils.paths import weights_dir
 
@@ -128,7 +132,36 @@ def download_asset(name: str, log_cb=None) -> str:
         from ultralytics.utils.downloads import attempt_download_asset
 
         if log_cb:
-            log_cb(f"Dang tai {name} ve {weights_dir()} ...")
+            log_cb(f"Đang tải {name} về {weights_dir()} ...")
+
+        downloading = [True]
+
+        def _monitor():
+            import time
+            total_bytes = KNOWN_ASSET_SIZES.get(name, 375_258_821)
+            while downloading[0]:
+                time.sleep(0.2)
+                cur_size = 0
+                p1 = weights_dir() / name
+                p2 = Path.cwd() / name
+                if p1.exists():
+                    cur_size = p1.stat().st_size
+                elif p2.exists():
+                    cur_size = p2.stat().st_size
+
+                if cur_size > 0:
+                    pct = int(min(99, (cur_size / total_bytes) * 100))
+                    cur_mb = cur_size / (1024 * 1024)
+                    tot_mb = total_bytes / (1024 * 1024)
+                    msg = f"Đang tải trọng số {name}: {pct}% ({cur_mb:.1f} MB / {tot_mb:.1f} MB)"
+                    if progress_cb:
+                        progress_cb(pct, 100, msg)
+                    elif log_cb:
+                        log_cb(msg)
+
+        mon_thread = threading.Thread(target=_monitor, daemon=True)
+        mon_thread.start()
+
         with _DOWNLOAD_LOCK:
             prev = os.getcwd()
             os.chdir(weights_dir())
@@ -136,6 +169,8 @@ def download_asset(name: str, log_cb=None) -> str:
                 attempt_download_asset(name)
             finally:
                 os.chdir(prev)
+                downloading[0] = False
+
     except Exception as exc:
         log.debug("Khong tai duoc %s: %s", name, exc)
         if log_cb:

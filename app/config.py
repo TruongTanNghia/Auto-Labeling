@@ -48,11 +48,14 @@ DEFAULTS: dict[str, Any] = {
     },
     "model": {
         "task": "segment",
-        "weights": "yolo11n-seg.pt",
+        "weights": "yolo11m-seg.pt",
         "custom_weights": "",
         "device": "auto",
         "half": False,
         "imgsz": 640,
+    },
+    "sam": {
+        "weights": "sam2_l.pt",
     },
     "inference": {
         "confidence": 0.45,
@@ -81,7 +84,7 @@ DEFAULTS: dict[str, Any] = {
         "snap_to_edge": False,
     },
     "train": {
-        "model": "yolo11n-seg.pt",
+        "model": "yolo11m-seg.pt",
         "epochs": 100,
         "batch": 16,
         "imgsz": 640,

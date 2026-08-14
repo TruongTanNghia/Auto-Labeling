@@ -10,11 +10,13 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
     QFileDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QScrollArea,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -127,9 +129,17 @@ class ImportPage(BasePage):
         return card
 
     def _build_right(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+
         wrap = QWidget()
+        wrap.setStyleSheet("background: transparent;")
         lay = QVBoxLayout(wrap)
-        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setContentsMargins(0, 0, 4, 0)
         lay.setSpacing(14)
 
         # --- Xem trước ---
@@ -195,7 +205,8 @@ class ImportPage(BasePage):
 
         # --- Nhập dataset có nhãn ---
         lay.addWidget(self._build_dataset_import_card())
-        return wrap
+        scroll.setWidget(wrap)
+        return scroll
 
     def _build_dataset_import_card(self) -> QWidget:
         self._ds_dir: str = ""

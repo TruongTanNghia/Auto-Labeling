@@ -50,12 +50,11 @@ class BaseWorker(QThread):
             self.result = self.execute()
             if not self._cancelled:
                 self.finished_ok.emit(self.result)
-            else:
-                self.finished_ok.emit(self.result)
         except Exception as exc:  # pragma: no cover
-            log.exception("Worker %s loi", self.__class__.__name__)
-            self.failed.emit(f"{type(exc).__name__}: {exc}")
-            self.message.emit(traceback.format_exc(limit=4))
+            if not self._cancelled:
+                log.exception("Worker %s loi", self.__class__.__name__)
+                self.failed.emit(f"{type(exc).__name__}: {exc}")
+                self.message.emit(traceback.format_exc(limit=4))
 
     def execute(self):
         """Lop con cai dat phan viec thuc te."""

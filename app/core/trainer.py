@@ -14,7 +14,7 @@ log = get_logger(__name__)
 
 @dataclass
 class TrainConfig:
-    model: str = "yolo11n-seg.pt"
+    model: str = "yolo11m-seg.pt"
     data_yaml: str = ""
     epochs: int = 100
     batch: int = 16
@@ -214,6 +214,14 @@ class ModelTrainer:
             raise FileNotFoundError(
                 tr("trainer.dataset_not_found", "Không tìm thấy data.yaml: {path}", path=cfg.data_yaml)
             )
+
+        # Xóa các file .cache cũ trong dataset để Ultralytics không dùng cache hỏng
+        try:
+            yaml_parent = Path(cfg.data_yaml).parent
+            for cache_file in yaml_parent.rglob("*.cache"):
+                cache_file.unlink(missing_ok=True)
+        except Exception:
+            pass
 
         try:
             from ultralytics import YOLO

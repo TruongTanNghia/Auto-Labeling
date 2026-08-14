@@ -34,8 +34,7 @@ class _ChartBase(QWidget):
         self.setMinimumHeight(min_height)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setMouseTracking(True)
-        self._font = QFont()
-        self._font.setPointSize(8)
+        self._font = QFont("Segoe UI", 8)
 
     @property
     def _grid_color(self) -> QColor:
@@ -636,9 +635,8 @@ class ProgressRing(QWidget):
         p.setPen(QPen(QColor(self._color), t, Qt.SolidLine, Qt.RoundCap))
         p.drawArc(rect, 90 * 16, int(-360 * 16 * self._value))
 
-        f = QFont()
+        f = QFont("Segoe UI", max(9, int(self.width() / 6)))
         f.setBold(True)
-        f.setPointSize(max(9, int(self.width() / 6)))
         p.setFont(f)
         p.setPen(QPen(QColor(COLORS["text"])))
         p.drawText(self.rect(), Qt.AlignCenter, self._label or f"{int(self._value * 100)}%")

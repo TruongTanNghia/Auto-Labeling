@@ -74,8 +74,13 @@ class DatasetExporter:
         t0 = time.time()
         _log = log_cb or (lambda *_: None)
         cfg = self.cfg
-
-        out_dir = ensure_dir(Path(cfg.output_dir) / cfg.dataset_name)
+        out_dir_path = Path(cfg.output_dir) / cfg.dataset_name
+        if out_dir_path.exists():
+            try:
+                shutil.rmtree(out_dir_path, ignore_errors=True)
+            except Exception:
+                pass
+        out_dir = ensure_dir(out_dir_path)
         classes = self._classes()
         images = self._select_images()
         if not images:
@@ -163,6 +168,8 @@ class DatasetExporter:
                 continue
             if a.confidence < self.cfg.min_confidence:
                 continue
+            if a.area <= 0 or a.width < 1 or a.height < 1:
+                continue
             out.append(a)
         return out
 
@@ -196,11 +203,20 @@ class DatasetExporter:
                 for a in self._annotations(im, class_map):
                     ci = class_map[a.class_id]
                     w, h = max(1, im.width), max(1, im.height)
-                    if seg and len(a.polygon) >= 6:
+                    if seg:
+                        # YOLO Segmentation: class x1 y1 x2 y2 ... (tối thiểu 3 điểm / 6 giá trị)
+                        poly = a.polygon
+                        if len(poly) < 6:
+                            x1, y1, x2, y2 = a.bbox
+                            if x2 <= x1 or y2 <= y1:
+                                continue
+                            poly = [x1, y1, x2, y1, x2, y2, x1, y2]
                         coords = []
-                        for i in range(0, len(a.polygon) - 1, 2):
-                            coords.append(_clip01(a.polygon[i] / w))
-                            coords.append(_clip01(a.polygon[i + 1] / h))
+                        for i in range(0, len(poly) - 1, 2):
+                            coords.append(_clip01(poly[i] / w))
+                            coords.append(_clip01(poly[i + 1] / h))
+                        if len(coords) < 6:
+                            continue
                         lines.append(f"{ci} " + " ".join(f"{v:.6f}" for v in coords))
                     elif obb:
                         # YOLO OBB: class x1 y1 x2 y2 x3 y3 x4 y4 (chuan hoa)

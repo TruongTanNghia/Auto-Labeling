@@ -8,8 +8,10 @@ from PySide6.QtCore import QItemSelectionModel, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap, QPolygonF
 from PySide6.QtWidgets import (
     QFileDialog,
+    QFrame,
     QHBoxLayout,
     QPlainTextEdit,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -87,8 +89,7 @@ class DetectionPreview(QWidget):
         ox, oy = (self.width() - w) / 2, (self.height() - h) / 2
         p.drawPixmap(QRectF(ox, oy, w, h), self._pixmap, QRectF(self._pixmap.rect()))
 
-        f = QFont()
-        f.setPointSize(8)
+        f = QFont("Segoe UI", 8)
         f.setBold(True)
         p.setFont(f)
         for d in self._dets:
@@ -522,13 +523,36 @@ class AutoLabelPage(BasePage):
         plugin_card.add(self.plugin_combo)
         self.plugin_desc = label("", size=11.5, color=COLORS["text_mute"], wrap=True)
         plugin_card.add(self.plugin_desc)
+        sam_presets = [
+            ("sam2_l.pt", "SAM 2 Large — Mạnh mẽ nhất (300 MB)"),
+            ("sam2_b.pt", "SAM 2 Base — Nhanh & Chính xác (148 MB)"),
+            ("sam_b.pt", "SAM 1 Base — Chuẩn (366 MB)"),
+            ("sam_l.pt", "SAM 1 Large — Độ phân giải cao (1.2 GB)"),
+            ("FastSAM-s.pt", "FastSAM Small — Siêu tốc (25 MB)"),
+            ("FastSAM-x.pt", "FastSAM Extra Large (140 MB)"),
+        ]
+        cur_sam = cfg.get("sam.weights", "sam2_l.pt")
+        self.plugin_sam_combo = combo(
+            sam_presets,
+            current=cur_sam if any(w == cur_sam for w, _ in sam_presets) else "sam2_l.pt",
+        )
+        self.plugin_sam_field = Field(
+            tr("autolabel.sam_weights", "Trọng số SAM"),
+            self.plugin_sam_combo,
+            label_width=LABEL_W_NARROW,
+        )
+        self.plugin_sam_field.setVisible(False)
+        plugin_card.add(self.plugin_sam_field)
+
         from PySide6.QtWidgets import QLineEdit
 
         self.plugin_prompt = QLineEdit()
         self.plugin_prompt.setPlaceholderText(
             tr("autolabel.prompt_placeholder", "Mô tả bằng chữ, ví dụ: crack, rust, bolt")
         )
+        self.plugin_prompt.setVisible(False)
         plugin_card.add(self.plugin_prompt)
+
         self.plugin_status = label("", size=11.5, color=COLORS["text_mute"])
         plugin_card.add(self.plugin_status)
         lay.addWidget(plugin_card)
@@ -543,9 +567,17 @@ class AutoLabelPage(BasePage):
 
     # --------------------------------------------------------------- preview --
     def _build_preview(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+
         wrap = QWidget()
+        wrap.setStyleSheet("background: transparent;")
         lay = QVBoxLayout(wrap)
-        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setContentsMargins(0, 0, 4, 0)
         lay.setSpacing(12)
 
         card = Card(tr("autolabel.preview_results", "Xem trước kết quả"), "", "eye")
@@ -592,7 +624,9 @@ class AutoLabelPage(BasePage):
         self.log_view.setMaximumHeight(150)
         log_card.add(self.log_view)
         lay.addWidget(log_card)
-        return wrap
+
+        scroll.setWidget(wrap)
+        return scroll
 
     # =============================================================== EVENTS ==
     def request_editor(self) -> None:
@@ -628,22 +662,32 @@ class AutoLabelPage(BasePage):
 
     def _on_plugin_changed(self) -> None:
         key = self.plugin_combo.currentData()
+        if hasattr(self, "plugin_sam_field"):
+            self.plugin_sam_field.setVisible(key == "sam")
         if not key:
             self.plugin_desc.setText(
                 tr("autolabel.only_yolo_hint", "Chỉ dùng YOLO, không qua plugin.")
             )
             self.plugin_status.setText("")
-            self.plugin_prompt.setEnabled(False)
+            if hasattr(self, "plugin_prompt"):
+                self.plugin_prompt.setEnabled(False)
             return
         info = next((i for i in registry.infos() if i.key == key), None)
         if info is None:
             return
         self.plugin_desc.setText(info.description)
-        self.plugin_prompt.setEnabled(info.accepts_prompt)
+        if hasattr(self, "plugin_prompt"):
+            self.plugin_prompt.setEnabled(info.accepts_prompt)
         ok, msg = registry.status(key)
         color = COLORS["success"] if ok else COLORS["warning"]
         self.plugin_status.setText(msg)
         self.plugin_status.setStyleSheet(f"font-size: 11.5px; color: {color};")
+
+    def _on_plugin_sam_changed(self, idx: int) -> None:
+        val = self.plugin_sam_combo.currentData()
+        if val:
+            cfg.set("sam.weights", val)
+            cfg.save()
 
     def _on_image_selected(self, image_id: int) -> None:
         rec = self.repo.image(image_id) if self.repo else None
@@ -672,7 +716,7 @@ class AutoLabelPage(BasePage):
         custom = cfg.get("model.custom_weights", "")
         if custom:
             return custom
-        return self.weights_combo.currentData() or "yolo11n-seg.pt"
+        return self.weights_combo.currentData() or "yolo11m-seg.pt"
 
     def load_model(self) -> None:
         if self.ctrl.is_running("model"):
@@ -820,7 +864,19 @@ class AutoLabelPage(BasePage):
 
     def _on_image_done(self, image_id: int, n_objects: int, max_conf: float) -> None:
         status = IMG_REVIEW if max_conf < self.review_slider.value() else "auto"
-        self.image_list.update_item(image_id, status if n_objects else "unlabeled", n_objects)
+        class_color = ""
+        if n_objects and self.repo:
+            anns = self.repo.annotations(image_id)
+            if anns:
+                c_def = self.repo.class_by_id(anns[0].class_id)
+                if c_def:
+                    class_color = c_def.color
+        self.image_list.update_item(
+            image_id,
+            status if n_objects else "unlabeled",
+            n_objects,
+            class_color=class_color,
+        )
 
     def _on_done(self, result) -> None:
         self.start_btn.setEnabled(True)
@@ -915,7 +971,16 @@ class AutoLabelPage(BasePage):
         elif key == "no_dup":
             kwargs["include_duplicates"] = False
         self._images = self.repo.images(**kwargs)
-        self.image_list.set_images(self._images)
+
+        img_colors = {}
+        if self._images:
+            c_map = {c.id: c.color for c in self.repo.classes()}
+            rows = self.repo.db.query("SELECT image_id, class_id FROM annotation GROUP BY image_id")
+            for r in rows:
+                if r["class_id"] in c_map:
+                    img_colors[r["image_id"]] = c_map[r["class_id"]]
+
+        self.image_list.set_images(self._images, img_colors)
         self.count_label.setText(
             tr("autolabel.images_count", "{count} ảnh", count=f"{len(self._images):,}")
         )

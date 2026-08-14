@@ -9,12 +9,14 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QFileDialog,
+    QFrame,
     QGridLayout,
     QHBoxLayout,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
     QPlainTextEdit,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -252,9 +254,17 @@ class TrainPage(BasePage):
 
     # -------------------------------------------------------------- monitor --
     def _build_monitor(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+
         wrap = QWidget()
+        wrap.setStyleSheet("background: transparent;")
         lay = QVBoxLayout(wrap)
-        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setContentsMargins(0, 0, 4, 0)
         lay.setSpacing(12)
 
         top = Card(tr("train.progress", "Tiến độ huấn luyện"), "", "target")
@@ -300,7 +310,9 @@ class TrainPage(BasePage):
         self.log_view.setMinimumHeight(190)
         log_card.add(self.log_view)
         lay.addWidget(log_card, 1)
-        return wrap
+
+        scroll.setWidget(wrap)
+        return scroll
 
     # ================================================================ LOGIC ==
     def _reload_models(self) -> None:
@@ -426,6 +438,7 @@ class TrainPage(BasePage):
         )
 
     def stop(self) -> None:
+        self.stop_btn.setEnabled(False)
         self.ctrl.cancel("train")
         self.progress_info.set_value(tr("train.status", "Trạng thái"), "Đang dừng …")
 
@@ -472,8 +485,10 @@ class TrainPage(BasePage):
         self._timer.stop()
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
-        if result is None:
+        if result is None or not getattr(result, "ok", False):
             self.progress_info.set_value(tr("train.status", "Trạng thái"), "Đã dừng")
+            self.toast(tr("trainer.stopped_halfway", "Đã dừng giữa chừng."), "warning")
+            self.refresh()
             return
         self.ring.set_value(1.0, "100%")
         self.progress_info.set_value(tr("train.status", "Trạng thái"), result.message)
