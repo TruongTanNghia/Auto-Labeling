@@ -11,6 +11,7 @@ PyYAML>=6.0
 ultralytics>=8.3
 torch>=2.1
 torchvision>=0.16
+transformers
 
 # Tuy chon - dung cho cac plugin nang cao
 # transformers

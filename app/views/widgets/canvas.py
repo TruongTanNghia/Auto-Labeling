@@ -122,6 +122,12 @@ class AnnotationCanvas(QWidget):
     # =========================================================== DU LIEU ===
     def load_image(self, path: str, annotations: list[Annotation] | None = None,
                    fit: bool = True) -> bool:
+        if not path:
+            self.pixmap = None
+            self.img_w = self.img_h = 0
+            self.annotations = []
+            self.update()
+            return False
         pm = QPixmap(path)
         if pm.isNull():
             img = QImage(path)
@@ -539,6 +545,7 @@ class AnnotationCanvas(QWidget):
         if self.style.show_confidence and ann.confidence < 1.0:
             text += f" {ann.confidence:.2f}"
         f = QFont()
+        f.setPixelSize(0)
         f.setPointSize(8)
         f.setBold(True)
         p.setFont(f)

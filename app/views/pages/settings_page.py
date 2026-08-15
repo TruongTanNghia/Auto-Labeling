@@ -444,7 +444,7 @@ class SettingsPage(BasePage):
         card.add(row)
         lay.addWidget(card)
 
-        self.plugin_detail_card = Card(tr("settings.plugins.detail", "Chi tiết plugin"), "", "info")
+        self.plugin_detail_card = Card(tr("settings.plugins.detail", "Chi tiết plugin"), "", "")
         self.plugin_detail = label(tr("settings.plugins.detail_placeholder", "Chọn một plugin để xem chi tiết."),
                                    size=12, color=COLORS["text_dim"], wrap=True)
         self.plugin_detail_card.add(self.plugin_detail)
@@ -452,7 +452,19 @@ class SettingsPage(BasePage):
         self.plugin_detail_card.add(self.plugin_install)
         lay.addWidget(self.plugin_detail_card)
 
-        guide = Card(tr("settings.plugins.guide_title", "Tự viết plugin"), "", "book")
+        self.plugin_config_card = Card(tr("settings.plugins.config_title", "Cấu hình tham số plugin"), "", "")
+        self.plugin_config_wrap = QWidget()
+        self.plugin_config_layout = QVBoxLayout(self.plugin_config_wrap)
+        self.plugin_config_layout.setContentsMargins(0, 0, 0, 0)
+        self.plugin_config_layout.setSpacing(10)
+        self.plugin_config_card.add(self.plugin_config_wrap)
+
+        self.plugin_reset_btn = ghost_button(tr("settings.plugins.reset_plugin", "Khôi phục mặc định plugin"), "refresh")
+        self.plugin_reset_btn.clicked.connect(self._reset_current_plugin)
+        self.plugin_config_card.add(self.plugin_reset_btn)
+        lay.addWidget(self.plugin_config_card)
+
+        guide = Card(tr("settings.plugins.guide_title", "Tự viết plugin"), "", "")
         guide.add(label(
             tr("settings.plugins.guide_text",
                "Tạo file .py trong thư mục plugin với một lớp kế thừa AnnotatorPlugin, "
@@ -477,11 +489,40 @@ class SettingsPage(BasePage):
             self.plugin_table.setItem(r, 2, status_item)
             self.plugin_table.setItem(r, 3, QTableWidgetItem(", ".join(info.requires)))
 
+    def _save_current_plugin_form(self) -> None:
+        if not hasattr(self, "_selected_plugin_key") or not self._selected_plugin_key:
+            return
+        if not hasattr(self, "_plugin_form_controls") or not self._plugin_form_controls:
+            return
+        plugin_key = self._selected_plugin_key
+        plugin_cfg = {}
+        for p_key, (param, widget) in self._plugin_form_controls.items():
+            if param.type == "int":
+                plugin_cfg[p_key] = widget.value()
+            elif param.type == "float":
+                plugin_cfg[p_key] = widget.value()
+            elif param.type == "bool":
+                plugin_cfg[p_key] = widget.isChecked()
+            elif param.type == "choice":
+                plugin_cfg[p_key] = widget.currentData() if widget.currentData() is not None else widget.currentText()
+            elif param.type == "str":
+                plugin_cfg[p_key] = widget.text().strip()
+        cfg.set(f"plugins.config.{plugin_key}", plugin_cfg)
+        plugin_inst = registry.get(plugin_key)
+        if plugin_inst:
+            eff = dict(plugin_inst.default_config())
+            eff.update(plugin_cfg)
+            plugin_inst.configure(eff)
+
     def _show_plugin_detail(self, row: int) -> None:
+        self._save_current_plugin_form()
+
         infos = getattr(self, "_plugin_infos", [])
         if not (0 <= row < len(infos)):
             return
         info = infos[row]
+        self._selected_plugin_key = info.key
+
         ok, msg = registry.status(info.key)
         self.plugin_detail.setText(
             f"{info.name} v{info.version}\n\n{info.description}\n\n"
@@ -493,6 +534,75 @@ class SettingsPage(BasePage):
             self.plugin_install.setText(
                 f"{msg}. Cài đặt bằng lệnh: pip install " + " ".join(info.requires))
             self.plugin_install.setStyleSheet(f"font-size: 11.5px; color: {COLORS['warning']};")
+
+        while self.plugin_config_layout.count():
+            item = self.plugin_config_layout.takeAt(0)
+            w = item.widget()
+            if w:
+                w.deleteLater()
+
+        self._plugin_form_controls = {}
+        plugin_inst = registry.get(info.key)
+        schema = plugin_inst.config_schema() if plugin_inst else []
+
+        if not schema:
+            no_param_lbl = label(tr("settings.plugins.no_params", "Plugin này không có tham số cấu hình."),
+                                 size=12, color=COLORS["text_dim"])
+            self.plugin_config_layout.addWidget(no_param_lbl)
+            self.plugin_reset_btn.setVisible(False)
+            return
+
+        self.plugin_reset_btn.setVisible(True)
+        user_cfg = cfg.get(f"plugins.config.{info.key}", {})
+
+        for param in schema:
+            cur_val = user_cfg.get(param.key, plugin_inst.config(param.key, param.default)) if plugin_inst else param.default
+
+            if param.type == "int":
+                min_v = int(param.min_value) if param.min_value is not None else 0
+                max_v = int(param.max_value) if param.max_value is not None else 999999
+                widget = spin(int(cur_val), min_v, max_v, width=140)
+            elif param.type == "float":
+                min_v = float(param.min_value) if param.min_value is not None else 0.0
+                max_v = float(param.max_value) if param.max_value is not None else 999999.0
+                step = 0.001 if param.default < 0.01 else (0.01 if param.default < 1.0 else 0.1)
+                decimals = 4 if param.default < 0.01 else 2
+                widget = dspin(float(cur_val), min_v, max_v, step=step, decimals=decimals, width=140)
+            elif param.type == "bool":
+                widget = ToggleSwitch(bool(cur_val))
+            elif param.type == "choice":
+                opts = param.options
+                items = [(o, o) for o in opts] if isinstance(opts, list) else []
+                widget = combo(items if items else opts, current=str(cur_val))
+            else:
+                widget = QLineEdit(str(cur_val))
+
+            self._plugin_form_controls[param.key] = (param, widget)
+            f_field = Field(param.label, widget, label_width=LABEL_W_WIDE)
+            self.plugin_config_layout.addWidget(f_field)
+            if param.description:
+                desc_lbl = label(param.description, size=11, color=COLORS["text_mute"])
+                desc_lbl.setContentsMargins(LABEL_W_WIDE + 12, 0, 0, 0)
+                self.plugin_config_layout.addWidget(desc_lbl)
+
+    def _reset_current_plugin(self) -> None:
+        if not hasattr(self, "_selected_plugin_key") or not self._selected_plugin_key:
+            return
+        plugin_key = self._selected_plugin_key
+        plugin_inst = registry.get(plugin_key)
+        if plugin_inst is None:
+            return
+        msg = tr("settings.plugins.reset_plugin_confirm", "Khôi phục plugin {plugin} về mặc định?", plugin=plugin_inst.info.name)
+        if QMessageBox.question(self, tr("settings.plugins.reset_plugin", "Khôi phục mặc định plugin"), msg) != QMessageBox.Yes:
+            return
+        cfg.set(f"plugins.config.{plugin_key}", {})
+        cfg.save()
+        plugin_inst.configure(plugin_inst.default_config())
+
+        row = self.plugin_table.currentRow()
+        if row >= 0:
+            self._show_plugin_detail(row)
+        self.toast(tr("settings.plugins.reset_done", "Đã khôi phục cài đặt mặc định cho plugin."), "info")
 
     # ============================================================= SHORTCUTS ==
     def _page_shortcuts(self) -> QWidget:
@@ -583,6 +693,7 @@ class SettingsPage(BasePage):
 
     # ================================================================== SAVE ==
     def save_all(self) -> None:
+        self._save_current_plugin_form()
         new_lang = self.lang_combo.currentData()
         cfg.update_section("general", {
             "language": new_lang,

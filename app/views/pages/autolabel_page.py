@@ -58,7 +58,7 @@ class DetectionPreview(QWidget):
         self.show_conf = True
 
     def set_result(self, path: str, detections) -> None:
-        pm = QPixmap(path)
+        pm = QPixmap(path) if path else QPixmap()
         self._pixmap = None if pm.isNull() else pm
         self._dets = list(detections or [])
         for d in self._dets:
@@ -90,6 +90,7 @@ class DetectionPreview(QWidget):
         p.drawPixmap(QRectF(ox, oy, w, h), self._pixmap, QRectF(self._pixmap.rect()))
 
         f = QFont()
+        f.setPixelSize(0)
         f.setPointSize(8)
         f.setBold(True)
         p.setFont(f)

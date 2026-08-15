@@ -15,7 +15,7 @@ import numpy as np
 
 from app.constants import SHAPE_BBOX, SHAPE_POLYGON
 from app.core.inference import Detection, mask_to_polygons, resolve_device
-from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo
+from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo, PluginParam
 from app.plugins.builtin.sam_refiner import ultralytics_version
 
 MIN_VERSION = (8, 3, 237)
@@ -41,8 +41,56 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
 
     WEIGHTS = "sam3.pt"
 
+    def config_schema(self) -> list[PluginParam]:
+        return [
+            PluginParam(
+                key="weights",
+                label="Trọng số SAM 3",
+                type="str",
+                default=self.WEIGHTS,
+                description="Tên file trọng số SAM 3 trong thư mục weights",
+            ),
+            PluginParam(
+                key="min_area",
+                label="Diện tích tối thiểu (px)",
+                type="float",
+                default=40.0,
+                min_value=0.0,
+                max_value=5000.0,
+                description="Ngưỡng diện tích nhỏ nhất của polygon",
+            ),
+            PluginParam(
+                key="simplify",
+                label="Độ giản lược polygon",
+                type="float",
+                default=0.002,
+                min_value=0.0,
+                max_value=0.05,
+                description="Mức độ làm mịn đường viền polygon",
+            ),
+        ]
+
     def default_config(self) -> dict:
-        return {"weights": self.WEIGHTS, "min_area": 40, "simplify": 0.002}
+        return {p.key: p.default for p in self.config_schema()}
+
+    def _resolve_weights_path(self):
+        from pathlib import Path
+
+        from app.utils.paths import app_root, weights_dir
+
+        val = str(self.config("weights", self.WEIGHTS)).strip()
+        if not val:
+            val = self.WEIGHTS
+        p = Path(val)
+        if p.is_absolute() and p.exists():
+            return p
+        w_dir_path = weights_dir() / val
+        if w_dir_path.exists():
+            return w_dir_path
+        app_models_path = app_root() / "app" / "models" / val
+        if app_models_path.exists():
+            return app_models_path
+        return None
 
     # -------------------------------------------------------------- trang thai --
     def is_available(self) -> tuple[bool, str]:
@@ -61,9 +109,9 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
         except Exception:
             return False, "Ban ultralytics nay khong co SAM3SemanticPredictor"
 
-        from app.utils.paths import weights_dir
-        if not (weights_dir() / self.config("weights", self.WEIGHTS)).exists():
-            return False, (f"Chua co {self.WEIGHTS} trong {weights_dir()} - "
+        if not self._resolve_weights_path():
+            from app.utils.paths import weights_dir
+            return False, (f"Chua co {self.WEIGHTS} trong {weights_dir()} hoac app/models/ - "
                            f"Meta yeu cau xin quyen tren Hugging Face roi tai thu cong")
         return True, "San sang"
 
@@ -78,9 +126,10 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
 
         from ultralytics.models.sam import SAM3SemanticPredictor
 
-        from app.utils.paths import weights_dir
+        path = self._resolve_weights_path()
+        if path is None:
+            raise RuntimeError(f"Khong tim thay tep trong so {self.WEIGHTS}")
 
-        path = weights_dir() / self.config("weights", self.WEIGHTS)
         device = resolve_device(ctx.device if ctx else "auto")
         if log_cb:
             log_cb(f"[SAM3] Dang nap {path.name} ...")

@@ -27,6 +27,26 @@ log = get_logger(__name__)
 
 
 @dataclass
+class PluginParam:
+    key: str
+    label: str
+    type: str  # "int" | "float" | "bool" | "str" | "choice"
+    default: Any
+    description: str = ""
+    min_value: float | int | None = None
+    max_value: float | int | None = None
+    options: list[str] = field(default_factory=list)
+
+    @property
+    def min(self) -> float | int | None:
+        return self.min_value
+
+    @property
+    def max(self) -> float | int | None:
+        return self.max_value
+
+
+@dataclass
 class PluginInfo:
     key: str = ""
     name: str = ""
@@ -90,13 +110,21 @@ class AnnotatorPlugin(ABC):
         """Tra ve danh sach Detection moi (hoac da tinh chinh)."""
 
     # -------------------------------------------------------------- cau hinh --
+    def config_schema(self) -> list[PluginParam]:
+        return []
+
     def default_config(self) -> dict:
+        schema = self.config_schema()
+        if schema:
+            return {p.key: p.default for p in schema}
         return {}
 
     def configure(self, config: dict) -> None:
         self._config = dict(config or {})
 
     def config(self, key: str, default=None):
+        if not hasattr(self, "_config"):
+            self.configure(self.default_config())
         return getattr(self, "_config", {}).get(key, default)
 
 
@@ -169,19 +197,33 @@ class PluginRegistry:
 
     def get(self, key: str) -> AnnotatorPlugin | None:
         self.discover()
-        if key in self._instances:
-            return self._instances[key]
+        inst = self._instances.get(key)
+        if inst is not None:
+            self._apply_user_config(key, inst)
+            return inst
         cls = self._classes.get(key)
         if cls is None:
             return None
         try:
             inst = cls()
+            self._apply_user_config(key, inst)
         except Exception as exc:
             self._errors[key] = str(exc)
             log.error("Khong khoi tao duoc plugin %s: %s", key, exc)
             return None
         self._instances[key] = inst
         return inst
+
+    def _apply_user_config(self, key: str, inst: AnnotatorPlugin) -> None:
+        try:
+            from app.config import cfg
+            effective = dict(inst.default_config())
+            user_cfg = cfg.get(f"plugins.config.{key}", {})
+            if isinstance(user_cfg, dict):
+                effective.update(user_cfg)
+            inst.configure(effective)
+        except Exception as exc:
+            log.warning("Loi nap config cho plugin %s: %s", key, exc)
 
     def status(self, key: str) -> tuple[bool, str]:
         plugin = self.get(key)

@@ -12,7 +12,8 @@ import numpy as np
 
 from app.constants import SHAPE_POLYGON
 from app.core.inference import Detection, mask_to_polygons, resolve_device
-from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo
+from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo, PluginParam
+
 
 #: (ten file trong so, nhan hien thi, phien ban ultralytics toi thieu)
 SAM_CANDIDATES = [
@@ -70,8 +71,38 @@ class SamRefiner(AnnotatorPlugin):
         homepage="https://docs.ultralytics.com/models/sam-3/",
     )
 
+    def config_schema(self) -> list[PluginParam]:
+        return [
+            PluginParam(
+                key="weights",
+                label="Trọng số SAM",
+                type="choice",
+                default="auto",
+                options=["auto", "sam3.pt", "sam2_b.pt", "sam_b.pt"],
+                description="Chọn phiên bản trọng số SAM thích hợp",
+            ),
+            PluginParam(
+                key="min_area",
+                label="Diện tích tối thiểu (px)",
+                type="float",
+                default=40.0,
+                min_value=0.0,
+                max_value=5000.0,
+                description="Ngưỡng diện tích nhỏ nhất của polygon",
+            ),
+            PluginParam(
+                key="simplify",
+                label="Độ giản lược polygon",
+                type="float",
+                default=0.002,
+                min_value=0.0,
+                max_value=0.05,
+                description="Mức độ làm mịn đường viền polygon",
+            ),
+        ]
+
     def default_config(self) -> dict:
-        return {"weights": "auto", "min_area": 40, "simplify": 0.002}
+        return {p.key: p.default for p in self.config_schema()}
 
     # -------------------------------------------------------------- trang thai --
     def is_available(self) -> tuple[bool, str]:

@@ -72,6 +72,8 @@
   "settings.plugins.available": "Available",
   "plugins.missing_packages": "Missing packages: ",
   "plugins.available": "Available",
+  "settings.plugins.reset_plugin": "Restore Default Plugin",
+  "settings.plugins.reset_plugin_confirm": "Restore plugin {plugin} to default?",
 
   "settings.shortcuts.navigation": "Navigation",
   "settings.shortcuts.navigation_desc": "Navigation",

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from app.constants import COLORS, PAGE_EXTRACT, VIDEO_EXTS
 from app.core.frame_extractor import ExtractConfig, VideoInfo, probe_video
+from app.i18n import tr
 from app.theme import icons
 from app.utils.paths import human_duration, human_size, is_image, is_video, scan_images
 from app.views.pages.base_page import BasePage
@@ -37,9 +38,6 @@ from app.workers.extract_worker import ScanFolderWorker
 
 ROLE_KIND = Qt.UserRole
 ROLE_VALUE = Qt.UserRole + 1
-
-
-from app.i18n import tr
 
 
 class ImportPage(BasePage):
@@ -346,21 +344,20 @@ class ImportPage(BasePage):
 
         # Giải thích rõ bước tiếp theo - đây là chỗ người dùng hay mắc kẹt
         if not n_v and not n_i:
-            msg = (tr("import.msg_empty", "Chưa chọn gì. Dùng nút <b>Thêm video</b> / <b>Thêm thư mục ảnh</b> "
-                   "ở trên, hoặc kéo thả file vào cửa sổ."))
+            msg = tr("import.msg_empty", "Chưa chọn gì. Dùng nút <b>Thêm video</b> / <b>Thêm thư mục ảnh</b> "
+                     "ở trên, hoặc kéo thả file vào cửa sổ.")
         elif n_v and not n_i:
-            msg = (f"{tr('import.msg_only_video', 'Đã chọn <b>{count} video</b>. Video <u>không</u> nạp thẳng vào project '
-                   f'— phải cắt thành ảnh trước. Bấm <b>Cắt frame từ video</b> để sang '
-                   f'bước đó.', count=n_v)}")
+            msg = tr("import.msg_only_video", "Đã chọn <b>{count} video</b>. Video <u>không</u> nạp thẳng vào project "
+                     "— phải cắt thành ảnh trước. Bấm <b>Cắt frame từ video</b> để sang bước đó.", count=n_v)
         elif n_i and not n_v:
-            msg = (f"{tr('import.msg_only_images', 'Đã chọn <b>{count} ảnh</b>. Bấm <b>Nạp ảnh vào project</b> để đưa '
-                   f'vào project và bắt đầu gán nhãn.', count=f'{n_i:,}')}")
+            msg = tr("import.msg_only_images", "Đã chọn <b>{count} ảnh</b>. Bấm <b>Nạp ảnh vào project</b> để đưa "
+                     "vào project và bắt đầu gán nhãn.", count=f"{n_i:,}")
         else:
-            msg = (f"{tr('import.msg_mixed', 'Đã chọn <b>{count_v} video</b> và <b>{count_i} ảnh</b>. Nạp ảnh trước, '
-                   f'rồi sang bước cắt frame cho video.', count_v=n_v, count_i=f'{n_i:,}')}")
+            msg = tr("import.msg_mixed", "Đã chọn <b>{count_v} video</b> và <b>{count_i} ảnh</b>. Nạp ảnh trước, "
+                     "rồi sang bước cắt frame cho video.", count_v=n_v, count_i=f"{n_i:,}")
         if not has_project:
-            msg += (tr("import.msg_no_project", "<br><span style='color:%s'>Chưa mở project — bấm nút bên dưới sẽ "
-                    "hỏi tạo project trước.</span>", color=COLORS["warning"]))
+            msg += tr("import.msg_no_project", "<br><span style='color:%s'>Chưa mở project — bấm nút bên dưới sẽ "
+                      "hỏi tạo project trước.</span>", color=COLORS["warning"])
         self.status_label.setText(msg)
 
     def _go_extract(self) -> None:
