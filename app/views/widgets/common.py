@@ -684,12 +684,13 @@ class ProgressPanel(QFrame):
 
         top = QHBoxLayout()
         top.setSpacing(9)
-        self.stage_label = label("Đang chuẩn bị …", bold=True, size=12.5)
+        from app.i18n import tr
+        self.stage_label = label(tr("progress.preparing", "Đang chuẩn bị …"), bold=True, size=12.5)
         top.addWidget(self.stage_label)
         top.addStretch(1)
         self.percent_label = label("0%", bold=True, size=12.5, color=COLORS["accent_hi"])
         top.addWidget(self.percent_label)
-        self.cancel_btn = ghost_button("Huỷ", "close")
+        self.cancel_btn = ghost_button(tr("common.cancel", "Hủy"), "close")
         self.cancel_btn.setFixedHeight(28)
         self.cancel_btn.clicked.connect(self.cancelled.emit)
         top.addWidget(self.cancel_btn)
@@ -707,8 +708,9 @@ class ProgressPanel(QFrame):
         lay.addWidget(self.detail_label)
         self.hide()
 
-    def start(self, stage: str = "Đang xử lý …") -> None:
-        self.stage_label.setText(stage)
+    def start(self, stage: str = "") -> None:
+        from app.i18n import tr
+        self.stage_label.setText(stage or tr("progress.processing", "Đang xử lý …"))
         self.bar.setValue(0)
         self.percent_label.setText("0%")
         self.detail_label.setText("")
@@ -725,10 +727,11 @@ class ProgressPanel(QFrame):
         if msg:
             self.detail_label.setText(msg)
 
-    def finish(self, text: str = "Hoàn tất") -> None:
+    def finish(self, text: str = "") -> None:
+        from app.i18n import tr
         self.bar.setValue(100)
         self.percent_label.setText("100%")
-        self.stage_label.setText(text)
+        self.stage_label.setText(text or tr("progress.done", "Hoàn tất"))
         self.cancel_btn.setEnabled(False)
         QTimer.singleShot(1600, self.hide)
 

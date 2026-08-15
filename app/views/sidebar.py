@@ -70,10 +70,12 @@ class Sidebar(QWidget):
         lay.addSpacing(14)
 
         # --- dieu huong ---
+        from app.constants import get_nav_items
+        from app.i18n import tr
         self.group = QButtonGroup(self)
         self.group.setExclusive(True)
         self.buttons: dict[str, NavButton] = {}
-        for i, (key, text, icon_name) in enumerate(NAV_ITEMS):
+        for i, (key, text, icon_name) in enumerate(get_nav_items()):
             b = NavButton(i, text, icon_name)
             b.clicked.connect(lambda _c=False, k=key: self.pageRequested.emit(k))
             self.group.addButton(b)
@@ -92,16 +94,16 @@ class Sidebar(QWidget):
         self.status_row.setSpacing(7)
         self.status_dot = StatusDot(COLORS["text_mute"], 8)
         self.status_row.addWidget(self.status_dot)
-        self.device_label = label("Đang kiểm tra …", size=11, color=COLORS["text_dim"])
+        self.device_label = label(tr("sidebar.checking", "Đang kiểm tra …"), size=11, color=COLORS["text_dim"])
         self.status_row.addWidget(self.device_label, 1)
         lay.addLayout(self.status_row)
 
-        self.project_label = label("Chưa mở project", size=11, color=COLORS["text_mute"])
+        self.project_label = label(tr("main.no_project", "Chưa mở project"), size=11, color=COLORS["text_mute"])
         self.project_label.setWordWrap(True)
         lay.addWidget(self.project_label)
         lay.addSpacing(4)
 
-        version = QLabel(f"Phiên bản {APP_VERSION}")
+        version = QLabel(f"{tr('settings.about.version', 'Phiên bản {version}', version=APP_VERSION)}")
         version.setObjectName("SidebarFooter")
         lay.addWidget(version)
 

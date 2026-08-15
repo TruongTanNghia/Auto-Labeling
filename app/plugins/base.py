@@ -10,6 +10,7 @@ Plugin co the:
 """
 from __future__ import annotations
 
+from app.i18n import tr
 import importlib
 import importlib.util
 import pkgutil
@@ -68,8 +69,8 @@ class AnnotatorPlugin(ABC):
         """Kiem tra thu vien phu thuoc da duoc cai chua."""
         missing = [m for m in self.info.requires if importlib.util.find_spec(m) is None]
         if missing:
-            return False, "Thieu goi: " + ", ".join(missing)
-        return True, "San sang"
+            return False, tr("plugins.missing_packages", "Thieu goi: ") + ", ".join(missing)
+        return True, tr("plugins.available", "San sang")
 
     def load(self, ctx: PluginContext | None = None, log_cb=None) -> None:
         """Nap model. Mac dinh khong lam gi - plugin ghi de neu can."""

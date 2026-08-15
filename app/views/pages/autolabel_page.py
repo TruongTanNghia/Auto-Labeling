@@ -134,10 +134,13 @@ def _pt(x, y):
     return QPointF(x, y)
 
 
+from app.i18n import tr
+
+
 # ============================================================== PAGE ========
 class AutoLabelPage(BasePage):
-    TITLE = "Auto Label"
-    SUBTITLE = "Tự động sinh nhãn bằng YOLO — Detection, Segmentation, OBB, Pose"
+    TITLE = tr("nav.autolabel", "Auto Label")
+    SUBTITLE = tr("autolabel.subtitle", "Tự động sinh nhãn bằng YOLO — Detection, Segmentation, OBB, Pose")
     ICON = "wand"
 
     def __init__(self, controller, parent=None) -> None:
@@ -190,8 +193,7 @@ class AutoLabelPage(BasePage):
         n = len(self.image_list.selectedItems())
         if n:
             self.batch_hint.setText(
-                f"Đang chọn sẵn <b>{n:,} ảnh vừa cắt</b>. Bấm "
-                f"<b>Bắt đầu gán nhãn</b> là chạy đúng loạt này.")
+                tr("autolabel.batch_hint_fmt", "Đang chọn sẵn <b>{count} ảnh vừa cắt</b>. Bấm <b>Bắt đầu gán nhãn</b> là chạy đúng loạt này.", count=f"{n:,}"))
             self.batch_hint.setVisible(True)
             if first_row >= 0:
                 self._on_image_selected(int(
@@ -199,9 +201,9 @@ class AutoLabelPage(BasePage):
 
     # ================================================================ BUILD ==
     def build(self) -> None:
-        self.load_model_btn = ghost_button("Nạp model", "download")
+        self.load_model_btn = ghost_button(tr("autolabel.load_model", "Nạp model"), "download")
         self.load_model_btn.clicked.connect(self.load_model)
-        self.start_btn = primary_button("Bắt đầu gán nhãn", "play")
+        self.start_btn = primary_button(tr("autolabel.start_btn", "Bắt đầu gán nhãn"), "play")
         self.start_btn.clicked.connect(self.start)
         self.header.add_action(self.load_model_btn)
         self.header.add_action(self.start_btn)
@@ -223,11 +225,13 @@ class AutoLabelPage(BasePage):
 
     # ------------------------------------------------------------- danh sach --
     def _build_list(self) -> QWidget:
-        card = Card("Ảnh trong project", "", "image")
+        card = Card(tr("autolabel.images_card", "Ảnh trong project"), "", "image")
         self.filter_combo = combo([
-            ("all", "Tất cả ảnh"), ("unlabeled", "Chưa gán nhãn"),
-            ("review", "Cần xem lại"), ("approved", "Đã duyệt"),
-            ("no_dup", "Bỏ qua ảnh trùng"),
+            ("all", tr("autolabel.filter_all", "Tất cả ảnh")),
+            ("unlabeled", tr("autolabel.filter_unlabeled", "Chưa gán nhãn")),
+            ("review", tr("autolabel.filter_review", "Cần xem lại")),
+            ("approved", tr("autolabel.filter_approved", "Đã duyệt")),
+            ("no_dup", tr("autolabel.filter_no_dup", "Bỏ qua ảnh trùng")),
         ])
         self.filter_combo.currentIndexChanged.connect(self.refresh)
         card.add(self.filter_combo)
@@ -242,11 +246,11 @@ class AutoLabelPage(BasePage):
 
         row = QHBoxLayout()
         row.setSpacing(8)
-        self.select_all_btn = ghost_button("Chọn tất cả")
+        self.select_all_btn = ghost_button(tr("autolabel.select_all", "Chọn tất cả"))
         self.select_all_btn.clicked.connect(self.image_list.selectAll)
         row.addWidget(self.select_all_btn)
         row.addStretch(1)
-        self.count_label = label("0 ảnh", size=11.5, color=COLORS["text_mute"])
+        self.count_label = label(tr("autolabel.images_count", "{count} ảnh", count=0), size=11.5, color=COLORS["text_mute"])
         row.addWidget(self.count_label)
         card.add(row)
         return card
@@ -260,73 +264,74 @@ class AutoLabelPage(BasePage):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(12)
 
-        model_card = Card("Cấu hình model", "", "cpu")
+        model_card = Card(tr("autolabel.model_config", "Cấu hình model"), "", "cpu")
         self.task_combo = combo(
             [(t, {"detect": "Detection", "segment": "Segmentation",
                   "obb": "OBB — hộp xoay", "pose": "Pose — điểm khớp"}[t]) for t in YOLO_TASKS],
             current=cfg.get("model.task", "segment"))
         self.task_combo.currentIndexChanged.connect(self._on_task_changed)
-        model_card.add(Field("Nhiệm vụ", self.task_combo, label_width=LABEL_W_NARROW))
+        model_card.add(Field(tr("autolabel.task", "Nhiệm vụ"), self.task_combo, label_width=LABEL_W_NARROW))
 
         self.weights_combo = combo([])
         self.weights_combo.setEditable(False)
-        model_card.add(Field("Trọng số", self.weights_combo, label_width=LABEL_W_NARROW))
+        model_card.add(Field(tr("autolabel.weights", "Trọng số"), self.weights_combo, label_width=LABEL_W_NARROW))
 
         custom_row = QWidget()
         cr = QHBoxLayout(custom_row)
         cr.setContentsMargins(0, 0, 0, 0)
         cr.setSpacing(8)
-        self.custom_label = label("Không dùng", size=11.5, color=COLORS["text_mute"])
-        pick = ghost_button("Chọn file", "folder")
+        self.custom_label = label(tr("autolabel.no_custom_weights", "Không dùng"), size=11.5, color=COLORS["text_mute"])
+        pick = ghost_button(tr("autolabel.choose_file", "Chọn file"), "folder")
         pick.clicked.connect(self._choose_weights)
-        clear = ghost_button("Xoá")
+        clear = ghost_button(tr("autolabel.clear", "Xoá"))
         clear.clicked.connect(self._clear_weights)
         cr.addWidget(self.custom_label, 1)
         cr.addWidget(pick)
         cr.addWidget(clear)
-        model_card.add(Field("Model riêng", custom_row, label_width=LABEL_W_NARROW,
-                             hint="Hỗ trợ .pt, .onnx, .engine"))
+        model_card.add(Field(tr("autolabel.custom_model", "Model riêng"), custom_row, label_width=LABEL_W_NARROW,
+                             hint=tr("autolabel.custom_model_hint", "Hỗ trợ .pt, .onnx, .engine")))
 
         self.device_combo = combo(available_devices(),
                                   current=cfg.get("model.device", "auto"))
-        model_card.add(Field("Thiết bị", self.device_combo, label_width=LABEL_W_NARROW))
+        model_card.add(Field(tr("autolabel.device", "Thiết bị"), self.device_combo, label_width=LABEL_W_NARROW))
         self.imgsz_spin = spin(cfg.get("model.imgsz", 640), 128, 4096, 32, width=110)
-        model_card.add(Field("Cỡ ảnh vào model", self.imgsz_spin, label_width=LABEL_W_NARROW))
+        model_card.add(Field(tr("autolabel.imgsz", "Cỡ ảnh vào model"), self.imgsz_spin, label_width=LABEL_W_NARROW))
 
-        self.model_status = label("Chưa nạp model", size=11.5, color=COLORS["warning"])
+        self.model_status = label(tr("autolabel.model_unloaded", "Chưa nạp model"), size=11.5, color=COLORS["warning"])
         model_card.add(hline())
         model_card.add(self.model_status)
         lay.addWidget(model_card)
 
-        infer_card = Card("Tham số suy luận", "", "sliders")
+        infer_card = Card(tr("autolabel.infer_params", "Tham số suy luận"), "", "sliders")
         self.conf_slider = SliderField(cfg.get("inference.confidence", 0.45), 0.01, 0.99, 2)
-        infer_card.add(Field("Độ tin cậy", self.conf_slider, label_width=LABEL_W_NARROW))
+        infer_card.add(Field(tr("autolabel.conf", "Độ tin cậy"), self.conf_slider, label_width=LABEL_W_NARROW))
         self.iou_slider = SliderField(cfg.get("inference.iou", 0.5), 0.05, 0.95, 2)
-        infer_card.add(Field("IOU (khử trùng)", self.iou_slider, label_width=LABEL_W_NARROW))
+        infer_card.add(Field(tr("autolabel.iou", "IOU (khử trùng)"), self.iou_slider, label_width=LABEL_W_NARROW))
         self.review_slider = SliderField(cfg.get("inference.review_threshold", 0.6),
                                          0.05, 0.99, 2)
-        infer_card.add(Field("Ngưỡng xem lại", self.review_slider, label_width=LABEL_W_NARROW,
-                             hint="Dự đoán thấp hơn ngưỡng này sẽ bị đánh dấu Cần xem lại"))
+        infer_card.add(Field(tr("autolabel.review_thresh", "Ngưỡng xem lại"), self.review_slider, label_width=LABEL_W_NARROW,
+                             hint=tr("autolabel.review_thresh_hint", "Dự đoán thấp hơn ngưỡng này sẽ bị đánh dấu Cần xem lại")))
         self.maxdet_spin = spin(cfg.get("inference.max_det", 1000), 1, 30000, 50, width=110)
-        infer_card.add(Field("Số đối tượng tối đa", self.maxdet_spin, label_width=LABEL_W_NARROW))
+        infer_card.add(Field(tr("autolabel.max_det", "Số đối tượng tối đa"), self.maxdet_spin, label_width=LABEL_W_NARROW))
         self.simplify_slider = SliderField(cfg.get("inference.polygon_simplify", 0.0025),
                                            0.0, 0.02, 4, 0.0005)
-        infer_card.add(Field("Giản lược polygon", self.simplify_slider, label_width=LABEL_W_NARROW))
+        infer_card.add(Field(tr("autolabel.simplify", "Giản lược polygon"), self.simplify_slider, label_width=LABEL_W_NARROW))
         self.minarea_spin = spin(cfg.get("inference.min_area_px", 24), 0, 100000, 4,
                                  suffix=" px", width=110)
-        infer_card.add(Field("Diện tích tối thiểu", self.minarea_spin, label_width=LABEL_W_NARROW))
+        infer_card.add(Field(tr("autolabel.min_area", "Diện tích tối thiểu"), self.minarea_spin, label_width=LABEL_W_NARROW))
 
         self.overwrite_toggle = ToggleSwitch(cfg.get("inference.overwrite_existing", True))
         ow = QHBoxLayout()
-        ow.addWidget(label("Ghi đè nhãn đã có", size=12, color=COLORS["text_dim"]))
+        ow.addWidget(label(tr("autolabel.overwrite", "Ghi đè nhãn đã có"), size=12, color=COLORS["text_dim"]))
         ow.addStretch(1)
         ow.addWidget(self.overwrite_toggle)
         infer_card.add(ow)
         lay.addWidget(infer_card)
 
-        plugin_card = Card("Plugin tinh chỉnh", "Cải thiện chất lượng nhãn tự động",
+        plugin_card = Card(tr("autolabel.refine_plugin", "Plugin tinh chỉnh"),
+                           tr("autolabel.refine_plugin_sub", "Cải thiện chất lượng nhãn tự động"),
                            "puzzle")
-        items = [("", "Không dùng plugin")]
+        items = [("", tr("autolabel.no_plugin", "Không dùng plugin"))]
         for info in registry.infos():
             items.append((info.key, info.name))
         self.plugin_combo = combo(items)
@@ -336,7 +341,7 @@ class AutoLabelPage(BasePage):
         plugin_card.add(self.plugin_desc)
         from PySide6.QtWidgets import QLineEdit
         self.plugin_prompt = QLineEdit()
-        self.plugin_prompt.setPlaceholderText("Mô tả bằng chữ, ví dụ: crack, rust, bolt")
+        self.plugin_prompt.setPlaceholderText(tr("autolabel.prompt_placeholder", "Mô tả bằng chữ, ví dụ: crack, rust, bolt"))
         plugin_card.add(self.plugin_prompt)
         self.plugin_status = label("", size=11.5, color=COLORS["text_mute"])
         plugin_card.add(self.plugin_status)
@@ -357,27 +362,27 @@ class AutoLabelPage(BasePage):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(12)
 
-        card = Card("Xem trước kết quả", "", "eye")
+        card = Card(tr("autolabel.preview_results", "Xem trước kết quả"), "", "eye")
         self.preview = DetectionPreview()
         card.add(self.preview, 1)
         lay.addWidget(card, 1)
 
-        stat_card = Card("Kết quả", "", "chart")
-        self.leg_total = LegendItem(COLORS["accent"], "Ảnh đã xử lý", "0")
-        self.leg_objects = LegendItem(COLORS["info"], "Đối tượng sinh ra", "0")
-        self.leg_review = LegendItem(COLORS["warning"], "Ảnh cần xem lại", "0")
-        self.leg_lowconf = LegendItem(COLORS["danger"], "Dự đoán độ tin cậy thấp", "0")
-        self.leg_empty = LegendItem(COLORS["text_mute"], "Ảnh không có đối tượng", "0")
+        stat_card = Card(tr("autolabel.results_card", "Kết quả"), "", "chart")
+        self.leg_total = LegendItem(COLORS["accent"], tr("autolabel.processed_images", "Ảnh đã xử lý"), "0")
+        self.leg_objects = LegendItem(COLORS["info"], tr("autolabel.generated_objects", "Đối tượng sinh ra"), "0")
+        self.leg_review = LegendItem(COLORS["warning"], tr("autolabel.images_need_review", "Ảnh cần xem lại"), "0")
+        self.leg_lowconf = LegendItem(COLORS["danger"], tr("autolabel.low_conf_predictions", "Dự đoán độ tin cậy thấp"), "0")
+        self.leg_empty = LegendItem(COLORS["text_mute"], tr("autolabel.empty_images", "Ảnh không có đối tượng"), "0")
         for w in (self.leg_total, self.leg_objects, self.leg_review,
                   self.leg_lowconf, self.leg_empty):
             stat_card.add(w)
         stat_card.add(hline())
-        self.review_btn = ghost_button("Mở trình sửa nhãn để xem lại", "pen")
+        self.review_btn = ghost_button(tr("autolabel.open_editor", "Mở trình sửa nhãn để xem lại"), "pen")
         self.review_btn.clicked.connect(lambda: self.request_editor())
         stat_card.add(self.review_btn)
         lay.addWidget(stat_card)
 
-        log_card = Card("Nhật ký", "", "file")
+        log_card = Card(tr("autolabel.log_card", "Nhật ký"), "", "file")
         self.log_view = QPlainTextEdit()
         self.log_view.setObjectName("LogView")
         self.log_view.setReadOnly(True)
@@ -404,7 +409,7 @@ class AutoLabelPage(BasePage):
 
     def _choose_weights(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "Chọn file trọng số", "",
+            self, tr("autolabel.choose_weights_title", "Chọn file trọng số"), "",
             "Model (*.pt *.onnx *.engine *.torchscript);;Tất cả file (*)")
         if path:
             cfg.set("model.custom_weights", path)
@@ -413,12 +418,12 @@ class AutoLabelPage(BasePage):
 
     def _clear_weights(self) -> None:
         cfg.set("model.custom_weights", "")
-        self.custom_label.setText("Không dùng")
+        self.custom_label.setText(tr("autolabel.no_custom_weights", "Không dùng"))
 
     def _on_plugin_changed(self) -> None:
         key = self.plugin_combo.currentData()
         if not key:
-            self.plugin_desc.setText("Chỉ dùng YOLO, không qua plugin.")
+            self.plugin_desc.setText(tr("autolabel.only_yolo_hint", "Chỉ dùng YOLO, không qua plugin."))
             self.plugin_status.setText("")
             self.plugin_prompt.setEnabled(False)
             return
@@ -466,7 +471,7 @@ class AutoLabelPage(BasePage):
         })
         cfg.save()
 
-        self.model_status.setText("Đang nạp model …")
+        self.model_status.setText(tr("autolabel.model_loading", "Đang nạp model …"))
         self.model_status.setStyleSheet(f"font-size: 11.5px; color: {COLORS['info']};")
         self.load_model_btn.setEnabled(False)
 
@@ -483,7 +488,7 @@ class AutoLabelPage(BasePage):
         eng = self.ctrl.engine
         self.model_status.setText(eng.describe())
         self.model_status.setStyleSheet(f"font-size: 11.5px; color: {COLORS['success']};")
-        self.toast(f"Đã nạp model, chạy trên {device_label(eng.device)}.", "success")
+        self.toast(tr("autolabel.loaded_toast", "Đã nạp model, chạy trên {device}.", device=device_label(eng.device)), "success")
         self.ctrl.modelChanged.emit()
         if getattr(self, "_pending_start", False):
             self._pending_start = False
@@ -492,26 +497,26 @@ class AutoLabelPage(BasePage):
     def _on_model_failed(self, msg: str) -> None:
         self.load_model_btn.setEnabled(True)
         self._pending_start = False
-        self.model_status.setText("Nạp model thất bại")
+        self.model_status.setText(tr("autolabel.model_load_failed", "Nạp model thất bại"))
         self.model_status.setStyleSheet(f"font-size: 11.5px; color: {COLORS['danger']};")
 
     # ================================================================== RUN ===
     def start(self) -> None:
         if not self.ctrl.has_project:
-            self.toast("Hãy mở hoặc tạo project trước.", "warning")
+            self.toast(tr("autolabel.open_project_first", "Hãy mở hoặc tạo project trước."), "warning")
             return
         if self.ctrl.is_running("autolabel"):
-            self.toast("Đang gán nhãn, vui lòng đợi.", "warning")
+            self.toast(tr("autolabel.labeling_wait", "Đang gán nhãn, vui lòng đợi."), "warning")
             return
         if not self.ctrl.engine.loaded:
-            self.toast("Đang nạp model trước khi chạy …", "info")
+            self.toast(tr("autolabel.loading_model_first", "Đang nạp model trước khi chạy …"), "info")
             self._pending_start = True
             self.load_model()
             return
 
         ids = self.image_list.selected_ids() or self.image_list.all_ids()
         if not ids:
-            self.toast("Không có ảnh nào để gán nhãn.", "warning")
+            self.toast(tr("autolabel.no_images_to_label", "Không có ảnh nào để gán nhãn."), "warning")
             return
 
         icfg = InferenceConfig(
@@ -533,7 +538,7 @@ class AutoLabelPage(BasePage):
         cfg.save()
 
         self.log_view.clear()
-        self.progress.start(f"Đang gán nhãn {len(ids):,} ảnh …")
+        self.progress.start(tr("autolabel.labeling_progress", "Đang gán nhãn {count} ảnh …", count=f"{len(ids):,}"))
         self.start_btn.setEnabled(False)
 
         worker = AutoLabelWorker(
@@ -562,7 +567,7 @@ class AutoLabelPage(BasePage):
 
     def _on_done(self, result) -> None:
         self.start_btn.setEnabled(True)
-        self.progress.finish("Gán nhãn hoàn tất")
+        self.progress.finish(tr("autolabel.labeling_done", "Gán nhãn hoàn tất"))
         if result is None:
             return
         self.leg_total.set_value(f"{result.n_images:,}")
@@ -571,8 +576,8 @@ class AutoLabelPage(BasePage):
         self.leg_lowconf.set_value(f"{result.n_low_conf:,}")
         self.leg_empty.set_value(f"{result.n_empty:,}")
         self.toast(
-            f"Xong: {result.n_objects:,} đối tượng trên {result.n_images:,} ảnh "
-            f"({result.fps:.1f} ảnh/giây).", "success")
+            tr("autolabel.done_toast", "Xong: {objects} đối tượng trên {images} ảnh ({fps:.1f} ảnh/giây).",
+               objects=f"{result.n_objects:,}", images=f"{result.n_images:,}", fps=result.fps), "success")
         self.ctrl.notify_images_changed()
         self.ctrl.notify_classes_changed()
         self.refresh()
@@ -598,7 +603,7 @@ class AutoLabelPage(BasePage):
             kwargs["include_duplicates"] = False
         self._images = self.repo.images(**kwargs)
         self.image_list.set_images(self._images)
-        self.count_label.setText(f"{len(self._images):,} ảnh")
+        self.count_label.setText(tr("autolabel.images_count", "{count} ảnh", count=f"{len(self._images):,}"))
         if self.ctrl.engine.loaded:
             self.model_status.setText(self.ctrl.engine.describe())
             self.model_status.setStyleSheet(

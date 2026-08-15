@@ -1,6 +1,7 @@
 """Cua so chinh: title bar tuy bien, sidebar, stack cac trang, toast."""
 from __future__ import annotations
 
+from app.i18n import tr
 from PySide6.QtCore import (
     QEasingCurve,
     QPoint,
@@ -309,14 +310,16 @@ class MainWindow(QMainWindow):
                 page.refresh()
 
     def _on_project_closed(self) -> None:
+        from app.i18n import tr
         self.title_bar.set_project("")
-        self.sidebar.set_project("Chưa mở project")
+        self.sidebar.set_project(tr("main.no_project", "Chưa mở project"))
 
     def _update_project_label(self) -> None:
+        from app.i18n import tr
         repo = self.ctrl.repo
         if repo is None:
             self.title_bar.set_project("")
-            self.sidebar.set_project("Chưa mở project")
+            self.sidebar.set_project(tr("main.no_project", "Chưa mở project"))
             return
         info = repo.refresh_stats()
         self.title_bar.set_project(f"{info.name}   ·   {info.n_images:,} ảnh")
@@ -508,15 +511,15 @@ class MainWindow(QMainWindow):
     def closeEvent(self, ev) -> None:  # noqa: D102
         if self.ctrl.busy:
             ret = QMessageBox.question(
-                self, "Còn tác vụ đang chạy",
-                "Vẫn còn tác vụ nền đang chạy. Thoát và huỷ tác vụ?",
+                self, tr("common.confirm", "Xác nhận"),
+                tr("main.tasks_running_confirm", "Vẫn còn tác vụ nền đang chạy. Thoát và huỷ tác vụ?"),
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
             if ret != QMessageBox.Yes:
                 ev.ignore()
                 return
         elif cfg.get("general.confirm_on_exit", True):
             ret = QMessageBox.question(
-                self, "Thoát", f"Đóng {APP_NAME}?",
+                self, tr("common.confirm", "Xác nhận"), tr("main.close_confirm", tr("common.close", "Đóng") + " {app_name}?", app_name=APP_NAME),
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
             if ret != QMessageBox.Yes:
                 ev.ignore()

@@ -124,14 +124,15 @@ class Config:
     # ----------------------------------------------------------------- I/O --
     def load(self) -> None:
         path = config_file()
-        if not path.exists():
-            return
-        try:
-            with open(path, "r", encoding="utf-8") as fh:
-                stored = json.load(fh)
-            _deep_update(self._data, stored)
-        except Exception:
-            pass
+        if path.exists():
+            try:
+                with open(path, "r", encoding="utf-8") as fh:
+                    stored = json.load(fh)
+                _deep_update(self._data, stored)
+            except Exception:
+                pass
+        from app.i18n import set_language
+        set_language(self.get("general.language", "vi"))
 
     def save(self) -> None:
         path = config_file()

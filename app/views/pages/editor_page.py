@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.i18n import tr
 from PySide6.QtCore import QPointF, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
@@ -31,7 +32,7 @@ from app.constants import (
     IMAGE_STATUS_LABEL,
 )
 from app.core.inference import InferenceConfig
-from app.models.entities import Annotation
+from app.models.entities import Annotation, ImageRecord
 from app.theme import icons
 from app.views.pages.base_page import BasePage
 from app.views.widgets.canvas import (
@@ -68,24 +69,24 @@ OBJ_ROLE = Qt.UserRole + 12
 
 
 class EditorPage(BasePage):
-    TITLE = "Annotation Editor"
-    SUBTITLE = "Kiểm tra và tinh chỉnh nhãn với bộ công cụ chuyên nghiệp"
+    TITLE = tr("nav.editor", "Sửa nhãn")
+    SUBTITLE = tr("editor.subtitle", "Kiểm tra và tinh chỉnh nhãn với bộ công cụ chuyên nghiệp")
     ICON = "pen"
 
     def __init__(self, controller, parent=None) -> None:
         super().__init__(controller, parent, scrollable=False)
-        self._image_id = 0
-        self._images = []
+        self._images: list[ImageRecord] = []
+        self.current_idx: int = -1
         self._dirty = False
         self._loading = False
 
     # ================================================================ BUILD ==
     def build(self) -> None:
-        self.autolabel_btn = ghost_button("Gán nhãn ảnh này", "wand")
+        self.autolabel_btn = ghost_button(tr("editor.autolabel_this", "Gán nhãn ảnh này"), "wand")
         self.autolabel_btn.clicked.connect(self.auto_label_current)
-        self.save_btn = ghost_button("Lưu  (Ctrl+S)", "save")
+        self.save_btn = ghost_button(tr("editor.save_shortcut", "Lưu  (Ctrl+S)"), "save")
         self.save_btn.clicked.connect(lambda: self.save_current(toast=True))
-        self.approve_btn = primary_button("Duyệt && sang ảnh sau", "check")
+        self.approve_btn = primary_button(tr("editor.approve_next", "Duyệt && sang ảnh sau"), "check")
         self.approve_btn.clicked.connect(self.approve_and_next)
         for b in (self.autolabel_btn, self.save_btn, self.approve_btn):
             self.header.add_action(b)
@@ -110,10 +111,12 @@ class EditorPage(BasePage):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(10)
 
-        img_card = Card("Ảnh", "", "image", margins=(12, 11, 12, 12), spacing=8)
+        img_card = Card(tr("editor.image_card", "Ảnh"), "", "image", margins=(12, 11, 12, 12), spacing=8)
         self.filter_combo = combo([
-            ("all", "Tất cả"), ("review", "Cần xem lại"),
-            ("unlabeled", "Chưa gán nhãn"), ("approved", "Đã duyệt"),
+            ("all", tr("editor.filter_all", "Tất cả")),
+            ("review", tr("editor.filter_review", "Cần xem lại")),
+            ("unlabeled", tr("editor.filter_unlabeled", "Chưa gán nhãn")),
+            ("approved", tr("editor.filter_approved", "Đã duyệt")),
         ])
         self.filter_combo.currentIndexChanged.connect(self.refresh)
         img_card.add(self.filter_combo)
@@ -122,7 +125,7 @@ class EditorPage(BasePage):
         img_card.add(self.image_list, 1)
         lay.addWidget(img_card, 3)
 
-        class_card = Card("Lớp đối tượng", "", "layers", margins=(12, 11, 12, 12), spacing=8)
+        class_card = Card(tr("editor.class_card", "Lớp đối tượng"), "", "layers", margins=(12, 11, 12, 12), spacing=8)
         self.class_list = QListWidget()
         self.class_list.setSelectionMode(QAbstractItemView.SingleSelection)
         self.class_list.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -130,7 +133,7 @@ class EditorPage(BasePage):
         self.class_list.currentItemChanged.connect(self._on_class_selected)
         self.class_list.itemDoubleClicked.connect(self._assign_class_to_selection)
         class_card.add(self.class_list, 1)
-        add_class_btn = ghost_button("Thêm lớp", "plus")
+        add_class_btn = ghost_button(tr("editor.add_class", "Thêm lớp"), "plus")
         add_class_btn.clicked.connect(self._add_class)
         class_card.add(add_class_btn)
         lay.addWidget(class_card, 2)
@@ -158,9 +161,9 @@ class EditorPage(BasePage):
         bl = QHBoxLayout(bottom)
         bl.setContentsMargins(0, 0, 0, 0)
         bl.setSpacing(9)
-        self.prev_btn = ghost_button("Ảnh trước  (A)", "chevron_left")
+        self.prev_btn = ghost_button(tr("editor.prev_image", "Ảnh trước  (A)"), "chevron_left")
         self.prev_btn.clicked.connect(lambda: self.step_image(-1))
-        self.next_btn = ghost_button("Ảnh sau  (D)", "chevron_right")
+        self.next_btn = ghost_button(tr("editor.next_image", "Ảnh sau  (D)"), "chevron_right")
         self.next_btn.clicked.connect(lambda: self.step_image(1))
         self.pos_label = label("0 / 0", bold=True, size=12.5)
         self.pos_label.setAlignment(Qt.AlignCenter)
@@ -188,22 +191,19 @@ class EditorPage(BasePage):
         self.tool_group = QButtonGroup(self)
         self.tool_group.setExclusive(True)
         self.TOOL_META = {
-            TOOL_SELECT: ("move", "Chọn", "V",
-                          "Chọn đối tượng, kéo để di chuyển, kéo đỉnh để chỉnh hình.\n"
-                          "Nháy đúp lên cạnh để thêm đỉnh mới."),
-            TOOL_POLYGON: ("polygon", "Polygon", "W",
-                           "Bấm để thêm từng đỉnh. Chuột phải hoặc Enter để đóng hình,\n"
-                           "Backspace để bỏ đỉnh vừa thêm, Esc để huỷ."),
-            TOOL_BBOX: ("crop", "Khung chữ nhật", "",
-                        "Kéo chuột để tạo một khung bao chữ nhật."),
-            TOOL_BRUSH: ("brush", "Cọ vẽ", "B",
-                         "Tô thêm vào vùng đang chọn. Chưa chọn gì thì tạo vùng mới.\n"
-                         "Alt + cuộn chuột để đổi cỡ cọ."),
-            TOOL_ERASER: ("eraser", "Tẩy", "E",
-                          "Xoá bớt vùng. Tẩy ở giữa sẽ tạo lỗ trong mask."),
-            TOOL_SPLIT: ("split", "Cắt đôi", "S",
+            TOOL_SELECT: ("move", tr("editor.tool_select", "Chọn"), "V",
+                          tr("editor.tool_select_desc", "Chọn đối tượng, kéo để di chuyển, kéo đỉnh để chỉnh hình.\nNháy đúp lên cạnh để thêm đỉnh mới.")),
+            TOOL_POLYGON: ("polygon", tr("editor.tool_polygon", "Polygon"), "W",
+                           tr("editor.tool_polygon_desc", "Bấm để thêm từng đỉnh. Chuột phải hoặc Enter để đóng hình,\nBackspace để bỏ đỉnh vừa thêm, Esc để huỷ.")),
+            TOOL_BBOX: ("crop", tr("editor.tool_bbox", "Hộp bao"), "",
+                        tr("editor.tool_bbox_desc", "Kéo chuột để tạo một khung bao chữ nhật.")),
+            TOOL_BRUSH: ("brush", tr("editor.tool_brush", "Cọ vẽ"), "B",
+                         tr("editor.tool_brush_desc", "Tô thêm vào vùng đang chọn. Chưa chọn gì thì tạo vùng mới.\nAlt + cuộn chuột để đổi cỡ cọ.")),
+            TOOL_ERASER: ("eraser", tr("editor.tool_eraser", "Tẩy"), "E",
+                          tr("editor.tool_eraser_desc", "Xoá bớt vùng. Tẩy ở giữa sẽ tạo lỗ trong mask.")),
+            TOOL_SPLIT: ("split", tr("editor.tool_split", "Cắt đôi"), "S",
                          "Kẻ một đường cắt ngang để tách vùng làm hai."),
-            TOOL_PAN: ("hand", "Di chuyển", "",
+            TOOL_PAN: ("hand", tr("editor.tool_pan", "Di chuyển"), "",
                        "Kéo để di chuyển ảnh. Cách khác: giữ Space hoặc chuột giữa."),
         }
         self.tool_buttons: dict[str, IconButton] = {}
@@ -220,7 +220,7 @@ class EditorPage(BasePage):
         lay.addSpacing(6)
         lay.addWidget(vline())
         lay.addSpacing(6)
-        self.tool_name_label = label("Chọn", bold=True, size=12,
+        self.tool_name_label = label(tr("editor.tool_select", "Chọn"), bold=True, size=12,
                                      color=COLORS["accent_hi"])
         self.tool_name_label.setMinimumWidth(78)
         lay.addWidget(self.tool_name_label)
@@ -229,7 +229,7 @@ class EditorPage(BasePage):
         bl = QHBoxLayout(self.brush_widget)
         bl.setContentsMargins(0, 0, 0, 0)
         bl.setSpacing(7)
-        bl.addWidget(label("Cỡ cọ", size=11.5, color=COLORS["text_mute"]))
+        bl.addWidget(label(tr("editor.brush_size", "Cỡ cọ"), size=11.5, color=COLORS["text_mute"]))
         self.brush_slider = SliderField(cfg.get("annotation.brush_size", 20), 2, 200, 0, 1)
         self.brush_slider.setFixedWidth(152)
         self.brush_slider.valueChanged.connect(self.canvas_brush_changed)
@@ -238,15 +238,15 @@ class EditorPage(BasePage):
         lay.addWidget(self.brush_widget)
 
         lay.addStretch(1)
-        self.merge_btn = IconButton("merge", "Gộp vùng  (M)\nGộp các vùng đang chọn thành một", 17)
+        self.merge_btn = IconButton("merge", tr("editor.merge_regions", "Gộp vùng  (M)\nGộp các vùng đang chọn thành một"), 17)
         self.merge_btn.setFixedSize(34, 30)
         self.merge_btn.clicked.connect(lambda: self.canvas.merge_selected())
         lay.addWidget(self.merge_btn)
-        self.simplify_btn = IconButton("sparkle", "Giản lược\nGiảm số đỉnh của polygon", 17)
+        self.simplify_btn = IconButton("sparkle", tr("editor.simplify_polygon", "Giản lược\nGiảm số đỉnh của polygon"), 17)
         self.simplify_btn.setFixedSize(34, 30)
         self.simplify_btn.clicked.connect(lambda: self.canvas.simplify_selected(1.8))
         lay.addWidget(self.simplify_btn)
-        self.delete_btn = IconButton("trash", "Xoá  (Delete)\nXoá đối tượng đang chọn",
+        self.delete_btn = IconButton("trash", tr("editor.delete_object", "Xoá  (Delete)\nXoá đối tượng đang chọn"),
                                      17, color=COLORS["danger"])
         self.delete_btn.setFixedSize(34, 30)
         self.delete_btn.clicked.connect(lambda: self.canvas.delete_selected())
@@ -255,15 +255,15 @@ class EditorPage(BasePage):
         lay.addSpacing(4)
         lay.addWidget(vline())
         lay.addSpacing(4)
-        self.undo_btn = IconButton("undo", "Hoàn tác  (Ctrl+Z)")
+        self.undo_btn = IconButton("undo", tr("editor.undo", "Hoàn tác  (Ctrl+Z)"))
         self.undo_btn.clicked.connect(lambda: self.canvas.undo())
-        self.redo_btn = IconButton("redo", "Làm lại  (Ctrl+Y)")
+        self.redo_btn = IconButton("redo", tr("editor.redo", "Làm lại  (Ctrl+Y)"))
         self.redo_btn.clicked.connect(lambda: self.canvas.redo())
-        self.zoom_in_btn = IconButton("zoom_in", "Phóng to  (Ctrl++)")
+        self.zoom_in_btn = IconButton("zoom_in", tr("editor.zoom_in", "Phóng to  (Ctrl++)"))
         self.zoom_in_btn.clicked.connect(lambda: self.canvas.zoom_by(1.2))
-        self.zoom_out_btn = IconButton("zoom_out", "Thu nhỏ  (Ctrl+-)")
+        self.zoom_out_btn = IconButton("zoom_out", tr("editor.zoom_out", "Thu nhỏ  (Ctrl+-)"))
         self.zoom_out_btn.clicked.connect(lambda: self.canvas.zoom_by(1 / 1.2))
-        self.fit_btn = IconButton("maximize", "Vừa khung  (Ctrl+0)")
+        self.fit_btn = IconButton("maximize", tr("editor.fit_view", "Vừa khung  (Ctrl+0)"))
         self.fit_btn.clicked.connect(lambda: self.canvas.fit_to_view())
         for b in (self.undo_btn, self.redo_btn, self.zoom_in_btn,
                   self.zoom_out_btn, self.fit_btn):
@@ -285,7 +285,7 @@ class EditorPage(BasePage):
         nav_card.add(self.navigator)
         lay.addWidget(nav_card)
 
-        obj_card = Card("Đối tượng trên ảnh", "", "target",
+        obj_card = Card(tr("editor.objects_on_image", "Đối tượng trên ảnh"), "", "target",
                         margins=(12, 11, 12, 12), spacing=8)
         self.object_list = QListWidget()
         self.object_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -295,37 +295,37 @@ class EditorPage(BasePage):
         obj_card.add(self.object_list, 1)
         lay.addWidget(obj_card, 1)
 
-        info_card = Card("Thuộc tính", "", "sliders", margins=(12, 11, 12, 12), spacing=8)
+        info_card = Card(tr("editor.properties", "Thuộc tính"), "", "sliders", margins=(12, 11, 12, 12), spacing=8)
         self.obj_class_combo = combo([])
         self.obj_class_combo.currentIndexChanged.connect(self._apply_class_combo)
-        info_card.add(Field("Lớp", self.obj_class_combo, label_width=88))
+        info_card.add(Field(tr("editor.class", "Lớp"), self.obj_class_combo, label_width=88))
         self.obj_conf = dspin(1.0, 0.0, 1.0, 0.01, 3, width=90)
         self.obj_conf.valueChanged.connect(self._apply_confidence)
-        info_card.add(Field("Độ tin cậy", self.obj_conf, label_width=88))
-        self.obj_info = label("Chưa chọn đối tượng nào", size=11.5,
+        info_card.add(Field(tr("editor.confidence", "Độ tin cậy"), self.obj_conf, label_width=88))
+        self.obj_info = label(tr("editor.no_object_selected", "Chưa chọn đối tượng nào"), size=11.5,
                               color=COLORS["text_mute"], wrap=True)
         info_card.add(self.obj_info)
         info_card.add(hline())
 
         self.status_row = QHBoxLayout()
         self.status_row.setSpacing(7)
-        self.mark_review_btn = ghost_button("Cần xem lại", "alert")
-        self.mark_review_btn.setToolTip("Đánh dấu đối tượng đang chọn là cần xem lại")
+        self.mark_review_btn = ghost_button(tr("editor.mark_review", "Cần xem lại"), "alert")
+        self.mark_review_btn.setToolTip(tr("editor.mark_review_tip", "Đánh dấu đối tượng đang chọn là cần xem lại"))
         self.mark_review_btn.clicked.connect(lambda: self._set_ann_status(ANN_REVIEW))
-        self.mark_ok_btn = ghost_button("Đã duyệt", "check")
-        self.mark_ok_btn.setToolTip("Đánh dấu đối tượng đang chọn là đã duyệt")
+        self.mark_ok_btn = ghost_button(tr("editor.mark_ok", "Đã duyệt"), "check")
+        self.mark_ok_btn.setToolTip(tr("editor.mark_ok_tip", "Đánh dấu đối tượng đang chọn là đã duyệt"))
         self.mark_ok_btn.clicked.connect(lambda: self._set_ann_status(ANN_APPROVED))
         self.status_row.addWidget(self.mark_review_btn)
         self.status_row.addWidget(self.mark_ok_btn)
         info_card.add(self.status_row)
         lay.addWidget(info_card)
 
-        view_card = Card("Hiển thị", "", "eye", margins=(12, 11, 12, 12), spacing=8)
+        view_card = Card(tr("editor.display_card", "Hiển thị"), "", "eye", margins=(12, 11, 12, 12), spacing=8)
         from app.views.widgets.common import ToggleSwitch
         self.show_conf_toggle = ToggleSwitch(cfg.get("annotation.show_confidence", True))
         self.show_label_toggle = ToggleSwitch(cfg.get("annotation.show_labels", True))
-        for text, toggle in (("Hiện độ tin cậy", self.show_conf_toggle),
-                             ("Hiện tên lớp", self.show_label_toggle)):
+        for text, toggle in ((tr("editor.show_confidence", "Hiện độ tin cậy"), self.show_conf_toggle),
+                             (tr("editor.show_class_name", "Hiện tên lớp"), self.show_label_toggle)):
             r = QHBoxLayout()
             r.addWidget(label(text, size=12, color=COLORS["text_dim"]))
             r.addStretch(1)
@@ -335,7 +335,7 @@ class EditorPage(BasePage):
         self.opacity_slider = SliderField(cfg.get("annotation.fill_opacity", 0.35),
                                           0.0, 0.9, 2)
         self.opacity_slider.valueChanged.connect(self._apply_view_settings)
-        view_card.add(Field("Độ đậm", self.opacity_slider, label_width=88))
+        view_card.add(Field(tr("editor.fill_opacity", "Độ đậm"), self.opacity_slider, label_width=88))
         lay.addWidget(view_card)
         return wrap
 
