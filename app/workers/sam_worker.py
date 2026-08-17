@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+
 import numpy as np
 
 from app.core.inference import download_asset, mask_to_polygons, resolve_device

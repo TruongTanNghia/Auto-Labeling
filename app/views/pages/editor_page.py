@@ -30,6 +30,7 @@ from app.constants import (
     ANN_REVIEW,
     COLORS,
     IMG_APPROVED,
+    IMG_REVIEW,
     SHAPE_POLYGON,
     get_image_status_label,
 )
@@ -63,7 +64,7 @@ from app.views.widgets.common import (
     primary_button,
     vline,
 )
-from app.views.widgets.image_list import ImageListPanel, ROLE_ID
+from app.views.widgets.image_list import ROLE_ID, ImageListPanel
 from app.workers.autolabel_worker import SingleImageInferWorker
 from app.workers.sam_worker import SmartSelectWorker
 
@@ -641,7 +642,7 @@ class EditorPage(BasePage):
         box.setWindowTitle(tr("editor.delete_image_title", "Xoá ảnh"))
         box.setText(f"Xoá ảnh '{filename}' khỏi project?")
         box.setInformativeText("Bạn có thể chọn chỉ gỡ khỏi project hoặc xoá luôn file gốc trên đĩa.")
-        btn_del_db = box.addButton("Chỉ gỡ khỏi project", QMessageBox.AcceptRole)
+        box.addButton("Chỉ gỡ khỏi project", QMessageBox.AcceptRole)
         btn_del_file = box.addButton("Xoá luôn file trên đĩa", QMessageBox.DestructiveRole)
         btn_cancel = box.addButton("Huỷ", QMessageBox.RejectRole)
         box.setDefaultButton(btn_cancel)
