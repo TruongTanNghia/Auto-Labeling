@@ -12,6 +12,7 @@ exclude = [
     "build",
     "dist",
     "*.ipynb",
+    "*.md",
 ]
 
 [tool.ruff.lint]

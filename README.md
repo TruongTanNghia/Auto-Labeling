@@ -286,8 +286,11 @@ from app.core.inference import Detection
 
 class MyPlugin(AnnotatorPlugin):
     info = PluginInfo(
-        key="my_plugin", name="Plugin cua toi", kind="refine",
-        description="Mo ta ngan", requires=["numpy"],
+        key="my_plugin",
+        name="Plugin cua toi",
+        kind="refine",
+        description="Mo ta ngan",
+        requires=["numpy"],
     )
 
     def annotate(self, ctx: PluginContext) -> list[Detection]:
