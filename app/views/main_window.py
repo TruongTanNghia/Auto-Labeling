@@ -330,7 +330,8 @@ class MainWindow(QMainWindow):
             return
         info = repo.refresh_stats()
         self.title_bar.set_project(
-            f"{info.name}   ·   " + tr("main.images_count", "{count} ảnh", count=f"{info.n_images:,}")
+            f"{info.name}   ·   "
+            + tr("main.images_count", "{count} ảnh", count=f"{info.n_images:,}")
         )
         self.sidebar.set_project(
             f"{info.name}\n"

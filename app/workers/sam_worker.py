@@ -190,11 +190,14 @@ class SmartSelectWorker(BaseWorker):
         mask_mat = cv2.morphologyEx(mask_mat, cv2.MORPH_OPEN, kernel)
         mask_mat = cv2.morphologyEx(mask_mat, cv2.MORPH_CLOSE, kernel)
 
-        polys = mask_to_polygons(mask_mat, min_area=max(10.0, self.min_area), simplify=max(0.0015, self.simplify))
+        polys = mask_to_polygons(
+            mask_mat, min_area=max(10.0, self.min_area), simplify=max(0.0015, self.simplify)
+        )
 
         # Fallback trực tiếp từ masks.xy nếu mask_mat bị lọc hết
         if not polys and hasattr(masks, "xy") and masks.xy is not None:
             from app.core.inference import simplify_polygon
+
             for p in masks.xy:
                 if len(p) >= 3:
                     pts = simplify_polygon(p.astype(np.float32), max(0.0015, self.simplify))

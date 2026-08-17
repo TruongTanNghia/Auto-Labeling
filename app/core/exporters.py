@@ -84,7 +84,9 @@ class DatasetExporter:
         classes = self._classes()
         images = self._select_images()
         if not images:
-            raise RuntimeError(tr("exporter.no_images_error", "Không có ảnh nào thoả điều kiện để xuất."))
+            raise RuntimeError(
+                tr("exporter.no_images_error", "Không có ảnh nào thoả điều kiện để xuất.")
+            )
 
         _log(
             tr(
@@ -109,7 +111,13 @@ class DatasetExporter:
             "mask": self._export_mask,
         }.get(cfg.fmt)
         if writer is None:
-            raise ValueError(tr("exporter.unsupported_format_error", "Định dạng không hỗ trợ: {fmt}", fmt=cfg.fmt))
+            raise ValueError(
+                tr(
+                    "exporter.unsupported_format_error",
+                    "Định dạng không hỗ trợ: {fmt}",
+                    fmt=cfg.fmt,
+                )
+            )
 
         result = ExportResult(output_dir=str(out_dir), fmt=cfg.fmt, n_classes=len(classes))
         result.splits = {k: len(v) for k, v in splits.items()}

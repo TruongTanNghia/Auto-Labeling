@@ -56,7 +56,9 @@ class FastSamPlugin(AnnotatorPlugin):
                 default=60.0,
                 min_value=0.0,
                 max_value=5000.0,
-                description=tr("plugins.fastsam.min_area_desc", "Bỏ qua các mask nhỏ hơn ngưỡng này"),
+                description=tr(
+                    "plugins.fastsam.min_area_desc", "Bỏ qua các mask nhỏ hơn ngưỡng này"
+                ),
             ),
             PluginParam(
                 key="simplify",
@@ -73,7 +75,10 @@ class FastSamPlugin(AnnotatorPlugin):
                 type="choice",
                 default="refine",
                 options=["refine", "generate"],
-                description=tr("plugins.fastsam.mode_desc", "Refine: tinh chỉnh box YOLO. Generate: tự tạo mask toàn ảnh"),
+                description=tr(
+                    "plugins.fastsam.mode_desc",
+                    "Refine: tinh chỉnh box YOLO. Generate: tự tạo mask toàn ảnh",
+                ),
             ),
         ]
 

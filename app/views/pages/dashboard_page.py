@@ -313,8 +313,7 @@ class DashboardPage(BasePage):
         for h in repo.history(30):
             dt = _detail_text(h["action"], h["detail"])
             item = QListWidgetItem(
-                f"{h['ts']}   {_action_text(h['action'])}"
-                + (f" — {dt}" if dt else "")
+                f"{h['ts']}   {_action_text(h['action'])}" + (f" — {dt}" if dt else "")
             )
             item.setIcon(icons.icon(_action_icon(h["action"]), COLORS["text_mute"], 15))
             self.history_list.addItem(item)

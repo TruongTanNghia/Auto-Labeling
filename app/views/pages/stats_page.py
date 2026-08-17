@@ -546,7 +546,9 @@ class StatsPage(BasePage):
         self.fmt_hint.setText(hint)
 
     def _choose_out(self) -> None:
-        d = QFileDialog.getExistingDirectory(self, tr("stats.choose_export_dir", "Chọn thư mục xuất"))
+        d = QFileDialog.getExistingDirectory(
+            self, tr("stats.choose_export_dir", "Chọn thư mục xuất")
+        )
         if d:
             self.out_edit.setText(d)
 
@@ -596,7 +598,10 @@ class StatsPage(BasePage):
                 (tr("stats.created_at", "Tạo lúc"), info.created_at),
                 (tr("stats.updated_at", "Cập nhật"), info.updated_at),
                 (tr("stats.num_classes", "Số lớp"), str(info.n_classes)),
-                (tr("stats.total_mask_area", "Tổng diện tích mask"), f"{repo.total_mask_area():,.0f} px²"),
+                (
+                    tr("stats.total_mask_area", "Tổng diện tích mask"),
+                    f"{repo.total_mask_area():,.0f} px²",
+                ),
                 (tr("stats.total_tracks", "Số track"), f"{t_stats['n_tracks']:,}"),
                 (
                     tr("stats.avg_track_len", "Độ dài track trung bình"),
@@ -635,7 +640,10 @@ class StatsPage(BasePage):
                     (tr("stats.min_area", "Diện tích nhỏ nhất"), f"{areas_edges[0]:,.0f} px²"),
                     (tr("stats.max_area", "Diện tích lớn nhất"), f"{areas_edges[-1]:,.0f} px²"),
                     (tr("stats.avg_obj_per_img", "Đối tượng / ảnh — trung bình"), f"{avg:.2f}"),
-                    (tr("stats.max_obj_per_img", "Đối tượng / ảnh — nhiều nhất"), str(max(per_img) if per_img else 0)),
+                    (
+                        tr("stats.max_obj_per_img", "Đối tượng / ảnh — nhiều nhất"),
+                        str(max(per_img) if per_img else 0),
+                    ),
                     (tr("stats.total_polygon_masks", "Tổng số mask polygon"), f"{n_masks:,}"),
                 ]
             )
@@ -711,7 +719,13 @@ class StatsPage(BasePage):
         splits = ", ".join(f"{k}={v}" for k, v in result.splits.items())
         self._log(f"{tr('stats.log_dir', 'Thư mục')}: {result.output_dir}")
         self.toast(
-            tr("stats.exported_summary", "Đã xuất {n_images} ảnh / {n_objects} đối tượng ({splits}).", n_images=f"{result.n_images:,}", n_objects=f"{result.n_objects:,}", splits=splits),
+            tr(
+                "stats.exported_summary",
+                "Đã xuất {n_images} ảnh / {n_objects} đối tượng ({splits}).",
+                n_images=f"{result.n_images:,}",
+                n_objects=f"{result.n_objects:,}",
+                splits=splits,
+            ),
             "success",
         )
 

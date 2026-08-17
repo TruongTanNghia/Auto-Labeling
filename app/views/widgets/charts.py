@@ -44,7 +44,6 @@ class _ChartBase(QWidget):
     def _text_color(self) -> QColor:
         return QColor(COLORS["text_mute"])
 
-
     def _painter(self) -> QPainter:
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing, True)

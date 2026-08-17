@@ -198,7 +198,6 @@ class SettingsPage(BasePage):
             )
         )
 
-
         accent_row = QWidget()
         ar = QHBoxLayout(accent_row)
         ar.setContentsMargins(0, 0, 0, 0)
@@ -344,13 +343,17 @@ class SettingsPage(BasePage):
             )
 
     def _pick_accent(self) -> None:
-        color = QColorDialog.getColor(QColor(self._accent), self, tr("settings.general.pick_accent", "Chọn màu nhấn"))
+        color = QColorDialog.getColor(
+            QColor(self._accent), self, tr("settings.general.pick_accent", "Chọn màu nhấn")
+        )
         if color.isValid():
             self._set_accent(color.name())
 
     def _pick_projects_dir(self) -> None:
         d = QFileDialog.getExistingDirectory(
-            self, tr("settings.general.choose_project_dir", "Chọn thư mục lưu project"), self.projects_edit.text()
+            self,
+            tr("settings.general.choose_project_dir", "Chọn thư mục lưu project"),
+            self.projects_edit.text(),
         )
         if d:
             self.projects_edit.setText(d)
@@ -401,7 +404,9 @@ class SettingsPage(BasePage):
         self.m_weights = QLineEdit(cfg.get("model.weights", "yolo11m-seg.pt"))
         card.add(
             Field(
-                tr("settings.model.weights", "Tên tệp trọng số"), self.m_weights, label_width=LABEL_W_WIDE
+                tr("settings.model.weights", "Tên tệp trọng số"),
+                self.m_weights,
+                label_width=LABEL_W_WIDE,
             )
         )
 
@@ -443,8 +448,6 @@ class SettingsPage(BasePage):
             tr("settings.model.half_hint", "Nhanh hơn trên GPU có tensor core"),
         )
         lay.addWidget(card)
-
-
 
         gpu_card = Card(tr("settings.model.current_device", "Thiết bị hiện tại"), "", "bolt")
         d = device_info()
@@ -583,8 +586,6 @@ class SettingsPage(BasePage):
         lay = QVBoxLayout(w)
         lay.setContentsMargins(0, 0, 6, 0)
         lay.setSpacing(12)
-
-
 
         card = Card(tr("settings.annotation.display", "Hiển thị trên vùng vẽ"), "", "eye")
         self.a_conf = ToggleSwitch(cfg.get("annotation.show_confidence", True))
@@ -1099,7 +1100,10 @@ class SettingsPage(BasePage):
         ):
             return
         cfg.reset()
-        self.toast(tr("settings.reset_toast", "Đã khôi phục mặc định. Khởi động lại để áp dụng đầy đủ."), "info")
+        self.toast(
+            tr("settings.reset_toast", "Đã khôi phục mặc định. Khởi động lại để áp dụng đầy đủ."),
+            "info",
+        )
 
     def refresh(self) -> None:
         self._refresh_plugins()

@@ -187,8 +187,8 @@ class _GalleryDelegate(QStyledItemDelegate):
             painter.setPen(QPen(QColor(COLORS["text_mute"])))
             painter.drawText(img_box, Qt.AlignCenter, "…")
 
-        pen_color = (
-            QColor(color if selected else (COLORS["border_hi"] if hovered else COLORS["border"]))
+        pen_color = QColor(
+            color if selected else (COLORS["border_hi"] if hovered else COLORS["border"])
         )
         painter.setBrush(Qt.NoBrush)
         painter.setPen(QPen(pen_color, 2 if selected else 1))

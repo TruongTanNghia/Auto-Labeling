@@ -91,7 +91,9 @@ class SamRefiner(AnnotatorPlugin):
                 default=40.0,
                 min_value=0.0,
                 max_value=5000.0,
-                description=tr("plugins.sam.min_area_desc", "Ngưỡng diện tích nhỏ nhất của polygon"),
+                description=tr(
+                    "plugins.sam.min_area_desc", "Ngưỡng diện tích nhỏ nhất của polygon"
+                ),
             ),
             PluginParam(
                 key="simplify",

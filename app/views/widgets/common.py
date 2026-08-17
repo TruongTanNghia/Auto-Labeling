@@ -75,7 +75,6 @@ def vline() -> QFrame:
     return f
 
 
-
 def spacer(w: int = 0, h: int = 0) -> QWidget:
     sp = QWidget()
     if w:

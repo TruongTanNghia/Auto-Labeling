@@ -97,7 +97,12 @@ class DraggableObjectMenuDialog(QDialog):
         hl = QHBoxLayout(header)
         hl.setContentsMargins(4, 2, 4, 4)
         hl.setSpacing(6)
-        lbl = label(tr("editor.objects_on_image", "Đối tượng trên ảnh"), bold=True, size=11, color=COLORS["text_dim"])
+        lbl = label(
+            tr("editor.objects_on_image", "Đối tượng trên ảnh"),
+            bold=True,
+            size=11,
+            color=COLORS["text_dim"],
+        )
         hl.addWidget(lbl)
         hl.addStretch(1)
         lay.addWidget(header)
@@ -435,7 +440,9 @@ class EditorPage(BasePage):
         lay.setContentsMargins(0, 0, 4, 0)
         lay.setSpacing(10)
 
-        nav_card = Card(tr("editor.navigator", "Navigator"), "", "grid", margins=(12, 11, 12, 12), spacing=8)
+        nav_card = Card(
+            tr("editor.navigator", "Navigator"), "", "grid", margins=(12, 11, 12, 12), spacing=8
+        )
         self.navigator = Navigator()
         self.navigator.setFixedHeight(150)
         self.navigator.navigate.connect(self._navigate_to)
@@ -641,7 +648,9 @@ class EditorPage(BasePage):
         box = QMessageBox(self)
         box.setWindowTitle(tr("editor.delete_image_title", "Xoá ảnh"))
         box.setText(f"Xoá ảnh '{filename}' khỏi project?")
-        box.setInformativeText("Bạn có thể chọn chỉ gỡ khỏi project hoặc xoá luôn file gốc trên đĩa.")
+        box.setInformativeText(
+            "Bạn có thể chọn chỉ gỡ khỏi project hoặc xoá luôn file gốc trên đĩa."
+        )
         box.addButton("Chỉ gỡ khỏi project", QMessageBox.AcceptRole)
         btn_del_file = box.addButton("Xoá luôn file trên đĩa", QMessageBox.DestructiveRole)
         btn_cancel = box.addButton("Huỷ", QMessageBox.RejectRole)
@@ -652,7 +661,7 @@ class EditorPage(BasePage):
         if clicked == btn_cancel or clicked is None:
             return
 
-        remove_file = (clicked == btn_del_file)
+        remove_file = clicked == btn_del_file
         cur_idx = next((i for i, r in enumerate(self._images) if r.id == image_id), -1)
 
         self.repo.delete_images([image_id], remove_files=remove_file)
@@ -764,8 +773,12 @@ class EditorPage(BasePage):
         if self._sam_running and hasattr(self, "notif_banner"):
             self.notif_banner.setVisible(True)
             self.notif_progress.setValue(self._sam_last_prog)
-            self.notif_label.setText(self._sam_last_msg or "Ảnh đang được xử lý, vui lòng thử lại sau.")
-            self.canvas.set_processing(True, self._sam_last_msg or "Ảnh đang được xử lý, vui lòng thử lại sau.")
+            self.notif_label.setText(
+                self._sam_last_msg or "Ảnh đang được xử lý, vui lòng thử lại sau."
+            )
+            self.canvas.set_processing(
+                True, self._sam_last_msg or "Ảnh đang được xử lý, vui lòng thử lại sau."
+            )
 
         idx = next((i for i, r in enumerate(self._images) if r.id == image_id), -1)
         self.pos_label.setText(f"{idx + 1} / {len(self._images)}")
@@ -839,7 +852,11 @@ class EditorPage(BasePage):
         bsl = QHBoxLayout(self.brush_setting_widget)
         bsl.setContentsMargins(0, 0, 0, 0)
         bsl.setSpacing(10)
-        bsl.addWidget(label(tr("editor.brush_size", "Cỡ cọ / tẩy:"), bold=True, size=11.5, color=COLORS["text"]))
+        bsl.addWidget(
+            label(
+                tr("editor.brush_size", "Cỡ cọ / tẩy:"), bold=True, size=11.5, color=COLORS["text"]
+            )
+        )
         self.brush_slider = SliderField(cfg.get("annotation.brush_size", 20), 2, 200, 0, 1)
         self.brush_slider.setFixedWidth(220)
         self.brush_slider.valueChanged.connect(self.canvas_brush_changed)
@@ -868,7 +885,9 @@ class EditorPage(BasePage):
         self.editor_sam_combo.setFixedWidth(270)
         self.editor_sam_combo.currentIndexChanged.connect(self._on_editor_sam_changed)
         ssl.addWidget(self.editor_sam_combo)
-        ssl.addWidget(label("Khoanh khung/nhấp điểm để tạo polygon", size=11.5, color=COLORS["text_dim"]))
+        ssl.addWidget(
+            label("Khoanh khung/nhấp điểm để tạo polygon", size=11.5, color=COLORS["text_dim"])
+        )
         lay.addWidget(self.sam_setting_widget)
 
         lay.addStretch(1)
@@ -885,7 +904,9 @@ class EditorPage(BasePage):
         self.canvas.set_tool(tool)
         if self._sam_running and hasattr(self, "notif_banner"):
             self.notif_banner.setVisible(True)
-            self.canvas.set_processing(True, self._sam_last_msg or "Ảnh đang được xử lý, vui lòng thử lại sau.")
+            self.canvas.set_processing(
+                True, self._sam_last_msg or "Ảnh đang được xử lý, vui lòng thử lại sau."
+            )
         for key, btn in self.tool_buttons.items():
             btn.setChecked(key == tool)
         meta = self.TOOL_META.get(tool)
@@ -1187,7 +1208,11 @@ class EditorPage(BasePage):
             self._assign_class_to_selection(item)
 
     def _add_class(self) -> None:
-        name, ok = QInputDialog.getText(self, tr("editor.add_class_title", "Thêm lớp"), tr("editor.class_name_label", "Tên lớp:"))
+        name, ok = QInputDialog.getText(
+            self,
+            tr("editor.add_class_title", "Thêm lớp"),
+            tr("editor.class_name_label", "Tên lớp:"),
+        )
         if not ok or not name.strip():
             return
         self.repo.add_class(name.strip())
@@ -1199,16 +1224,27 @@ class EditorPage(BasePage):
             return
         cid = int(item.data(CLASS_ROLE))
         menu = QMenu(self)
-        act_rename = menu.addAction(icons.icon("pen", COLORS["text_dim"], 16), tr("common.rename", "Đổi tên"))
-        act_color = menu.addAction(icons.icon("sparkle", COLORS["text_dim"], 16), tr("common.change_color", "Đổi màu"))
-        act_hide = menu.addAction(icons.icon("eye_off", COLORS["text_dim"], 16), tr("common.hide_show", "Ẩn / hiện"))
+        act_rename = menu.addAction(
+            icons.icon("pen", COLORS["text_dim"], 16), tr("common.rename", "Đổi tên")
+        )
+        act_color = menu.addAction(
+            icons.icon("sparkle", COLORS["text_dim"], 16), tr("common.change_color", "Đổi màu")
+        )
+        act_hide = menu.addAction(
+            icons.icon("eye_off", COLORS["text_dim"], 16), tr("common.hide_show", "Ẩn / hiện")
+        )
         menu.addSeparator()
-        act_del = menu.addAction(icons.icon("trash", COLORS["danger"], 16), tr("common.delete_class", "Xoá lớp"))
+        act_del = menu.addAction(
+            icons.icon("trash", COLORS["danger"], 16), tr("common.delete_class", "Xoá lớp")
+        )
         chosen = menu.exec(self.class_list.mapToGlobal(pos))
 
         if chosen == act_rename:
             name, ok = QInputDialog.getText(
-                self, tr("editor.rename_class_title", "Đổi tên lớp"), tr("editor.new_name_label", "Tên mới:"), text=item.text().strip()
+                self,
+                tr("editor.rename_class_title", "Đổi tên lớp"),
+                tr("editor.new_name_label", "Tên mới:"),
+                text=item.text().strip(),
             )
             if ok and name.strip():
                 self.repo.update_class(cid, name=name.strip())
@@ -1216,7 +1252,9 @@ class EditorPage(BasePage):
         elif chosen == act_color:
             cd = self.repo.class_by_id(cid)
             color = QColorDialog.getColor(
-                QColor(cd.color if cd else "#7C5CFF"), self, tr("editor.choose_class_color", "Chọn màu cho lớp")
+                QColor(cd.color if cd else "#7C5CFF"),
+                self,
+                tr("editor.choose_class_color", "Chọn màu cho lớp"),
             )
             if color.isValid():
                 self.repo.update_class(cid, color=color.name())
@@ -1230,7 +1268,11 @@ class EditorPage(BasePage):
             from PySide6.QtWidgets import QMessageBox
 
             if (
-                QMessageBox.question(self, tr("editor.delete_class_title", "Xoá lớp"), tr("editor.delete_class_confirm", "Xoá lớp này và toàn bộ nhãn thuộc nó?"))
+                QMessageBox.question(
+                    self,
+                    tr("editor.delete_class_title", "Xoá lớp"),
+                    tr("editor.delete_class_confirm", "Xoá lớp này và toàn bộ nhãn thuộc nó?"),
+                )
                 == QMessageBox.Yes
             ):
                 self.repo.delete_class(cid)
@@ -1242,7 +1284,9 @@ class EditorPage(BasePage):
         if not self._image_id or not self.repo:
             return
         if not self.ctrl.engine.loaded:
-            self.toast(tr("editor.load_model_first", "Hãy nạp model ở trang Auto Label trước."), "warning")
+            self.toast(
+                tr("editor.load_model_first", "Hãy nạp model ở trang Auto Label trước."), "warning"
+            )
             return
         rec = self.repo.image(self._image_id)
         if rec is None:
@@ -1303,7 +1347,13 @@ class EditorPage(BasePage):
         self._dirty = True
         self._reload_classes()
         self._refresh_object_list()
-        self._set_status(tr("editor.added_objects_count", "Đã thêm {count} đối tượng từ model", count=len(detections)))
+        self._set_status(
+            tr(
+                "editor.added_objects_count",
+                "Đã thêm {count} đối tượng từ model",
+                count=len(detections),
+            )
+        )
 
     # ========================================================== SMART SELECT ==
     def _build_notification_banner(self) -> QWidget:
@@ -1425,19 +1475,26 @@ class EditorPage(BasePage):
 
             if not polygon_pts or len(polygon_pts) < 3:
                 self._set_status("Không tìm thấy đối tượng hợp lệ tại vị trí này.")
-                self.toast("Không nhận diện được đối tượng trong vùng chọn. Hãy thử khoanh rộng hơn.", "warning")
+                self.toast(
+                    "Không nhận diện được đối tượng trong vùng chọn. Hãy thử khoanh rộng hơn.",
+                    "warning",
+                )
                 return
 
             if self._image_id == target_image_id:
                 # Đang đứng tại đúng ảnh đã chọn
                 self.canvas.push_undo()
-                if target_refine_idx is not None and 0 <= target_refine_idx < len(self.canvas.annotations):
+                if target_refine_idx is not None and 0 <= target_refine_idx < len(
+                    self.canvas.annotations
+                ):
                     a = self.canvas.annotations[target_refine_idx]
                     a.shape = SHAPE_POLYGON
                     a.status = ANN_MANUAL
                     a.set_points(polygon_pts)
                     self.canvas.selected = {target_refine_idx}
-                    self._set_status(f"Đã tinh chỉnh viền đối tượng #{a.id or (target_refine_idx + 1)}")
+                    self._set_status(
+                        f"Đã tinh chỉnh viền đối tượng #{a.id or (target_refine_idx + 1)}"
+                    )
                 else:
                     a = Annotation()
                     a.image_id = target_image_id

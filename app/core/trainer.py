@@ -212,7 +212,11 @@ class ModelTrainer:
 
         if not cfg.data_yaml or not Path(cfg.data_yaml).exists():
             raise FileNotFoundError(
-                tr("trainer.dataset_not_found", "Không tìm thấy data.yaml: {path}", path=cfg.data_yaml)
+                tr(
+                    "trainer.dataset_not_found",
+                    "Không tìm thấy data.yaml: {path}",
+                    path=cfg.data_yaml,
+                )
             )
 
         # Xóa các file .cache cũ trong dataset để Ultralytics không dùng cache hỏng
@@ -227,7 +231,10 @@ class ModelTrainer:
             from ultralytics import YOLO
         except ImportError as exc:
             raise RuntimeError(
-                tr("trainer.ultralytics_not_installed", "Chưa cài ultralytics: pip install ultralytics")
+                tr(
+                    "trainer.ultralytics_not_installed",
+                    "Chưa cài ultralytics: pip install ultralytics",
+                )
             ) from exc
 
         from app.core.inference import (
@@ -390,7 +397,12 @@ class ModelTrainer:
                 progress_cb(
                     epoch,
                     total,
-                    tr("trainer.epoch_progress", "Epoch {current}/{total}", current=epoch, total=total),
+                    tr(
+                        "trainer.epoch_progress",
+                        "Epoch {current}/{total}",
+                        current=epoch,
+                        total=total,
+                    ),
                 )
 
         def on_batch_end(trainer):
@@ -444,7 +456,9 @@ def validate_dataset(data_yaml: str) -> tuple[bool, str]:
         return False, tr("trainer.val_missing_train", "data.yaml thiếu mục 'train'.")
     train_dir = (root / train_rel) if not Path(train_rel).is_absolute() else Path(train_rel)
     if not train_dir.exists():
-        return False, tr("trainer.val_train_dir_not_found", "Không tìm thấy thư mục train: {dir}", dir=train_dir)
+        return False, tr(
+            "trainer.val_train_dir_not_found", "Không tìm thấy thư mục train: {dir}", dir=train_dir
+        )
     n_img = sum(1 for _ in train_dir.glob("*.*"))
     if n_img == 0:
         return False, tr("trainer.val_no_images", "Thư mục train không có ảnh nào.")

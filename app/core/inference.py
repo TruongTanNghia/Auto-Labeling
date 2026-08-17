@@ -138,6 +138,7 @@ def download_asset(name: str, log_cb=None, progress_cb=None) -> str:
 
         def _monitor():
             import time
+
             total_bytes = KNOWN_ASSET_SIZES.get(name, 375_258_821)
             while downloading[0]:
                 time.sleep(0.2)

@@ -146,7 +146,9 @@ class AnnotationCanvas(QWidget):
                 self.img_w = self.img_h = 0
                 self.annotations = []
                 self.update()
-                self.statusMessage.emit(tr("canvas.err_read_img", "Không đọc được ảnh: {path}", path=path))
+                self.statusMessage.emit(
+                    tr("canvas.err_read_img", "Không đọc được ảnh: {path}", path=path)
+                )
                 return False
             pm = QPixmap.fromImage(img)
         self.pixmap = pm
@@ -325,7 +327,13 @@ class AnnotationCanvas(QWidget):
         self.update()
 
     def cancel_draft(self) -> None:
-        had = bool(self._draft or self._brush_path or self._split_line or self._bbox_start or self._smart_start)
+        had = bool(
+            self._draft
+            or self._brush_path
+            or self._split_line
+            or self._bbox_start
+            or self._smart_start
+        )
         self._reset_transient()
         self.update()
         if had:
@@ -386,7 +394,13 @@ class AnnotationCanvas(QWidget):
     def set_class_for_selected(self, class_id: int) -> None:
         if not self.selected:
             self.active_class_id = class_id
-            self.statusMessage.emit(tr("canvas.default_class", "Lớp mặc định: {name}", name=self.class_names.get(class_id, '?')))
+            self.statusMessage.emit(
+                tr(
+                    "canvas.default_class",
+                    "Lớp mặc định: {name}",
+                    name=self.class_names.get(class_id, "?"),
+                )
+            )
             return
         self.push_undo()
         for i in self.selected:
@@ -398,7 +412,12 @@ class AnnotationCanvas(QWidget):
         self.annotationsChanged.emit()
         self.selectionChanged.emit(sorted(self.selected))
         self.statusMessage.emit(
-            tr("canvas.assigned_class", "Đã gán lớp “{name}” cho {count} đối tượng", name=self.class_names.get(class_id, '?'), count=len(self.selected))
+            tr(
+                "canvas.assigned_class",
+                "Đã gán lớp “{name}” cho {count} đối tượng",
+                name=self.class_names.get(class_id, "?"),
+                count=len(self.selected),
+            )
         )
 
     def set_confidence_for_selected(self, conf: float) -> None:
@@ -412,10 +431,14 @@ class AnnotationCanvas(QWidget):
 
     def merge_selected(self) -> None:
         if len(self.selected) < 2:
-            self.statusMessage.emit(tr("canvas.merge_select_min", "Hãy chọn ít nhất 2 đối tượng để gộp"))
+            self.statusMessage.emit(
+                tr("canvas.merge_select_min", "Hãy chọn ít nhất 2 đối tượng để gộp")
+            )
             return
         if not _HAS_SHAPELY:
-            self.statusMessage.emit(tr("canvas.shapely_req_merge", "Cần thư viện shapely để gộp vùng"))
+            self.statusMessage.emit(
+                tr("canvas.shapely_req_merge", "Cần thư viện shapely để gộp vùng")
+            )
             return
         idxs = sorted(self.selected)
         polys = []
@@ -424,7 +447,9 @@ class AnnotationCanvas(QWidget):
             if g is not None and not g.is_empty:
                 polys.append(g)
         if len(polys) < 2:
-            self.statusMessage.emit(tr("canvas.merge_not_enough_valid", "Không đủ hình hợp lệ để gộp"))
+            self.statusMessage.emit(
+                tr("canvas.merge_not_enough_valid", "Không đủ hình hợp lệ để gộp")
+            )
             return
         merged = unary_union(polys)
         base = self.annotations[idxs[0]].clone()
@@ -450,7 +475,14 @@ class AnnotationCanvas(QWidget):
         self.update()
         self.annotationsChanged.emit()
         self.selectionChanged.emit(sorted(self.selected))
-        self.statusMessage.emit(tr("canvas.merged_result", "Đã gộp {n_src} đối tượng thành {n_dst} vùng", n_src=len(idxs), n_dst=len(new_indices)))
+        self.statusMessage.emit(
+            tr(
+                "canvas.merged_result",
+                "Đã gộp {n_src} đối tượng thành {n_dst} vùng",
+                n_src=len(idxs),
+                n_dst=len(new_indices),
+            )
+        )
 
     def simplify_selected(self, tolerance_px: float = 1.5) -> None:
         if not self.selected or not _HAS_SHAPELY:
@@ -492,7 +524,9 @@ class AnnotationCanvas(QWidget):
         if self.pixmap is None:
             p.setPen(QPen(QColor(COLORS["text_mute"])))
             p.drawText(
-                self.rect(), Qt.AlignCenter, tr("canvas.no_image_opened", "Chưa mở ảnh nào\nChọn một ảnh ở danh sách bên trái")
+                self.rect(),
+                Qt.AlignCenter,
+                tr("canvas.no_image_opened", "Chưa mở ảnh nào\nChọn một ảnh ở danh sách bên trái"),
             )
             return
 
@@ -522,7 +556,9 @@ class AnnotationCanvas(QWidget):
     def _draw_processing_overlay(self, p: QPainter) -> None:
         if not self._processing:
             return
-        msg = self._processing_msg or tr("canvas.processing", "Ảnh đang được xử lý, vui lòng thử lại sau.")
+        msg = self._processing_msg or tr(
+            "canvas.processing", "Ảnh đang được xử lý, vui lòng thử lại sau."
+        )
         f = QFont("Segoe UI", 9)
         f.setBold(True)
         p.setFont(f)
@@ -562,7 +598,9 @@ class AnnotationCanvas(QWidget):
         lw = self.style.line_width + (1.2 if selected else 0.0)
 
         # Viền tương phản để nhìn rõ trên cả nền tối lẫn sáng
-        contrast_color = QColor(0, 0, 0, 180) if color.lightness() > 140 else QColor(255, 255, 255, 180)
+        contrast_color = (
+            QColor(0, 0, 0, 180) if color.lightness() > 140 else QColor(255, 255, 255, 180)
+        )
         p.setBrush(QBrush(fill))
         p.setPen(QPen(contrast_color, lw + 1.6, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         p.drawPolygon(poly)
@@ -593,7 +631,6 @@ class AnnotationCanvas(QWidget):
         # nhan
         if self.style.show_labels:
             self._draw_label(p, ann, poly, color)
-
 
     def _draw_keypoints(self, p: QPainter, ann: Annotation, color: QColor) -> None:
         kp = ann.keypoints
@@ -763,7 +800,9 @@ class AnnotationCanvas(QWidget):
             self._draft_cursor = pos
         elif self.tool == TOOL_SMART_SELECT:
             if self._processing:
-                self.statusMessage.emit(tr("canvas.is_processing_wait", "Ảnh đang được xử lý, vui lòng thử lại sau."))
+                self.statusMessage.emit(
+                    tr("canvas.is_processing_wait", "Ảnh đang được xử lý, vui lòng thử lại sau.")
+                )
                 return
             v = self._vertex_at(pos)
             if v[0] >= 0:
@@ -879,7 +918,11 @@ class AnnotationCanvas(QWidget):
             if self.tool == TOOL_POLYGON:
                 self._draft.append(img_pt)
                 self.statusMessage.emit(
-                    tr("canvas.drawing_polygon", "Polygon: {count} đỉnh — chuột phải hoặc Enter để đóng hình", count=len(self._draft))
+                    tr(
+                        "canvas.drawing_polygon",
+                        "Polygon: {count} đỉnh — chuột phải hoặc Enter để đóng hình",
+                        count=len(self._draft),
+                    )
                 )
                 self.update()
                 return
@@ -909,16 +952,19 @@ class AnnotationCanvas(QWidget):
                         count2 = (n - 1 - i2) + i1
 
                         if count1 <= count2:
-                            new_pts = pts[:i1 + 1] + pts[i2:]
+                            new_pts = pts[: i1 + 1] + pts[i2:]
                         else:
-                            new_pts = pts[i1:i2 + 1]
+                            new_pts = pts[i1 : i2 + 1]
 
                         if len(new_pts) >= 3:
                             self.push_undo()
                             ann.set_points(new_pts)
                             ann.recompute()
                             self.statusMessage.emit(
-                                tr("canvas.merged_vertices", "Đã gộp 2 đỉnh và tự động xoá các đỉnh trung gian")
+                                tr(
+                                    "canvas.merged_vertices",
+                                    "Đã gộp 2 đỉnh và tự động xoá các đỉnh trung gian",
+                                )
                             )
 
             self.annotationsChanged.emit()
@@ -956,9 +1002,7 @@ class AnnotationCanvas(QWidget):
             target_idx = sorted(self.selected)[0] if self.selected else self._hit_test_bbox(bbox)
             if target_idx < 0:
                 target_idx = None
-            self.smartSelectTriggered.emit(
-                {"point": None, "bbox": bbox, "target_idx": target_idx}
-            )
+            self.smartSelectTriggered.emit({"point": None, "bbox": bbox, "target_idx": target_idx})
             self.update()
             return
 
@@ -1168,7 +1212,9 @@ class AnnotationCanvas(QWidget):
         self.annotationsChanged.emit()
         self.newShapeCreated.emit(idx)
         self.selectionChanged.emit([idx])
-        self.statusMessage.emit(tr("canvas.created_polygon", "Đã tạo polygon {count} đỉnh", count=len(pts)))
+        self.statusMessage.emit(
+            tr("canvas.created_polygon", "Đã tạo polygon {count} đỉnh", count=len(pts))
+        )
 
     def _finish_bbox(self, end: QPointF) -> None:
         start = self._bbox_start
@@ -1194,7 +1240,9 @@ class AnnotationCanvas(QWidget):
     # ============================================================== BRUSH ===
     def set_brush_size(self, size: float) -> None:
         self.brush_size = max(2.0, min(400.0, float(size)))
-        self.statusMessage.emit(tr("canvas.brush_size_status", "Cỡ cọ: {size:.0f} px", size=self.brush_size))
+        self.statusMessage.emit(
+            tr("canvas.brush_size_status", "Cỡ cọ: {size:.0f} px", size=self.brush_size)
+        )
         self.update()
 
     def _stroke_geometry(self):
@@ -1212,7 +1260,9 @@ class AnnotationCanvas(QWidget):
         self._brush_path = []
         if stroke is None or stroke.is_empty:
             if not _HAS_SHAPELY:
-                self.statusMessage.emit(tr("canvas.shapely_req_brush", "Cần thư viện shapely cho Cọ vẽ / Tẩy"))
+                self.statusMessage.emit(
+                    tr("canvas.shapely_req_brush", "Cần thư viện shapely cho Cọ vẽ / Tẩy")
+                )
             self.update()
             return
 
@@ -1230,7 +1280,9 @@ class AnnotationCanvas(QWidget):
                 self.annotationsChanged.emit()
                 self.newShapeCreated.emit(idx)
                 self.selectionChanged.emit([idx])
-                self.statusMessage.emit(tr("canvas.created_brush_region", "Đã tạo vùng mới bằng cọ vẽ"))
+                self.statusMessage.emit(
+                    tr("canvas.created_brush_region", "Đã tạo vùng mới bằng cọ vẽ")
+                )
             self.update()
             return
 
@@ -1289,14 +1341,20 @@ class AnnotationCanvas(QWidget):
         self.update()
         self.annotationsChanged.emit()
         self.selectionChanged.emit(sorted(self.selected))
-        self.statusMessage.emit(tr("canvas.eraser_updated", "Tẩy đã cập nhật vùng") if erase else tr("canvas.brush_updated", "Cọ vẽ đã cập nhật vùng"))
+        self.statusMessage.emit(
+            tr("canvas.eraser_updated", "Tẩy đã cập nhật vùng")
+            if erase
+            else tr("canvas.brush_updated", "Cọ vẽ đã cập nhật vùng")
+        )
 
     # ============================================================== SPLIT ===
     def _apply_split(self) -> None:
         if len(self._split_line) < 2 or not _HAS_SHAPELY:
             self._split_line = []
             if not _HAS_SHAPELY:
-                self.statusMessage.emit(tr("canvas.shapely_req_split", "Cần thư viện shapely cho công cụ Cắt đôi"))
+                self.statusMessage.emit(
+                    tr("canvas.shapely_req_split", "Cần thư viện shapely cho công cụ Cắt đôi")
+                )
             self.update()
             return
         a0, a1 = self._split_line[0], self._split_line[1]
@@ -1327,7 +1385,9 @@ class AnnotationCanvas(QWidget):
             ]
         )
         if not candidates:
-            self.statusMessage.emit(tr("canvas.split_no_intersect", "Đường cắt không đi qua đối tượng nào"))
+            self.statusMessage.emit(
+                tr("canvas.split_no_intersect", "Đường cắt không đi qua đối tượng nào")
+            )
             self.update()
             return
 
@@ -1363,7 +1423,9 @@ class AnnotationCanvas(QWidget):
         self.update()
         self.annotationsChanged.emit()
         self.selectionChanged.emit(sorted(self.selected))
-        self.statusMessage.emit(tr("canvas.split_result", "Đã tách thành {count} vùng", count=len(new_selection)))
+        self.statusMessage.emit(
+            tr("canvas.split_result", "Đã tách thành {count} vùng", count=len(new_selection))
+        )
 
     # ============================================================= HELPERS ==
     def _clampx(self, v: float) -> float:

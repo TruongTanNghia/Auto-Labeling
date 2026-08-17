@@ -645,7 +645,15 @@ class ImportPage(BasePage):
         if result is None:
             self._update_counts()
             return
-        self.toast(tr("import.imported_toast", "Đã nạp ảnh thành công (trùng: {dup}, mờ: {blur}).", dup=result.n_duplicate, blur=result.n_blurry), "success")
+        self.toast(
+            tr(
+                "import.imported_toast",
+                "Đã nạp ảnh thành công (trùng: {dup}, mờ: {blur}).",
+                dup=result.n_duplicate,
+                blur=result.n_blurry,
+            ),
+            "success",
+        )
         self.image_files.clear()
         for i in reversed(range(self.source_list.count())):
             if self.source_list.item(i).data(ROLE_KIND) == "folder":

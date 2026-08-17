@@ -51,7 +51,10 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
                 label=tr("plugins.sam3_concept.weights_label", "Trọng số SAM 3"),
                 type="str",
                 default=self.WEIGHTS,
-                description=tr("plugins.sam3_concept.weights_desc", "Tên file trọng số SAM 3 trong thư mục weights"),
+                description=tr(
+                    "plugins.sam3_concept.weights_desc",
+                    "Tên file trọng số SAM 3 trong thư mục weights",
+                ),
             ),
             PluginParam(
                 key="min_area",
@@ -60,7 +63,9 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
                 default=40.0,
                 min_value=0.0,
                 max_value=5000.0,
-                description=tr("plugins.sam3_concept.min_area_desc", "Ngưỡng diện tích nhỏ nhất của polygon"),
+                description=tr(
+                    "plugins.sam3_concept.min_area_desc", "Ngưỡng diện tích nhỏ nhất của polygon"
+                ),
             ),
             PluginParam(
                 key="simplify",
@@ -69,7 +74,9 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
                 default=0.002,
                 min_value=0.0,
                 max_value=0.05,
-                description=tr("plugins.sam3_concept.simplify_desc", "Mức độ làm mịn đường viền polygon"),
+                description=tr(
+                    "plugins.sam3_concept.simplify_desc", "Mức độ làm mịn đường viền polygon"
+                ),
             ),
         ]
 

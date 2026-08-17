@@ -1,11 +1,17 @@
 #!/bin/sh
-# Pre-push hook: Kiem tra ma nguon truoc khi push
+# Pre-push hook: Kiem tra lint va format ma nguon truoc khi push
 
-echo "Dang chay kiem tra ruff check truoc khi push..."
-
+echo "Dang chay kiem tra ruff check..."
 ruff check .
 if [ $? -ne 0 ]; then
     echo "Loi: ruff check khong dat yeu cau. Huy thao tac push!"
+    exit 1
+fi
+
+echo "Dang chay kiem tra ruff format..."
+ruff format --check .
+if [ $? -ne 0 ]; then
+    echo "Loi: ruff format khong dat yeu cau (hay chay 'ruff format .'). Huy thao tac push!"
     exit 1
 fi
 

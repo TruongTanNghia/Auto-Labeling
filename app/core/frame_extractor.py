@@ -167,7 +167,9 @@ class FrameExtractor:
 
         cap = cv2.VideoCapture(str(video_path))
         if not cap.isOpened():
-            raise RuntimeError(tr("extractor.cannot_open_video", "Không mở được video: {path}", path=video_path))
+            raise RuntimeError(
+                tr("extractor.cannot_open_video", "Không mở được video: {path}", path=video_path)
+            )
 
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
@@ -290,7 +292,13 @@ class FrameExtractor:
                 preview_cb(str(fpath))
 
             if cfg.max_frames > 0 and result.n_saved >= cfg.max_frames:
-                _log(tr("extractor.limit_reached_log", "Đã đạt giới hạn {max_frames} ảnh - dừng.", max_frames=cfg.max_frames))
+                _log(
+                    tr(
+                        "extractor.limit_reached_log",
+                        "Đã đạt giới hạn {max_frames} ảnh - dừng.",
+                        max_frames=cfg.max_frames,
+                    )
+                )
                 break
 
         cap.release()
@@ -406,7 +414,9 @@ def scan_folder_records(
         result.n_read += 1
         if img is None:
             if log_cb:
-                log_cb(tr("extractor.skip_unreadable_log", "Bỏ qua (không đọc được): {path}", path=p))
+                log_cb(
+                    tr("extractor.skip_unreadable_log", "Bỏ qua (không đọc được): {path}", path=p)
+                )
             continue
         h, w = img.shape[:2]
         rep = analyze(img, cfg.blur_threshold, cfg.lowlight_threshold)

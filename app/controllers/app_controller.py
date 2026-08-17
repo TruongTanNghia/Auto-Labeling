@@ -62,7 +62,10 @@ class AppController(QObject):
         parent_dir = parent_dir or cfg.get("general.projects_dir") or str(default_projects_dir())
         root = Path(parent_dir) / _safe_name(name)
         if (root / PROJECT_DB_NAME).exists():
-            self.statusMessage.emit(tr("main.project_exists", "Project '{name}' đã tồn tại ở thư mục này.", name=name), "error")
+            self.statusMessage.emit(
+                tr("main.project_exists", "Project '{name}' đã tồn tại ở thư mục này.", name=name),
+                "error",
+            )
             return None
         try:
             self.close_project()
@@ -70,12 +73,16 @@ class AppController(QObject):
             self.repo = ProjectRepository.create(root, name, description, task)
         except Exception as exc:
             log.exception("Tao project loi")
-            self.statusMessage.emit(tr("main.cannot_create_project", "Không tạo được project: {exc}", exc=exc), "error")
+            self.statusMessage.emit(
+                tr("main.cannot_create_project", "Không tạo được project: {exc}", exc=exc), "error"
+            )
             return None
         cfg.push_recent(str(root / PROJECT_DB_NAME))
         self.current_image_id = 0
         self.projectOpened.emit(self.repo)
-        self.statusMessage.emit(tr("main.created_project", "Đã tạo project '{name}'", name=name), "success")
+        self.statusMessage.emit(
+            tr("main.created_project", "Đã tạo project '{name}'", name=name), "success"
+        )
         return self.repo
 
     def open_project(self, path: str) -> ProjectRepository | None:
@@ -84,13 +91,17 @@ class AppController(QObject):
             self.repo = ProjectRepository.open(path)
         except Exception as exc:
             log.exception("Mo project loi")
-            self.statusMessage.emit(tr("main.cannot_open_project", "Không mở được project: {exc}", exc=exc), "error")
+            self.statusMessage.emit(
+                tr("main.cannot_open_project", "Không mở được project: {exc}", exc=exc), "error"
+            )
             cfg.drop_recent(str(path))
             return None
         cfg.push_recent(str(Path(self.repo.info.db_path)))
         self.current_image_id = 0
         self.projectOpened.emit(self.repo)
-        self.statusMessage.emit(tr("main.opened_project", "Đã mở project '{name}'", name=self.repo.info.name), "success")
+        self.statusMessage.emit(
+            tr("main.opened_project", "Đã mở project '{name}'", name=self.repo.info.name), "success"
+        )
         return self.repo
 
     def close_project(self) -> None:
@@ -118,9 +129,13 @@ class AppController(QObject):
             return
         try:
             dest = self.repo.backup()
-            self.statusMessage.emit(tr("main.backed_up", "Đã sao lưu: {name}", name=Path(dest).name), "success")
+            self.statusMessage.emit(
+                tr("main.backed_up", "Đã sao lưu: {name}", name=Path(dest).name), "success"
+            )
         except Exception as exc:
-            self.statusMessage.emit(tr("main.backup_failed", "Sao lưu thất bại: {exc}", exc=exc), "error")
+            self.statusMessage.emit(
+                tr("main.backup_failed", "Sao lưu thất bại: {exc}", exc=exc), "error"
+            )
 
     def recent_projects(self) -> list[dict]:
         out = []

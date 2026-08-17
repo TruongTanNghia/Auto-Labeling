@@ -196,7 +196,12 @@ class AutoLabelWorker(BaseWorker):
                             img_progress,
                             total,
                             f"{_i + 1}/{total} - {_rec.filename} - "
-                            + tr("worker.tile_step", "ô {idx}/{total_tiles}", idx=tile_idx, total_tiles=total_tiles),
+                            + tr(
+                                "worker.tile_step",
+                                "ô {idx}/{total_tiles}",
+                                idx=tile_idx,
+                                total_tiles=total_tiles,
+                            ),
                         )
 
                     dets = self.engine.slice_predict(rec.path, self.cfg, progress_cb=_tile_cb)

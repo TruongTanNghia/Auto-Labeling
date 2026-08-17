@@ -67,7 +67,11 @@ class DatasetImporter:
         cfg = self.cfg
         d = Path(cfg.dataset_dir)
         if not d.exists():
-            return {"error": tr("importer.directory_not_found_error", "Không tìm thấy thư mục: {dir}", dir=d)}
+            return {
+                "error": tr(
+                    "importer.directory_not_found_error", "Không tìm thấy thư mục: {dir}", dir=d
+                )
+            }
         try:
             if cfg.fmt == "coco":
                 return self._preview_coco(d)
@@ -106,7 +110,11 @@ class DatasetImporter:
     def _preview_coco(self, root: Path) -> dict:
         json_files = list(root.rglob("*.json"))
         if not json_files:
-            return {"error": tr("importer.json_not_found_error", "Không tìm thấy file JSON trong thư mục.")}
+            return {
+                "error": tr(
+                    "importer.json_not_found_error", "Không tìm thấy file JSON trong thư mục."
+                )
+            }
         n_img, n_ann = 0, 0
         class_names: list[str] = []
         for jf in json_files:
@@ -144,10 +152,16 @@ class DatasetImporter:
         root = Path(cfg.dataset_dir)
         if not root.exists():
             raise FileNotFoundError(
-                tr("importer.dataset_directory_not_found_error", "Không tìm thấy thư mục dataset: {root}", root=root)
+                tr(
+                    "importer.dataset_directory_not_found_error",
+                    "Không tìm thấy thư mục dataset: {root}",
+                    root=root,
+                )
             )
 
-        _log(tr("importer.start_import_log", "Bắt đầu nhập {fmt} từ {root}", fmt=cfg.fmt, root=root))
+        _log(
+            tr("importer.start_import_log", "Bắt đầu nhập {fmt} từ {root}", fmt=cfg.fmt, root=root)
+        )
         if cfg.fmt == "coco":
             self._run_coco(root, result, progress_cb, _log)
         else:

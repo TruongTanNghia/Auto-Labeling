@@ -435,7 +435,9 @@ class ProjectRepository:
         self.db.executemany("DELETE FROM annotation WHERE image_id=?", [(i,) for i in ids])
         self.db.executemany("DELETE FROM image WHERE id=?", [(i,) for i in ids])
         self.db.commit()
-        self.log_history("delete_images", tr("history.delete_images", "{count} ảnh", count=len(ids)))
+        self.log_history(
+            "delete_images", tr("history.delete_images", "{count} ảnh", count=len(ids))
+        )
         return len(ids)
 
     def neighbor_image(

@@ -58,7 +58,9 @@ class TrainWorker(BaseWorker):
     def execute(self) -> TrainResult:
         if self.build_dataset or not self.cfg.data_yaml:
             self.stage.emit(tr("worker.building_yolo_ds", "Đang dựng dataset YOLO ..."))
-            self.emit_log(tr("worker.prep_dataset_log", "Chuẩn bị dataset train/val từ project ..."))
+            self.emit_log(
+                tr("worker.prep_dataset_log", "Chuẩn bị dataset train/val từ project ...")
+            )
             ds_dir = self.repo.sub("runs") / "dataset"
             ecfg = ExportConfig(
                 fmt=self.TASK_FORMAT.get(self.task, "yolo_seg"),
@@ -77,7 +79,9 @@ class TrainWorker(BaseWorker):
                 log_cb=self.emit_log,
             )
             if self.cancelled:
-                return TrainResult(ok=False, message=tr("worker.cancelled_before_train", "Đã huỷ trước khi train."))
+                return TrainResult(
+                    ok=False, message=tr("worker.cancelled_before_train", "Đã huỷ trước khi train.")
+                )
             self.cfg.data_yaml = eres.yaml_path
             self.emit_log(
                 tr(
