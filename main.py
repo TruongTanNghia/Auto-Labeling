@@ -1,4 +1,5 @@
 """AutoLabel Studio AI - diem khoi chay ung dung."""
+
 from __future__ import annotations
 
 import os
@@ -22,8 +23,9 @@ from PySide6.QtWidgets import QApplication, QMessageBox  # noqa: E402
 from app.config import cfg  # noqa: E402
 from app.constants import APP_NAME, APP_VERSION, COLORS, ORG_NAME  # noqa: E402
 from app.controllers.app_controller import AppController  # noqa: E402
+from app.i18n import tr  # noqa: E402
 from app.theme import icons  # noqa: E402
-from app.theme.style import build_stylesheet  # noqa: E402
+from app.theme.style import apply_theme  # noqa: E402
 from app.utils.logger import get_logger, setup_logging  # noqa: E402
 
 
@@ -34,7 +36,7 @@ def _excepthook(exc_type, exc_value, exc_tb) -> None:
     try:
         box = QMessageBox()
         box.setIcon(QMessageBox.Critical)
-        box.setWindowTitle("Da xay ra loi")
+        box.setWindowTitle(tr("common.error_occurred", "Đã xảy ra lỗi"))
         box.setText(f"{exc_type.__name__}: {exc_value}")
         box.setDetailedText(text)
         box.exec()
@@ -48,11 +50,21 @@ def main() -> int:
     log.info("Khoi dong %s v%s", APP_NAME, APP_VERSION)
 
     QApplication.setHighDpiScaleFactorRoundingPolicy(
-        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+    )
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setApplicationVersion(APP_VERSION)
     app.setOrganizationName(ORG_NAME)
+
+    apply_theme(app, cfg.get("general.theme", "Dark"), cfg.get("general.accent"))
+
+    def _on_color_scheme_changed():
+        if cfg.get("general.theme", "Dark") in ("System", "Theo hệ thống", "system"):
+            apply_theme(app)
+
+    app.styleHints().colorSchemeChanged.connect(_on_color_scheme_changed)
+
     app.setWindowIcon(QIcon(icons.pixmap("logo", COLORS["accent_hi"], 64, stroke=1.6)))
 
     font = QFont("Segoe UI Variable Display")
@@ -60,13 +72,13 @@ def main() -> int:
         font = QFont("Segoe UI")
     font.setPointSize(9)
     app.setFont(font)
-    app.setStyleSheet(build_stylesheet(cfg.get("general.accent")))
 
     sys.excepthook = _excepthook
 
     # Ep Ultralytics dung thu muc weights rieng cua ung dung
     try:
         from app.core.inference import configure_ultralytics
+
         configure_ultralytics()
     except Exception as exc:
         log.debug("configure_ultralytics: %s", exc)
@@ -74,6 +86,7 @@ def main() -> int:
     # Nap plugin o nen de khong lam cham khoi dong
     try:
         from app.plugins.base import registry
+
         registry.discover()
     except Exception as exc:
         log.warning("Khong nap duoc plugin: %s", exc)
@@ -81,6 +94,7 @@ def main() -> int:
     controller = AppController()
 
     from app.views.main_window import MainWindow
+
     window = MainWindow(controller)
     window.show()
 
@@ -92,6 +106,7 @@ def main() -> int:
     autoclose = os.environ.get("ALS_AUTOCLOSE_MS")
     if autoclose:
         from PySide6.QtCore import QTimer
+
         cfg.set("general.confirm_on_exit", False)
         QTimer.singleShot(int(autoclose), app.quit)
 

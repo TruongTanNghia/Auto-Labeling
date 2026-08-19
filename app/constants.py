@@ -1,5 +1,7 @@
 """Hang so dung chung cho toan bo ung dung."""
+
 from __future__ import annotations
+
 from app.i18n import tr
 
 APP_NAME = "AutoLabel Studio AI"
@@ -7,8 +9,8 @@ APP_TAGLINE = "AI-Powered Video to Dataset Annotation"
 APP_VERSION = "1.0.0"
 ORG_NAME = "AutoLabelAI"
 
-# ---------------------------------------------------------------- Bang mau ---
-COLORS = {
+# ---------------------------------------------------------------- Bảng màu ---
+DARK_COLORS = {
     "bg": "#0F0F16",
     "bg_alt": "#14141D",
     "surface": "#1A1A26",
@@ -28,14 +30,61 @@ COLORS = {
     "danger": "#F3506B",
     "info": "#38BDF8",
     "shadow": "#07070C",
+    "canvas_bg": "#0A0A10",
+    "log_bg": "#0B0B12",
+    "log_text": "#B9B9CF",
 }
+
+LIGHT_COLORS = {
+    "bg": "#F3F4F6",
+    "bg_alt": "#FFFFFF",
+    "surface": "#FFFFFF",
+    "surface_alt": "#F8FAFC",
+    "surface_hi": "#E5E7EB",
+    "border": "#E2E8F0",
+    "border_hi": "#CBD5E1",
+    "text": "#0F172A",
+    "text_dim": "#334155",
+    "text_mute": "#64748B",
+    "accent": "#7C5CFF",
+    "accent_hi": "#6336FF",
+    "accent_dim": "#5B3FD9",
+    "accent_soft": "#EEF2FF",
+    "success": "#10B981",
+    "warning": "#F59E0B",
+    "danger": "#EF4444",
+    "info": "#06B6D4",
+    "shadow": "#CBD5E1",
+    "canvas_bg": "#E2E8F0",
+    "log_bg": "#F8FAFC",
+    "log_text": "#334155",
+}
+
+COLORS = dict(DARK_COLORS)
+
 
 # Bang mau gan cho class annotation (tuong phan tot tren nen toi)
 CLASS_PALETTE = [
-    "#7C5CFF", "#FF7A45", "#3DD68C", "#F5A524", "#38BDF8",
-    "#F3506B", "#A78BFA", "#22D3EE", "#FB923C", "#4ADE80",
-    "#F472B6", "#60A5FA", "#FACC15", "#2DD4BF", "#C084FC",
-    "#FF6B6B", "#94E2D5", "#FDBA74", "#818CF8", "#34D399",
+    "#7C5CFF",
+    "#FF7A45",
+    "#3DD68C",
+    "#F5A524",
+    "#38BDF8",
+    "#F3506B",
+    "#A78BFA",
+    "#22D3EE",
+    "#FB923C",
+    "#4ADE80",
+    "#F472B6",
+    "#60A5FA",
+    "#FACC15",
+    "#2DD4BF",
+    "#C084FC",
+    "#FF6B6B",
+    "#94E2D5",
+    "#FDBA74",
+    "#818CF8",
+    "#34D399",
 ]
 
 # ------------------------------------------------------------------ Trang ---
@@ -61,8 +110,8 @@ NAV_ITEMS = [
     (PAGE_SETTINGS, "Settings", "settings"),
 ]
 
+
 def get_nav_items():
-    from app.i18n import tr
     return [
         (PAGE_DASHBOARD, tr("nav.dashboard", "Dashboard"), "dashboard"),
         (PAGE_IMPORT, tr("nav.import", "Import"), "import"),
@@ -75,6 +124,7 @@ def get_nav_items():
         (PAGE_SETTINGS, tr("nav.settings", "Settings"), "settings"),
     ]
 
+
 # ---------------------------------------------------------- Frame extractor ---
 MODE_EVERY_FRAME = "every_frame"
 MODE_EVERY_N_FRAMES = "every_n_frames"
@@ -86,42 +136,96 @@ EXTRACT_MODES = [
     (MODE_EVERY_FRAME, "Mọi frame", "Lấy toàn bộ frame của video"),
     (MODE_EVERY_N_FRAMES, "Mỗi N frame", "Lấy 1 frame sau mỗi N frame"),
     (MODE_EVERY_N_SECONDS, "Mỗi N giây", "Lấy 1 frame sau mỗi N giây"),
-    (MODE_ADAPTIVE_MOTION, "Theo chuyển động",
-     "Chỉ lấy frame khi có chuyển động đáng kể"),
+    (MODE_ADAPTIVE_MOTION, "Theo chuyển động", "Chỉ lấy frame khi có chuyển động đáng kể"),
     (MODE_SCENE_DETECT, "Đổi cảnh", "Lấy frame mỗi khi khung hình đổi cảnh"),
 ]
 
+
 def get_extract_modes():
-    from app.i18n import tr
     return [
-        (MODE_EVERY_FRAME, tr("extract.mode.every_frame", "Mọi frame"), tr("extract.mode.every_frame_desc", "Lấy toàn bộ frame của video")),
-        (MODE_EVERY_N_FRAMES, tr("extract.mode.every_n_frames", "Mỗi N frame"), tr("extract.mode.every_n_frames_desc", "Lấy 1 frame sau mỗi N frame")),
-        (MODE_EVERY_N_SECONDS, tr("extract.mode.every_n_seconds", "Mỗi N giây"), tr("extract.mode.every_n_seconds_desc", "Lấy 1 frame sau mỗi N giây")),
-        (MODE_ADAPTIVE_MOTION, tr("extract.mode.adaptive_motion", "Theo chuyển động"), tr("extract.mode.adaptive_motion_desc", "Chỉ lấy frame khi có chuyển động đáng kể")),
-        (MODE_SCENE_DETECT, tr("extract.mode.scene_detect", "Đổi cảnh"), tr("extract.mode.scene_detect_desc", "Lấy frame mỗi khi khung hình đổi cảnh")),
+        (
+            MODE_EVERY_FRAME,
+            tr("extract.mode.every_frame", "Mọi frame"),
+            tr("extract.mode.every_frame_desc", "Lấy toàn bộ frame của video"),
+        ),
+        (
+            MODE_EVERY_N_FRAMES,
+            tr("extract.mode.every_n_frames", "Mỗi N frame"),
+            tr("extract.mode.every_n_frames_desc", "Lấy 1 frame sau mỗi N frame"),
+        ),
+        (
+            MODE_EVERY_N_SECONDS,
+            tr("extract.mode.every_n_seconds", "Mỗi N giây"),
+            tr("extract.mode.every_n_seconds_desc", "Lấy 1 frame sau mỗi N giây"),
+        ),
+        (
+            MODE_ADAPTIVE_MOTION,
+            tr("extract.mode.adaptive_motion", "Theo chuyển động"),
+            tr("extract.mode.adaptive_motion_desc", "Chỉ lấy frame khi có chuyển động đáng kể"),
+        ),
+        (
+            MODE_SCENE_DETECT,
+            tr("extract.mode.scene_detect", "Đổi cảnh"),
+            tr("extract.mode.scene_detect_desc", "Lấy frame mỗi khi khung hình đổi cảnh"),
+        ),
     ]
+
 
 # ------------------------------------------------------------------- Model ---
 YOLO_TASKS = ["detect", "segment", "obb", "pose"]
 
 MODEL_ZOO = {
     "detect": [
-        "yolov8n.pt", "yolov8s.pt", "yolov8m.pt", "yolov8l.pt", "yolov8x.pt",
-        "yolo11n.pt", "yolo11s.pt", "yolo11m.pt", "yolo11l.pt", "yolo11x.pt",
-        "yolo12n.pt", "yolo12s.pt", "yolo12m.pt", "yolo12l.pt", "yolo12x.pt",
+        "yolov8n.pt",
+        "yolov8s.pt",
+        "yolov8m.pt",
+        "yolov8l.pt",
+        "yolov8x.pt",
+        "yolo11n.pt",
+        "yolo11s.pt",
+        "yolo11m.pt",
+        "yolo11l.pt",
+        "yolo11x.pt",
+        "yolo12n.pt",
+        "yolo12s.pt",
+        "yolo12m.pt",
+        "yolo12l.pt",
+        "yolo12x.pt",
     ],
     "segment": [
-        "yolov8n-seg.pt", "yolov8s-seg.pt", "yolov8m-seg.pt", "yolov8l-seg.pt", "yolov8x-seg.pt",
-        "yolo11n-seg.pt", "yolo11s-seg.pt", "yolo11m-seg.pt", "yolo11l-seg.pt", "yolo11x-seg.pt",
-        "yolo12n-seg.pt", "yolo12s-seg.pt", "yolo12m-seg.pt",
+        "yolov8n-seg.pt",
+        "yolov8s-seg.pt",
+        "yolov8m-seg.pt",
+        "yolov8l-seg.pt",
+        "yolov8x-seg.pt",
+        "yolo11n-seg.pt",
+        "yolo11s-seg.pt",
+        "yolo11m-seg.pt",
+        "yolo11l-seg.pt",
+        "yolo11x-seg.pt",
+        "yolo12n-seg.pt",
+        "yolo12s-seg.pt",
+        "yolo12m-seg.pt",
     ],
     "obb": [
-        "yolov8n-obb.pt", "yolov8s-obb.pt", "yolov8m-obb.pt", "yolov8l-obb.pt",
-        "yolo11n-obb.pt", "yolo11s-obb.pt", "yolo11m-obb.pt", "yolo11l-obb.pt",
+        "yolov8n-obb.pt",
+        "yolov8s-obb.pt",
+        "yolov8m-obb.pt",
+        "yolov8l-obb.pt",
+        "yolo11n-obb.pt",
+        "yolo11s-obb.pt",
+        "yolo11m-obb.pt",
+        "yolo11l-obb.pt",
     ],
     "pose": [
-        "yolov8n-pose.pt", "yolov8s-pose.pt", "yolov8m-pose.pt", "yolov8l-pose.pt",
-        "yolo11n-pose.pt", "yolo11s-pose.pt", "yolo11m-pose.pt", "yolo11l-pose.pt",
+        "yolov8n-pose.pt",
+        "yolov8s-pose.pt",
+        "yolov8m-pose.pt",
+        "yolov8l-pose.pt",
+        "yolo11n-pose.pt",
+        "yolo11s-pose.pt",
+        "yolo11m-pose.pt",
+        "yolo11l-pose.pt",
     ],
 }
 
@@ -140,8 +244,8 @@ IMAGE_STATUS_LABEL = {
     IMG_REJECTED: ("Đã loại", COLORS["danger"]),
 }
 
+
 def get_image_status_label():
-    from app.i18n import tr
     return {
         IMG_UNLABELED: (tr("status.unlabeled", "Chưa gán nhãn"), COLORS["text_mute"]),
         IMG_AUTO: (tr("status.auto", "Máy gán nhãn"), COLORS["info"]),
@@ -149,6 +253,7 @@ def get_image_status_label():
         IMG_APPROVED: (tr("status.approved", "Đã duyệt"), COLORS["success"]),
         IMG_REJECTED: (tr("status.rejected", "Đã loại"), COLORS["danger"]),
     }
+
 
 ANN_AUTO = "auto"
 ANN_REVIEW = "review"
@@ -171,55 +276,181 @@ EXPORT_FORMATS = [
     ("mask", "PNG Mask", "Ảnh mask 8-bit theo chỉ số lớp, kèm bản mask màu"),
 ]
 
+
 def get_export_formats():
-    from app.i18n import tr
     return [
-        ("yolo_seg", tr("export.yolo_seg", "YOLO Segmentation"), tr("export.yolo_seg_desc", "Polygon chuẩn hoá — dùng cho model *-seg.pt")),
-        ("yolo_det", tr("export.yolo_det", "YOLO Detection"), tr("export.yolo_det_desc", "Bounding box chuẩn hoá: cx cy w h")),
-        ("yolo_obb", tr("export.yolo_obb", "YOLO OBB"), tr("export.yolo_obb_desc", "Hộp xoay 4 đỉnh chuẩn hoá — dùng cho model *-obb.pt")),
-        ("yolo_pose", tr("export.yolo_pose", "YOLO Pose"), tr("export.yolo_pose_desc", "Box kèm keypoint — dùng cho model *-pose.pt")),
-        ("coco", tr("export.coco", "COCO JSON"), tr("export.coco_desc", "File instances.json chuẩn COCO, có cả keypoints")),
-        ("voc", tr("export.voc", "Pascal VOC XML"), tr("export.voc_desc", "Một file .xml cho mỗi ảnh")),
-        ("mask", tr("export.mask", "PNG Mask"), tr("export.mask_desc", "Ảnh mask 8-bit theo chỉ số lớp, kèm bản mask màu")),
+        (
+            "yolo_seg",
+            tr("export.yolo_seg", "YOLO Segmentation"),
+            tr("export.yolo_seg_desc", "Polygon chuẩn hoá — dùng cho model *-seg.pt"),
+        ),
+        (
+            "yolo_det",
+            tr("export.yolo_det", "YOLO Detection"),
+            tr("export.yolo_det_desc", "Bounding box chuẩn hoá: cx cy w h"),
+        ),
+        (
+            "yolo_obb",
+            tr("export.yolo_obb", "YOLO OBB"),
+            tr("export.yolo_obb_desc", "Hộp xoay 4 đỉnh chuẩn hoá — dùng cho model *-obb.pt"),
+        ),
+        (
+            "yolo_pose",
+            tr("export.yolo_pose", "YOLO Pose"),
+            tr("export.yolo_pose_desc", "Box kèm keypoint — dùng cho model *-pose.pt"),
+        ),
+        (
+            "coco",
+            tr("export.coco", "COCO JSON"),
+            tr("export.coco_desc", "File instances.json chuẩn COCO, có cả keypoints"),
+        ),
+        (
+            "voc",
+            tr("export.voc", "Pascal VOC XML"),
+            tr("export.voc_desc", "Một file .xml cho mỗi ảnh"),
+        ),
+        (
+            "mask",
+            tr("export.mask", "PNG Mask"),
+            tr("export.mask_desc", "Ảnh mask 8-bit theo chỉ số lớp, kèm bản mask màu"),
+        ),
     ]
 
+
 # Be rong cot nhan trong cac bang nhap lieu - dung chung de khong lech nhau
-LABEL_W_WIDE = 168     # form rong (Settings, Statistics)
-LABEL_W = 132          # form thuong (Frame Extractor, Train)
-LABEL_W_NARROW = 104   # cot ben (Auto Label, Editor)
+LABEL_W_WIDE = 168  # form rong (Settings, Statistics)
+LABEL_W = 132  # form thuong (Frame Extractor, Train)
+LABEL_W_NARROW = 104  # cot ben (Auto Label, Editor)
 
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff")
 VIDEO_EXTS = (".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".m4v", ".mpg", ".mpeg", ".webm")
 
+
 # ---------------------------------------------------------------- Phim tat ---
 def get_shortcuts():
-    from app.i18n import tr
     return [
-        (tr("settings.shortcuts.navigation", "Điều hướng"), "Ctrl+1 … Ctrl+9", tr("settings.shortcuts.navigation_desc", "Chuyển nhanh giữa các trang")),
-        (tr("settings.shortcuts.navigation", "Điều hướng"), "Ctrl+N", tr("settings.shortcuts.navigation_desc", "Tạo project mới")),
-        (tr("settings.shortcuts.navigation", "Điều hướng"), "Ctrl+O", tr("settings.shortcuts.navigation_desc", "Mở project có sẵn")),
-        (tr("settings.shortcuts.navigation", "Điều hướng"), "Ctrl+S", tr("settings.shortcuts.navigation_desc", "Lưu project")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "A / D", tr("settings.shortcuts.annotation_desc", "Ảnh trước / ảnh sau")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "V", tr("settings.shortcuts.annotation_desc", "Công cụ Chọn")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "W", tr("settings.shortcuts.annotation_desc", "Công cụ Polygon")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "B", tr("settings.shortcuts.annotation_desc", "Công cụ Cọ vẽ")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "E", tr("settings.shortcuts.annotation_desc", "Công cụ Tẩy")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "S", tr("settings.shortcuts.annotation_desc", "Công cụ Cắt đôi")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "M", tr("settings.shortcuts.annotation_desc", "Gộp các vùng đang chọn")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "Giữ Space", tr("settings.shortcuts.annotation_desc", "Di chuyển ảnh")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "Ctrl+Z / Ctrl+Y", tr("settings.shortcuts.annotation_desc", "Hoàn tác / Làm lại")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "Ctrl++ / Ctrl+-", tr("settings.shortcuts.annotation_desc", "Phóng to / thu nhỏ")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "Ctrl+0", tr("settings.shortcuts.annotation_desc", "Vừa khung hình")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "Delete", tr("settings.shortcuts.annotation_desc", "Xoá đối tượng đang chọn")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "1 … 9", tr("settings.shortcuts.annotation_desc", "Gán lớp cho đối tượng đang chọn")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "Enter", tr("settings.shortcuts.annotation_desc", "Duyệt ảnh và sang ảnh kế tiếp")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "Ctrl+A", tr("settings.shortcuts.annotation_desc", "Chọn tất cả đối tượng")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "Esc", tr("settings.shortcuts.annotation_desc", "Huỷ thao tác đang vẽ")),
-        (tr("settings.shortcuts.annotation", "Sửa nhãn"), "Alt + cuộn chuột", tr("settings.shortcuts.annotation_desc", "Đổi cỡ cọ vẽ / tẩy")),
-        (tr("settings.shortcuts.autolabel", "Gán nhãn tự động"), "F5", tr("settings.shortcuts.autolabel_desc", "Bắt đầu gán nhãn tự động")),
-        (tr("settings.shortcuts.common", "Chung"), "F11", tr("settings.shortcuts.common_desc", "Toàn màn hình")),
-        (tr("settings.shortcuts.common", "Chung"), "Ctrl+Q", tr("settings.shortcuts.common_desc", "Thoát")),
+        (
+            tr("settings.shortcuts.navigation", "Điều hướng"),
+            "Ctrl+1 … Ctrl+9",
+            tr("settings.shortcuts.navigation_desc", "Chuyển nhanh giữa các trang"),
+        ),
+        (
+            tr("settings.shortcuts.navigation", "Điều hướng"),
+            "Ctrl+N",
+            tr("settings.shortcuts.navigation_desc", "Tạo project mới"),
+        ),
+        (
+            tr("settings.shortcuts.navigation", "Điều hướng"),
+            "Ctrl+O",
+            tr("settings.shortcuts.navigation_desc", "Mở project có sẵn"),
+        ),
+        (
+            tr("settings.shortcuts.navigation", "Điều hướng"),
+            "Ctrl+S",
+            tr("settings.shortcuts.navigation_desc", "Lưu project"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "A / D",
+            tr("settings.shortcuts.annotation_desc", "Ảnh trước / ảnh sau"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "V",
+            tr("settings.shortcuts.annotation_desc", "Công cụ Chọn"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "W",
+            tr("settings.shortcuts.annotation_desc", "Công cụ Polygon"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "B",
+            tr("settings.shortcuts.annotation_desc", "Công cụ Cọ vẽ"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "E",
+            tr("settings.shortcuts.annotation_desc", "Công cụ Tẩy"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "S",
+            tr("settings.shortcuts.annotation_desc", "Công cụ Cắt đôi"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "M",
+            tr("settings.shortcuts.annotation_desc", "Gộp các vùng đang chọn"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            tr("settings.shortcuts.keep_space", "Giữ Space"),
+            tr("settings.shortcuts.annotation_desc", "Di chuyển ảnh"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "Ctrl+Z / Ctrl+Y",
+            tr("settings.shortcuts.annotation_desc", "Hoàn tác / Làm lại"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "Ctrl++ / Ctrl+-",
+            tr("settings.shortcuts.annotation_desc", "Phóng to / thu nhỏ"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "Ctrl+0",
+            tr("settings.shortcuts.annotation_desc", "Vừa khung hình"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "Delete",
+            tr("settings.shortcuts.annotation_desc", "Xoá đối tượng đang chọn"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "1 … 9",
+            tr("settings.shortcuts.annotation_desc", "Gán lớp cho đối tượng đang chọn"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "Enter",
+            tr("settings.shortcuts.annotation_desc", "Duyệt ảnh và sang ảnh kế tiếp"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "Ctrl+A",
+            tr("settings.shortcuts.annotation_desc", "Chọn tất cả đối tượng"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            "Esc",
+            tr("settings.shortcuts.annotation_desc", "Huỷ thao tác đang vẽ"),
+        ),
+        (
+            tr("settings.shortcuts.annotation", "Sửa nhãn"),
+            tr("settings.shortcuts.scroll", "Alt + cuộn chuột"),
+            tr("settings.shortcuts.annotation_desc", "Đổi cỡ cọ vẽ / tẩy"),
+        ),
+        (
+            tr("settings.shortcuts.autolabel", "Gán nhãn tự động"),
+            "F5",
+            tr("settings.shortcuts.autolabel_desc", "Bắt đầu gán nhãn tự động"),
+        ),
+        (
+            tr("settings.shortcuts.common", "Chung"),
+            "F11",
+            tr("settings.shortcuts.common_desc", "Toàn màn hình"),
+        ),
+        (
+            tr("settings.shortcuts.common", "Chung"),
+            "Ctrl+Q",
+            tr("settings.shortcuts.common_desc", "Thoát"),
+        ),
     ]
+
 
 SHORTCUTS = [
     ("Điều hướng", "Ctrl+1 … Ctrl+9", "Chuyển nhanh giữa các trang"),

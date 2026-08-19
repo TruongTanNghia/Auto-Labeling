@@ -1,4 +1,5 @@
 """Bo widget dung chung: card, badge, stat, toast, toggle, field ..."""
+
 from __future__ import annotations
 
 from PySide6.QtCore import (
@@ -36,8 +37,14 @@ from app.theme import icons
 
 
 # ================================================================== LABEL ===
-def label(text: str, obj: str = "", bold: bool = False, size: int | None = None,
-          color: str = "", wrap: bool = False) -> QLabel:
+def label(
+    text: str,
+    obj: str = "",
+    bold: bool = False,
+    size: int | None = None,
+    color: str = "",
+    wrap: bool = False,
+) -> QLabel:
     lb = QLabel(text)
     if obj:
         lb.setObjectName(obj)
@@ -58,7 +65,6 @@ def hline() -> QFrame:
     f = QFrame()
     f.setObjectName("Divider")
     f.setFixedHeight(1)
-    f.setStyleSheet(f"background: {COLORS['border']};")
     return f
 
 
@@ -66,7 +72,6 @@ def vline() -> QFrame:
     f = QFrame()
     f.setObjectName("VDivider")
     f.setFixedWidth(1)
-    f.setStyleSheet(f"background: {COLORS['border']};")
     return f
 
 
@@ -91,9 +96,17 @@ def hstretch() -> QWidget:
 class Card(QFrame):
     """Khung noi dung bo goc, co tieu de + vung header phu tuy chon."""
 
-    def __init__(self, title: str = "", subtitle: str = "", icon_name: str = "",
-                 icon_color: str = "", parent=None, flat: bool = False,
-                 margins: tuple = (16, 14, 16, 16), spacing: int = 12) -> None:
+    def __init__(
+        self,
+        title: str = "",
+        subtitle: str = "",
+        icon_name: str = "",
+        icon_color: str = "",
+        parent=None,
+        flat: bool = False,
+        margins: tuple = (16, 14, 16, 16),
+        spacing: int = 12,
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("CardFlat" if flat else "Card")
         self._outer = QVBoxLayout(self)
@@ -163,8 +176,7 @@ class StatCard(QFrame):
 
     clicked = Signal()
 
-    def __init__(self, icon_name: str, value: str, text: str, color: str = "",
-                 parent=None) -> None:
+    def __init__(self, icon_name: str, value: str, text: str, color: str = "", parent=None) -> None:
         super().__init__(parent)
         self.setObjectName("CardFlat")
         self._color = color or COLORS["accent"]
@@ -178,7 +190,8 @@ class StatCard(QFrame):
         self.icon_box.setPixmap(icons.pixmap(icon_name, self._color, 20))
         self.icon_box.setStyleSheet(
             f"background: {icons.with_alpha(self._color, 0.14).name(QColor.HexArgb)};"
-            f"border-radius: 11px;")
+            f"border-radius: 11px;"
+        )
         lay.addWidget(self.icon_box)
 
         col = QVBoxLayout()
@@ -255,8 +268,15 @@ class LegendItem(QWidget):
 
 # ============================================================ ICON BUTTON ===
 class IconButton(QPushButton):
-    def __init__(self, icon_name: str, tooltip: str = "", size: int = 18,
-                 checkable: bool = False, color: str = "", parent=None) -> None:
+    def __init__(
+        self,
+        icon_name: str,
+        tooltip: str = "",
+        size: int = 18,
+        checkable: bool = False,
+        color: str = "",
+        parent=None,
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("IconBtn")
         self.setIcon(icons.icon(icon_name, color or COLORS["text_dim"], size))
@@ -276,8 +296,9 @@ class IconButton(QPushButton):
 class ToolButton(QPushButton):
     """Nut co icon + chu, dung cho thanh cong cu Editor."""
 
-    def __init__(self, icon_name: str, text: str, tooltip: str = "",
-                 checkable: bool = True, parent=None) -> None:
+    def __init__(
+        self, icon_name: str, text: str, tooltip: str = "", checkable: bool = True, parent=None
+    ) -> None:
         super().__init__(text, parent)
         self.setObjectName("Tool")
         self.setIcon(icons.icon(icon_name, COLORS["text_dim"], 16))
@@ -318,8 +339,9 @@ def danger_button(text: str, icon_name: str = "", parent=None) -> QPushButton:
     return btn
 
 
-def browse_button(tooltip: str = "Chọn thư mục…", icon_name: str = "folder",
-                  parent=None) -> QPushButton:
+def browse_button(
+    tooltip: str = "Chọn thư mục…", icon_name: str = "folder", parent=None
+) -> QPushButton:
     """Nut duyet file/thu muc: chi co icon de khong bi cat chu."""
     btn = QPushButton(parent)
     btn.setObjectName("Ghost")
@@ -331,8 +353,7 @@ def browse_button(tooltip: str = "Chọn thư mục…", icon_name: str = "folde
     return btn
 
 
-def chip_button(text: str, icon_name: str = "", checkable: bool = True,
-                parent=None) -> QPushButton:
+def chip_button(text: str, icon_name: str = "", checkable: bool = True, parent=None) -> QPushButton:
     btn = QPushButton(text, parent)
     btn.setObjectName("Chip")
     btn.setCheckable(checkable)
@@ -347,8 +368,15 @@ def chip_button(text: str, icon_name: str = "", checkable: bool = True,
 class Field(QWidget):
     """Nhan + widget nhap, xep ngang hoac doc."""
 
-    def __init__(self, text: str, widget: QWidget, horizontal: bool = True,
-                 label_width: int = 96, hint: str = "", parent=None) -> None:
+    def __init__(
+        self,
+        text: str,
+        widget: QWidget,
+        horizontal: bool = True,
+        label_width: int = 96,
+        hint: str = "",
+        parent=None,
+    ) -> None:
         super().__init__(parent)
         self.widget = widget
         self.label_widget: QLabel | None = None
@@ -395,8 +423,9 @@ def combo(items, current=None, width: int = 0) -> QComboBox:
     return cb
 
 
-def spin(value: int, lo: int = 0, hi: int = 100000, step: int = 1,
-         suffix: str = "", width: int = 0) -> QSpinBox:
+def spin(
+    value: int, lo: int = 0, hi: int = 100000, step: int = 1, suffix: str = "", width: int = 0
+) -> QSpinBox:
     sb = QSpinBox()
     sb.setRange(lo, hi)
     sb.setSingleStep(step)
@@ -409,8 +438,15 @@ def spin(value: int, lo: int = 0, hi: int = 100000, step: int = 1,
     return sb
 
 
-def dspin(value: float, lo: float = 0.0, hi: float = 1.0, step: float = 0.01,
-          decimals: int = 3, suffix: str = "", width: int = 0) -> QDoubleSpinBox:
+def dspin(
+    value: float,
+    lo: float = 0.0,
+    hi: float = 1.0,
+    step: float = 0.01,
+    decimals: int = 3,
+    suffix: str = "",
+    width: int = 0,
+) -> QDoubleSpinBox:
     sb = QDoubleSpinBox()
     sb.setRange(lo, hi)
     sb.setSingleStep(step)
@@ -428,10 +464,17 @@ class SliderField(QWidget):
 
     valueChanged = Signal(float)
 
-    def __init__(self, value: float, lo: float = 0.0, hi: float = 1.0,
-                 decimals: int = 2, step: float = 0.01, parent=None) -> None:
+    def __init__(
+        self,
+        value: float,
+        lo: float = 0.0,
+        hi: float = 1.0,
+        decimals: int = 2,
+        step: float = 0.01,
+        parent=None,
+    ) -> None:
         super().__init__(parent)
-        self._scale = 10 ** decimals
+        self._scale = 10**decimals
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(10)
@@ -545,14 +588,14 @@ class Toast(QFrame):
         "info": ("info", COLORS["info"]),
     }
 
-    def __init__(self, text: str, kind: str = "info", parent=None,
-                 duration: int = 3200) -> None:
+    def __init__(self, text: str, kind: str = "info", parent=None, duration: int = 3200) -> None:
         super().__init__(parent)
         icon_name, color = self.KINDS.get(kind, self.KINDS["info"])
         self.setObjectName("Card")
         self.setStyleSheet(
             f"#Card {{ background: {COLORS['surface_alt']};"
-            f"border: 1px solid {color}; border-radius: 11px; }}")
+            f"border: 1px solid {color}; border-radius: 11px; }}"
+        )
         lay = QHBoxLayout(self)
         lay.setContentsMargins(13, 11, 15, 11)
         lay.setSpacing(10)
@@ -627,9 +670,15 @@ class EmptyState(QWidget):
     action = Signal()
     action2 = Signal()
 
-    def __init__(self, icon_name: str, title: str, hint: str = "",
-                 action_text: str = "", parent=None,
-                 action2_text: str = "") -> None:
+    def __init__(
+        self,
+        icon_name: str,
+        title: str,
+        hint: str = "",
+        action_text: str = "",
+        parent=None,
+        action2_text: str = "",
+    ) -> None:
         super().__init__(parent)
         lay = QVBoxLayout(self)
         lay.setAlignment(Qt.AlignCenter)
@@ -685,6 +734,7 @@ class ProgressPanel(QFrame):
         top = QHBoxLayout()
         top.setSpacing(9)
         from app.i18n import tr
+
         self.stage_label = label(tr("progress.preparing", "Đang chuẩn bị …"), bold=True, size=12.5)
         top.addWidget(self.stage_label)
         top.addStretch(1)
@@ -697,6 +747,7 @@ class ProgressPanel(QFrame):
         lay.addLayout(top)
 
         from PySide6.QtWidgets import QProgressBar
+
         self.bar = QProgressBar()
         self.bar.setRange(0, 100)
         self.bar.setValue(0)
@@ -710,6 +761,7 @@ class ProgressPanel(QFrame):
 
     def start(self, stage: str = "") -> None:
         from app.i18n import tr
+
         self.stage_label.setText(stage or tr("progress.processing", "Đang xử lý …"))
         self.bar.setValue(0)
         self.percent_label.setText("0%")
@@ -729,6 +781,7 @@ class ProgressPanel(QFrame):
 
     def finish(self, text: str = "") -> None:
         from app.i18n import tr
+
         self.bar.setValue(100)
         self.percent_label.setText("100%")
         self.stage_label.setText(text or tr("progress.done", "Hoàn tất"))
@@ -740,8 +793,9 @@ class ProgressPanel(QFrame):
 class KeyValueGrid(QWidget):
     """Bang thong tin dang khoa - gia tri (vd: thong tin video)."""
 
-    def __init__(self, pairs=None, parent=None, key_color: str = "",
-                 value_bold: bool = True) -> None:
+    def __init__(
+        self, pairs=None, parent=None, key_color: str = "", value_bold: bool = True
+    ) -> None:
         super().__init__(parent)
         self._grid = QGridLayout(self)
         self._grid.setContentsMargins(0, 0, 0, 0)
@@ -793,8 +847,9 @@ class CollapsibleSection(QWidget):
         self.toggle.setCheckable(True)
         self.toggle.setChecked(expanded)
         self.toggle.setCursor(Qt.PointingHandCursor)
-        self.toggle.setIcon(icons.icon("chevron_down" if expanded else "chevron_right",
-                                       COLORS["text_dim"], 15))
+        self.toggle.setIcon(
+            icons.icon("chevron_down" if expanded else "chevron_right", COLORS["text_dim"], 15)
+        )
         self.toggle.setIconSize(QSize(15, 15))
         outer.addWidget(self.toggle)
 
@@ -808,8 +863,9 @@ class CollapsibleSection(QWidget):
 
     def _on_toggle(self, checked: bool) -> None:
         self.content.setVisible(checked)
-        self.toggle.setIcon(icons.icon("chevron_down" if checked else "chevron_right",
-                                       COLORS["text_dim"], 15))
+        self.toggle.setIcon(
+            icons.icon("chevron_down" if checked else "chevron_right", COLORS["text_dim"], 15)
+        )
 
     def add(self, widget_or_layout) -> None:
         if isinstance(widget_or_layout, QWidget):
@@ -822,8 +878,7 @@ class CollapsibleSection(QWidget):
 class PageHeader(QWidget):
     """Tieu de trang + mo ta + vung nut ben phai."""
 
-    def __init__(self, title: str, subtitle: str = "", icon_name: str = "",
-                 parent=None) -> None:
+    def __init__(self, title: str, subtitle: str = "", icon_name: str = "", parent=None) -> None:
         super().__init__(parent)
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -834,8 +889,7 @@ class PageHeader(QWidget):
             box.setFixedSize(42, 42)
             box.setAlignment(Qt.AlignCenter)
             box.setPixmap(icons.pixmap(icon_name, COLORS["accent_hi"], 22))
-            box.setStyleSheet(
-                f"background: {COLORS['accent_soft']}; border-radius: 12px;")
+            box.setStyleSheet(f"background: {COLORS['accent_soft']}; border-radius: 12px;")
             lay.addWidget(box)
 
         col = QVBoxLayout()
@@ -866,6 +920,5 @@ def font_mono(size: int = 11) -> QFont:
     f = QFont("Cascadia Mono")
     if not f.exactMatch():
         f = QFont("Consolas")
-    f.setPixelSize(0)
     f.setPointSize(size)
     return f

@@ -8,9 +8,9 @@ Plugin co the:
   - sinh annotation moi tu prompt van ban (Grounding DINO, Florence-2)
   - tinh chinh annotation san co thanh mask sac net (SAM2, FastSAM)
 """
+
 from __future__ import annotations
 
-from app.i18n import tr
 import importlib
 import importlib.util
 import pkgutil
@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core.inference import Detection
+from app.i18n import tr
 from app.utils.logger import get_logger
 from app.utils.paths import plugins_dir
 
@@ -54,7 +55,7 @@ class PluginInfo:
     author: str = ""
     description: str = ""
     requires: list[str] = field(default_factory=list)
-    kind: str = "refine"          # "generate" | "refine"
+    kind: str = "refine"  # "generate" | "refine"
     accepts_prompt: bool = False
     homepage: str = ""
 
@@ -62,6 +63,7 @@ class PluginInfo:
 @dataclass
 class PluginContext:
     """Du lieu truyen vao plugin khi chay."""
+
     image_path: str = ""
     # ndarray BGR (co the None -> plugin tu doc file tu image_path).
     # Bat buoc phai co annotation, neu khong dataclass se coi day la bien lop
@@ -90,7 +92,7 @@ class AnnotatorPlugin(ABC):
         missing = [m for m in self.info.requires if importlib.util.find_spec(m) is None]
         if missing:
             return False, tr("plugins.missing_packages", "Thieu goi: ") + ", ".join(missing)
-        return True, tr("plugins.available", "San sang")
+        return True, tr("plugins.available", "Sẵn sàng")
 
     def load(self, ctx: PluginContext | None = None, log_cb=None) -> None:
         """Nap model. Mac dinh khong lam gi - plugin ghi de neu can."""
@@ -182,8 +184,11 @@ class PluginRegistry:
 
     def _scan_module(self, module) -> None:
         for attr in vars(module).values():
-            if (isinstance(attr, type) and issubclass(attr, AnnotatorPlugin)
-                    and attr is not AnnotatorPlugin):
+            if (
+                isinstance(attr, type)
+                and issubclass(attr, AnnotatorPlugin)
+                and attr is not AnnotatorPlugin
+            ):
                 self.register(attr)
 
     # ---------------------------------------------------------------- truy van --
@@ -217,6 +222,7 @@ class PluginRegistry:
     def _apply_user_config(self, key: str, inst: AnnotatorPlugin) -> None:
         try:
             from app.config import cfg
+
             effective = dict(inst.default_config())
             user_cfg = cfg.get(f"plugins.config.{key}", {})
             if isinstance(user_cfg, dict):

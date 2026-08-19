@@ -1,9 +1,11 @@
 """Module i18n cho phep chuyen doi va tra cuu chuoi ban dich (Tieng Viet / Tieng Anh)."""
+
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 I18N_DIR = Path(__file__).resolve().parent
 
@@ -44,7 +46,7 @@ class Translator:
             file_path = I18N_DIR / f"{lang}.json"
             if file_path.exists():
                 try:
-                    with open(file_path, "r", encoding="utf-8") as fh:
+                    with open(file_path, encoding="utf-8") as fh:
                         self._translations[lang] = json.load(fh)
                 except Exception:
                     self._translations[lang] = {}

@@ -1,7 +1,7 @@
 """Cua so chinh: title bar tuy bien, sidebar, stack cac trang, toast."""
+
 from __future__ import annotations
 
-from app.i18n import tr
 from PySide6.QtCore import (
     QEasingCurve,
     QPoint,
@@ -42,6 +42,7 @@ from app.constants import (
     PAGE_TRAIN,
 )
 from app.controllers.app_controller import AppController
+from app.i18n import tr
 from app.theme import icons
 from app.utils.logger import get_logger
 from app.views.pages.autolabel_page import AutoLabelPage
@@ -54,7 +55,7 @@ from app.views.pages.settings_page import SettingsPage
 from app.views.pages.stats_page import StatsPage
 from app.views.pages.train_page import TrainPage
 from app.views.sidebar import Sidebar
-from app.views.widgets.common import IconButton, ToastManager, label
+from app.views.widgets.common import ToastManager, label
 
 log = get_logger(__name__)
 
@@ -118,8 +119,7 @@ class TitleBar(QWidget):
     # ------------------------------------------------------------- keo tha --
     def mousePressEvent(self, ev) -> None:  # noqa: D102
         if ev.button() == Qt.LeftButton:
-            self._drag_pos = ev.globalPosition().toPoint() - \
-                self._window.frameGeometry().topLeft()
+            self._drag_pos = ev.globalPosition().toPoint() - self._window.frameGeometry().topLeft()
             ev.accept()
 
     def mouseMoveEvent(self, ev) -> None:  # noqa: D102
@@ -209,12 +209,10 @@ class MainWindow(QMainWindow):
         # --- lien ket giua cac trang ---
         self.pages[PAGE_DASHBOARD].navigate.connect(self.go_to_page)
         self.pages[PAGE_IMPORT].navigate.connect(self.go_to_page)
-        self.pages[PAGE_IMPORT].videosSelected.connect(
-            self.pages[PAGE_EXTRACT].set_videos)
+        self.pages[PAGE_IMPORT].videosSelected.connect(self.pages[PAGE_EXTRACT].set_videos)
         self.pages[PAGE_EXTRACT].navigate.connect(self.go_to_page)
         # Cat frame xong -> chuyen dung loat anh vua cat sang buoc gan nhan
-        self.pages[PAGE_EXTRACT].batchReady.connect(
-            self.pages[PAGE_AUTOLABEL].set_batch)
+        self.pages[PAGE_EXTRACT].batchReady.connect(self.pages[PAGE_AUTOLABEL].set_batch)
         self.pages[PAGE_DATASET].navigate.connect(self.go_to_page)
 
         # goc duoi de keo doi kich thuoc
@@ -303,28 +301,47 @@ class MainWindow(QMainWindow):
 
     def _on_project_opened(self, repo) -> None:
         self._update_project_label()
-        for key in (PAGE_IMPORT, PAGE_EXTRACT, PAGE_AUTOLABEL, PAGE_EDITOR,
-                    PAGE_DATASET, PAGE_STATS, PAGE_TRAIN):
+        for key in (
+            PAGE_IMPORT,
+            PAGE_EXTRACT,
+            PAGE_AUTOLABEL,
+            PAGE_EDITOR,
+            PAGE_DATASET,
+            PAGE_STATS,
+            PAGE_TRAIN,
+        ):
             page = self.pages[key]
             if getattr(page, "_built", False):
                 page.refresh()
 
     def _on_project_closed(self) -> None:
         from app.i18n import tr
+
         self.title_bar.set_project("")
         self.sidebar.set_project(tr("main.no_project", "Chưa mở project"))
 
     def _update_project_label(self) -> None:
         from app.i18n import tr
+
         repo = self.ctrl.repo
         if repo is None:
             self.title_bar.set_project("")
             self.sidebar.set_project(tr("main.no_project", "Chưa mở project"))
             return
         info = repo.refresh_stats()
-        self.title_bar.set_project(f"{info.name}   ·   {info.n_images:,} ảnh")
+        self.title_bar.set_project(
+            f"{info.name}   ·   "
+            + tr("main.images_count", "{count} ảnh", count=f"{info.n_images:,}")
+        )
         self.sidebar.set_project(
-            f"{info.name}\n{info.n_labeled:,}/{info.n_images:,} ảnh đã gán nhãn")
+            f"{info.name}\n"
+            + tr(
+                "main.labeled_images_count",
+                "{labeled}/{total} ảnh đã gán nhãn",
+                labeled=f"{info.n_labeled:,}",
+                total=f"{info.n_images:,}",
+            )
+        )
 
     def _refresh_device(self) -> None:
         self.ctrl.refresh_device()
@@ -405,8 +422,9 @@ class MainWindow(QMainWindow):
     def resizeEvent(self, ev) -> None:  # noqa: D102
         super().resizeEvent(ev)
         if hasattr(self, "grip"):
-            self.grip.move(self.width() - self.grip.width() - 2,
-                           self.height() - self.grip.height() - 2)
+            self.grip.move(
+                self.width() - self.grip.width() - 2, self.height() - self.grip.height() - 2
+            )
             self.grip.raise_()
 
     def mousePressEvent(self, ev) -> None:  # noqa: D102
@@ -458,10 +476,14 @@ class MainWindow(QMainWindow):
 
     def _update_cursor(self, direction) -> None:
         cursors = {
-            "l": Qt.SizeHorCursor, "r": Qt.SizeHorCursor,
-            "t": Qt.SizeVerCursor, "b": Qt.SizeVerCursor,
-            "tl": Qt.SizeFDiagCursor, "br": Qt.SizeFDiagCursor,
-            "tr": Qt.SizeBDiagCursor, "bl": Qt.SizeBDiagCursor,
+            "l": Qt.SizeHorCursor,
+            "r": Qt.SizeHorCursor,
+            "t": Qt.SizeVerCursor,
+            "b": Qt.SizeVerCursor,
+            "tl": Qt.SizeFDiagCursor,
+            "br": Qt.SizeFDiagCursor,
+            "tr": Qt.SizeBDiagCursor,
+            "bl": Qt.SizeBDiagCursor,
         }
         if direction:
             self.setCursor(cursors[direction])
@@ -511,16 +533,30 @@ class MainWindow(QMainWindow):
     def closeEvent(self, ev) -> None:  # noqa: D102
         if self.ctrl.busy:
             ret = QMessageBox.question(
-                self, tr("common.confirm", "Xác nhận"),
-                tr("main.tasks_running_confirm", "Vẫn còn tác vụ nền đang chạy. Thoát và huỷ tác vụ?"),
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                self,
+                tr("common.confirm", "Xác nhận"),
+                tr(
+                    "main.tasks_running_confirm",
+                    "Vẫn còn tác vụ nền đang chạy. Thoát và huỷ tác vụ?",
+                ),
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
             if ret != QMessageBox.Yes:
                 ev.ignore()
                 return
         elif cfg.get("general.confirm_on_exit", True):
             ret = QMessageBox.question(
-                self, tr("common.confirm", "Xác nhận"), tr("main.close_confirm", tr("common.close", "Đóng") + " {app_name}?", app_name=APP_NAME),
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+                self,
+                tr("common.confirm", "Xác nhận"),
+                tr(
+                    "main.close_confirm",
+                    tr("common.close", "Đóng") + " {app_name}?",
+                    app_name=APP_NAME,
+                ),
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Yes,
+            )
             if ret != QMessageBox.Yes:
                 ev.ignore()
                 return

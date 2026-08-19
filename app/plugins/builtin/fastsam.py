@@ -1,10 +1,12 @@
 """Plugin FastSAM - segment toan anh, nhanh hon SAM nhieu lan."""
+
 from __future__ import annotations
 
 import numpy as np
 
 from app.constants import SHAPE_POLYGON
 from app.core.inference import Detection, mask_to_polygons, resolve_device
+from app.i18n import tr
 from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo, PluginParam
 
 
@@ -14,10 +16,11 @@ class FastSamPlugin(AnnotatorPlugin):
         name="FastSAM",
         version="1.0",
         author="AutoLabel Studio AI",
-        description=(
-            "Segment toan bo doi tuong trong anh bang FastSAM (nhanh gap ~50 lan SAM). "
-            "Co the dung o che do 'refine' (bam theo box YOLO) hoac 'generate' "
-            "(sinh moi mask cho toan anh de ban gan class thu cong)."
+        description=tr(
+            "plugins.fastsam.desc",
+            "Segment toàn bộ đối tượng trong ảnh bằng FastSAM (nhanh gấp ~50 lần SAM). "
+            "Có thể dùng ở chế độ 'refine' (bám theo box YOLO) hoặc 'generate' "
+            "(sinh mới mask cho toàn ảnh để bạn gán class thủ công).",
         ),
         requires=["ultralytics", "torch"],
         kind="refine",
@@ -31,46 +34,51 @@ class FastSamPlugin(AnnotatorPlugin):
         return [
             PluginParam(
                 key="weights",
-                label="Trọng số FastSAM",
+                label=tr("plugins.fastsam.weights_label", "Trọng số FastSAM"),
                 type="choice",
                 default=self.WEIGHTS,
                 options=["FastSAM-s.pt", "FastSAM-x.pt"],
-                description="Tên file trọng số FastSAM",
+                description=tr("plugins.fastsam.weights_desc", "Tên file trọng số FastSAM"),
             ),
             PluginParam(
                 key="imgsz",
-                label="Cỡ ảnh vào",
+                label=tr("plugins.fastsam.imgsz_label", "Cỡ ảnh vào"),
                 type="int",
                 default=1024,
                 min_value=320,
                 max_value=2048,
-                description="Kích thước ảnh đưa vào FastSAM",
+                description=tr("plugins.fastsam.imgsz_desc", "Kích thước ảnh đưa vào FastSAM"),
             ),
             PluginParam(
                 key="min_area",
-                label="Diện tích tối thiểu (px)",
+                label=tr("plugins.fastsam.min_area_label", "Diện tích tối thiểu (px)"),
                 type="float",
                 default=60.0,
                 min_value=0.0,
                 max_value=5000.0,
-                description="Bỏ qua các mask nhỏ hơn ngưỡng này",
+                description=tr(
+                    "plugins.fastsam.min_area_desc", "Bỏ qua các mask nhỏ hơn ngưỡng này"
+                ),
             ),
             PluginParam(
                 key="simplify",
-                label="Độ giản lược polygon",
+                label=tr("plugins.fastsam.simplify_label", "Độ giản lược polygon"),
                 type="float",
                 default=0.002,
                 min_value=0.0,
                 max_value=0.05,
-                description="Tỷ lệ làm mịn đường viền polygon",
+                description=tr("plugins.fastsam.simplify_desc", "Tỷ lệ làm mịn đường viền polygon"),
             ),
             PluginParam(
                 key="mode",
-                label="Chế độ hoạt động",
+                label=tr("plugins.fastsam.mode_label", "Chế độ hoạt động"),
                 type="choice",
                 default="refine",
                 options=["refine", "generate"],
-                description="Refine: tinh chỉnh box YOLO. Generate: tự tạo mask toàn ảnh",
+                description=tr(
+                    "plugins.fastsam.mode_desc",
+                    "Refine: tinh chỉnh box YOLO. Generate: tự tạo mask toàn ảnh",
+                ),
             ),
         ]
 
@@ -91,7 +99,13 @@ class FastSamPlugin(AnnotatorPlugin):
         try:
             os.chdir(weights_dir())
             if log_cb:
-                log_cb(f"[FastSAM] Dang nap {self.config('weights', self.WEIGHTS)} ...")
+                log_cb(
+                    tr(
+                        "plugins.fastsam.loading_log",
+                        "[FastSAM] Đang nạp {weights} ...",
+                        weights=self.config("weights", self.WEIGHTS),
+                    )
+                )
             self._model = FastSAM(self.config("weights", self.WEIGHTS))
         finally:
             os.chdir(prev)
@@ -106,8 +120,12 @@ class FastSamPlugin(AnnotatorPlugin):
         if self._model is None:
             self.load(ctx)
         source = ctx.image if ctx.image is not None else ctx.image_path
-        kwargs = dict(imgsz=int(self.config("imgsz", 1024)), conf=ctx.confidence,
-                      verbose=False, retina_masks=True)
+        kwargs = dict(
+            imgsz=int(self.config("imgsz", 1024)),
+            conf=ctx.confidence,
+            verbose=False,
+            retina_masks=True,
+        )
         mode = self.config("mode", "refine")
 
         if mode == "refine" and ctx.detections:
@@ -129,12 +147,15 @@ class FastSamPlugin(AnnotatorPlugin):
         if mode == "refine" and ctx.detections:
             out = []
             for i, det in enumerate(ctx.detections):
-                new_det = Detection(class_id=det.class_id, class_name=det.class_name,
-                                    confidence=det.confidence, bbox=list(det.bbox),
-                                    shape=det.shape)
+                new_det = Detection(
+                    class_id=det.class_id,
+                    class_name=det.class_name,
+                    confidence=det.confidence,
+                    bbox=list(det.bbox),
+                    shape=det.shape,
+                )
                 if i < len(data):
-                    polys = mask_to_polygons((data[i] > 0.5).astype(np.uint8),
-                                             min_area, simplify)
+                    polys = mask_to_polygons((data[i] > 0.5).astype(np.uint8), min_area, simplify)
                     if polys:
                         big = max(polys, key=len)
                         new_det.polygon = [float(v) for v in np.asarray(big).flatten()]
@@ -150,10 +171,17 @@ class FastSamPlugin(AnnotatorPlugin):
             for p in polys:
                 arr = np.asarray(p, dtype=np.float32)
                 det = Detection(
-                    class_id=0, class_name=name, confidence=0.5,
-                    polygon=[float(v) for v in arr.flatten()], shape=SHAPE_POLYGON,
-                    bbox=[float(arr[:, 0].min()), float(arr[:, 1].min()),
-                          float(arr[:, 0].max()), float(arr[:, 1].max())],
+                    class_id=0,
+                    class_name=name,
+                    confidence=0.5,
+                    polygon=[float(v) for v in arr.flatten()],
+                    shape=SHAPE_POLYGON,
+                    bbox=[
+                        float(arr[:, 0].min()),
+                        float(arr[:, 1].min()),
+                        float(arr[:, 0].max()),
+                        float(arr[:, 1].max()),
+                    ],
                 )
                 out.append(det)
         return out

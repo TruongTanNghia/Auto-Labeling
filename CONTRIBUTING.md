@@ -16,7 +16,10 @@ source .venv/bin/activate
 
 # Torch bản CPU là đủ để phát triển (bản CUDA cài riêng nếu cần GPU)
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
+
+# Cài đặt pre-commit hook để tự động kiểm tra code trước khi commit
+pip install pre-commit && pre-commit install
 
 python main.py
 ```
@@ -24,10 +27,16 @@ python main.py
 ## Chạy kiểm thử
 
 ```bash
-python tests/test_pipeline.py
+pytest -v --cov=app
 ```
 
-Bộ test chạy **offscreen** (không cần màn hình) và **không cần GPU**. CI sẽ chạy đúng lệnh này trên Ubuntu + Windows với Python 3.10 và 3.12 — hãy đảm bảo nó đạt trước khi mở PR.
+Hoặc chạy một file test đơn lẻ:
+
+```bash
+pytest tests/test_exporters.py
+```
+
+Bộ test chạy **offscreen** (không cần màn hình) và **không cần GPU**. CI sẽ tự động chạy `pytest` và đo coverage trên Ubuntu + Windows với Python 3.10 và 3.12 — hãy đảm bảo các test đều qua trước khi mở PR.
 
 ## Quy trình đóng góp
 
@@ -43,7 +52,7 @@ Bộ test chạy **offscreen** (không cần màn hình) và **không cần GPU*
 - Tính năng annotation mới nên hoạt động trên hình học Shapely thật (xem `canvas.py`), không chỉ vẽ đè lên ảnh.
 - Plugin mới kế thừa `AnnotatorPlugin` trong `app/plugins/base.py`; khai báo dependency trong `PluginInfo.requires` để ứng dụng báo thiếu thư viện thay vì crash.
 - Thêm test vào `tests/test_pipeline.py` cho nghiệp vụ mới (theo mẫu `check("ten", fn)` có sẵn).
-- Lint: CI chạy `ruff` — lỗi nghiêm trọng (cú pháp, tên chưa định nghĩa) sẽ làm fail build.
+- **Chuẩn hóa code (Lint & Format)**: Sử dụng `pre-commit` để tự động kiểm tra trước khi commit (`pre-commit run --all-files`). CI chạy `ruff check .` và `ruff format --check .` để đảm bảo chất lượng code.
 
 ## Báo lỗi
 

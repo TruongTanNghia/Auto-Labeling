@@ -1,10 +1,11 @@
 """Danh sach anh: che do list gon (co dot trang thai) va che do luoi thumbnail."""
+
 from __future__ import annotations
 
 from pathlib import Path
 
 from PySide6.QtCore import QRect, QSize, Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QListWidget,
@@ -12,7 +13,8 @@ from PySide6.QtWidgets import (
     QStyledItemDelegate,
 )
 
-from app.constants import COLORS, IMAGE_STATUS_LABEL, IMG_UNLABELED
+from app.constants import COLORS, IMG_UNLABELED, get_image_status_label
+from app.i18n import tr
 from app.models.entities import ImageRecord
 from app.theme import icons
 
@@ -21,6 +23,7 @@ ROLE_STATUS = Qt.UserRole + 2
 ROLE_PATH = Qt.UserRole + 3
 ROLE_NOBJ = Qt.UserRole + 4
 ROLE_DUP = Qt.UserRole + 5
+ROLE_CLASS_COLOR = Qt.UserRole + 6
 
 
 # ======================================================== THUMBNAIL LOADER ===
@@ -58,8 +61,9 @@ class ThumbnailLoader(QThread):
             try:
                 pm = QPixmap(path)
                 if not pm.isNull():
-                    pm = pm.scaled(self._size, self._size, Qt.KeepAspectRatio,
-                                   Qt.SmoothTransformation)
+                    pm = pm.scaled(
+                        self._size, self._size, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                    )
                     self.loaded.emit(path, pm)
             except Exception:
                 pass
@@ -91,32 +95,41 @@ class _CompactDelegate(QStyledItemDelegate):
             painter.setPen(Qt.NoPen)
             painter.drawRoundedRect(box, 7, 7)
 
+        class_color = index.data(ROLE_CLASS_COLOR)
         status = index.data(ROLE_STATUS) or IMG_UNLABELED
-        _, color = IMAGE_STATUS_LABEL.get(status, ("", COLORS["text_mute"]))
+        n = index.data(ROLE_NOBJ) or 0
+        if not selected and (n == 0 or status == IMG_UNLABELED or not class_color):
+            color = COLORS["text_mute"]
+        elif class_color:
+            color = class_color
+        else:
+            _, color = get_image_status_label().get(status, ("", COLORS["text_mute"]))
+
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(color))
         cy = r.center().y()
         painter.drawEllipse(r.left() + 12, cy - 3, 7, 7)
 
         name = index.data(Qt.DisplayRole) or ""
-        painter.setPen(QPen(QColor(COLORS["text"] if selected else COLORS["text_dim"])))
-        f = painter.font()
-        f.setPixelSize(0)
-        f.setPointSize(9)
-        painter.setFont(f)
+        painter.setPen(QPen(QColor(COLORS["text"] if selected else COLORS["text"])))
+        painter.setFont(QFont("Segoe UI", 9))
         text_rect = QRect(r.left() + 26, r.top(), r.width() - 76, r.height())
         fm = painter.fontMetrics()
-        painter.drawText(text_rect, Qt.AlignVCenter | Qt.AlignLeft,
-                         fm.elidedText(str(name), Qt.ElideMiddle, text_rect.width()))
+        painter.drawText(
+            text_rect,
+            Qt.AlignVCenter | Qt.AlignLeft,
+            fm.elidedText(str(name), Qt.ElideMiddle, text_rect.width()),
+        )
 
-        n = index.data(ROLE_NOBJ)
         if n is not None:
-            painter.setPen(QPen(QColor(COLORS["text_mute"])))
-            painter.drawText(QRect(r.right() - 46, r.top(), 32, r.height()),
-                             Qt.AlignVCenter | Qt.AlignRight, str(n))
+            painter.setPen(QPen(QColor(COLORS["accent_hi"] if selected else COLORS["text_dim"])))
+            painter.drawText(
+                QRect(r.right() - 46, r.top(), 32, r.height()),
+                Qt.AlignVCenter | Qt.AlignRight,
+                str(n),
+            )
         if index.data(ROLE_DUP):
-            painter.drawPixmap(r.right() - 14, cy - 6,
-                               icons.pixmap("copy", COLORS["warning"], 12))
+            painter.drawPixmap(r.right() - 14, cy - 6, icons.pixmap("copy", COLORS["warning"], 12))
         painter.restore()
 
 
@@ -140,12 +153,20 @@ class _GalleryDelegate(QStyledItemDelegate):
         selected = bool(option.state & QStyle.State_Selected)
         hovered = bool(option.state & QStyle.State_MouseOver)
 
+        class_color = index.data(ROLE_CLASS_COLOR)
         status = index.data(ROLE_STATUS) or IMG_UNLABELED
-        _, color = IMAGE_STATUS_LABEL.get(status, ("", COLORS["text_mute"]))
+        n = index.data(ROLE_NOBJ) or 0
+        if not selected and (n == 0 or status == IMG_UNLABELED or not class_color):
+            color = COLORS["text_mute"]
+        elif class_color:
+            color = class_color
+        else:
+            _, color = get_image_status_label().get(status, ("", COLORS["text_mute"]))
 
         pad = 5
-        img_box = QRect(r.left() + pad, r.top() + pad,
-                        r.width() - pad * 2, r.height() - pad * 2 - 20)
+        img_box = QRect(
+            r.left() + pad, r.top() + pad, r.width() - pad * 2, r.height() - pad * 2 - 20
+        )
         painter.setBrush(QColor(COLORS["bg"]))
         painter.setPen(Qt.NoPen)
         painter.drawRoundedRect(img_box, 8, 8)
@@ -166,8 +187,9 @@ class _GalleryDelegate(QStyledItemDelegate):
             painter.setPen(QPen(QColor(COLORS["text_mute"])))
             painter.drawText(img_box, Qt.AlignCenter, "…")
 
-        pen_color = QColor(COLORS["accent"]) if selected else (
-            QColor(COLORS["border_hi"]) if hovered else QColor(COLORS["border"]))
+        pen_color = QColor(
+            color if selected else (COLORS["border_hi"] if hovered else COLORS["border"])
+        )
         painter.setBrush(Qt.NoBrush)
         painter.setPen(QPen(pen_color, 2 if selected else 1))
         painter.drawRoundedRect(img_box, 8, 8)
@@ -183,24 +205,18 @@ class _GalleryDelegate(QStyledItemDelegate):
             painter.setBrush(QColor(0, 0, 0, 175))
             painter.drawRoundedRect(badge, 5, 5)
             painter.setPen(QPen(QColor("#FFFFFF")))
-            f = painter.font()
-            f.setPixelSize(0)
-            f.setPointSize(7)
-            f.setBold(True)
-            painter.setFont(f)
+            painter.setFont(QFont("Segoe UI", 7))
             painter.drawText(badge, Qt.AlignCenter, str(n))
 
         painter.setPen(QPen(QColor(COLORS["text"] if selected else COLORS["text_dim"])))
-        f = painter.font()
-        f.setPixelSize(0)
-        f.setPointSize(8)
-        f.setBold(False)
-        painter.setFont(f)
+        painter.setFont(QFont("Segoe UI", 8))
         name_rect = QRect(r.left() + 4, img_box.bottom() + 3, r.width() - 8, 17)
         fm = painter.fontMetrics()
-        painter.drawText(name_rect, Qt.AlignCenter,
-                         fm.elidedText(str(index.data(Qt.DisplayRole) or ""),
-                                       Qt.ElideMiddle, name_rect.width()))
+        painter.drawText(
+            name_rect,
+            Qt.AlignCenter,
+            fm.elidedText(str(index.data(Qt.DisplayRole) or ""), Qt.ElideMiddle, name_rect.width()),
+        )
         painter.restore()
 
 
@@ -208,15 +224,16 @@ class _GalleryDelegate(QStyledItemDelegate):
 class ImageListPanel(QListWidget):
     """Danh sach anh gon nhe - dung o trang Auto Label va Editor."""
 
-    imageSelected = Signal(int)          # image_id
+    imageSelected = Signal(int)  # image_id
     selectionIds = Signal(list)
 
     def __init__(self, parent=None, multi: bool = True) -> None:
         super().__init__(parent)
         self.setObjectName("ThumbList")
         self.setItemDelegate(_CompactDelegate(self))
-        self.setSelectionMode(QAbstractItemView.ExtendedSelection if multi
-                              else QAbstractItemView.SingleSelection)
+        self.setSelectionMode(
+            QAbstractItemView.ExtendedSelection if multi else QAbstractItemView.SingleSelection
+        )
         self.setUniformItemSizes(True)
         self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.setMouseTracking(True)
@@ -225,10 +242,13 @@ class ImageListPanel(QListWidget):
         self.itemSelectionChanged.connect(self._on_selection)
 
     # ---------------------------------------------------------------- API ---
-    def set_images(self, records: list[ImageRecord]) -> None:
+    def set_images(
+        self, records: list[ImageRecord], image_colors: dict[int, str] | None = None
+    ) -> None:
         self.blockSignals(True)
         self.clear()
         self._by_id.clear()
+        image_colors = image_colors or {}
         for rec in records:
             item = QListWidgetItem(rec.filename)
             item.setData(ROLE_ID, rec.id)
@@ -236,14 +256,21 @@ class ImageListPanel(QListWidget):
             item.setData(ROLE_PATH, rec.path)
             item.setData(ROLE_NOBJ, rec.n_objects)
             item.setData(ROLE_DUP, rec.is_duplicate)
-            item.setToolTip(f"{rec.path}\n{rec.width}x{rec.height} | "
-                            f"{rec.n_objects} doi tuong")
+            item.setData(ROLE_CLASS_COLOR, image_colors.get(rec.id, ""))
+            obj_str = tr("image_list.objects_unit", "{count} đối tượng", count=rec.n_objects)
+            status_str = tr(f"status.{rec.status}", rec.status)
+            item.setToolTip(f"{rec.path}\n{rec.width}x{rec.height} | {obj_str} | {status_str}")
             self.addItem(item)
             self._by_id[rec.id] = item
         self.blockSignals(False)
 
-    def update_item(self, image_id: int, status: str | None = None,
-                    n_objects: int | None = None) -> None:
+    def update_item(
+        self,
+        image_id: int,
+        status: str | None = None,
+        n_objects: int | None = None,
+        class_color: str | None = None,
+    ) -> None:
         item = self._by_id.get(image_id)
         if item is None:
             return
@@ -251,6 +278,8 @@ class ImageListPanel(QListWidget):
             item.setData(ROLE_STATUS, status)
         if n_objects is not None:
             item.setData(ROLE_NOBJ, n_objects)
+        if class_color is not None:
+            item.setData(ROLE_CLASS_COLOR, class_color)
         self.viewport().update()
 
     def select_id(self, image_id: int) -> None:
@@ -309,10 +338,8 @@ class ImageGallery(QListWidget):
 
         self._loader = ThumbnailLoader(cell)
         self._loader.loaded.connect(self._on_thumb)
-        self.itemDoubleClicked.connect(
-            lambda it: self.imageActivated.emit(int(it.data(ROLE_ID))))
-        self.itemSelectionChanged.connect(
-            lambda: self.selectionIds.emit(self.selected_ids()))
+        self.itemDoubleClicked.connect(lambda it: self.imageActivated.emit(int(it.data(ROLE_ID))))
+        self.itemSelectionChanged.connect(lambda: self.selectionIds.emit(self.selected_ids()))
 
         self._scroll_timer = QTimer(self)
         self._scroll_timer.setSingleShot(True)
@@ -335,9 +362,11 @@ class ImageGallery(QListWidget):
             item.setData(ROLE_NOBJ, rec.n_objects)
             item.setData(ROLE_DUP, rec.is_duplicate)
             item.setSizeHint(QSize(self._cell, self._cell + 24))
+            obj_str = tr("image_list.objects_unit", "{count} đối tượng", count=rec.n_objects)
+            status_str = tr(f"status.{rec.status}", rec.status)
             item.setToolTip(
                 f"{Path(rec.path).name}\n{rec.width}x{rec.height}\n"
-                f"{rec.n_objects} doi tuong | {rec.status}"
+                f"{obj_str} | {status_str}"
                 + (f"\nBlur: {rec.blur_score:.0f}" if rec.blur_score else "")
             )
             self.addItem(item)
@@ -357,8 +386,9 @@ class ImageGallery(QListWidget):
     def selected_ids(self) -> list[int]:
         return [int(i.data(ROLE_ID)) for i in self.selectedItems()]
 
-    def refresh_item(self, image_id: int, status: str | None = None,
-                     n_objects: int | None = None) -> None:
+    def refresh_item(
+        self, image_id: int, status: str | None = None, n_objects: int | None = None
+    ) -> None:
         item = self._by_id.get(image_id)
         if item is None:
             return

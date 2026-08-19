@@ -1,4 +1,5 @@
 """Logging tap trung: ghi file xoay vong + phat tin hieu Qt cho UI."""
+
 from __future__ import annotations
 
 import logging

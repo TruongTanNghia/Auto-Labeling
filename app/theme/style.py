@@ -1,11 +1,15 @@
-"""Dark Fluent stylesheet - sinh dong tu bang mau trong constants."""
+"""Fluent stylesheet hỗ trợ chủ đề Tối / Sáng / Theo hệ thống."""
+
 from __future__ import annotations
 
 import re
 
-from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QGuiApplication
+from PySide6.QtWidgets import QApplication
 
-from app.constants import COLORS
+from app.config import cfg
+from app.constants import COLORS, DARK_COLORS, LIGHT_COLORS
 
 _QSS = """
 /* ============================================================ CO BAN === */
@@ -53,10 +57,10 @@ QToolTip {
     font-size: 13px;
     font-weight: 500;
 }
-#NavButton:hover { background: @surface@; color: @text@; }
+#NavButton:hover { background: @surface_hi@; color: @text@; }
 #NavButton:checked {
     background: @accent_soft@;
-    color: #FFFFFF;
+    color: @accent@;
     font-weight: 650;
 }
 
@@ -103,8 +107,8 @@ QPushButton {
     font-size: 13px;
     font-weight: 600;
 }
-QPushButton:hover { background: #30304A; border-color: #45455F; }
-QPushButton:pressed { background: #24243A; }
+QPushButton:hover { background: @surface_alt@; border-color: @border_hi@; }
+QPushButton:pressed { background: @border@; }
 QPushButton:disabled { background: @surface_alt@; color: @text_mute@; border-color: @border@; }
 
 QPushButton#Primary {
@@ -112,13 +116,13 @@ QPushButton#Primary {
 }
 QPushButton#Primary:hover { background: @accent_hi@; border-color: @accent_hi@; }
 QPushButton#Primary:pressed { background: @accent_dim@; }
-QPushButton#Primary:disabled { background: #3A3358; color: #8A85A8; border-color: #3A3358; }
+QPushButton#Primary:disabled { background: @surface_alt@; color: @text_mute@; border-color: @border@; }
 
-QPushButton#Success { background: @success@; color: #07281A; border: 1px solid @success@; }
-QPushButton#Success:hover { background: #56E5A0; }
+QPushButton#Success { background: @success@; color: #FFFFFF; border: 1px solid @success@; }
+QPushButton#Success:hover { opacity: 0.9; }
 QPushButton#Danger { background: @danger@; color: #FFFFFF; border: 1px solid @danger@; }
-QPushButton#Danger:hover { background: #FF6C84; }
-QPushButton#Warning { background: @warning@; color: #2A1A00; border: 1px solid @warning@; }
+QPushButton#Danger:hover { opacity: 0.9; }
+QPushButton#Warning { background: @warning@; color: #FFFFFF; border: 1px solid @warning@; }
 
 /* Trang thai vo hieu hoa phai thay ro o moi loai nut */
 QPushButton#Success:disabled, QPushButton#Danger:disabled,
@@ -136,7 +140,7 @@ QPushButton#Link {
     background: transparent; border: none; color: @accent_hi@;
     padding: 2px 4px; font-weight: 600; text-decoration: underline;
 }
-QPushButton#Link:hover { color: #B9A6FF; }
+QPushButton#Link:hover { color: @accent@; }
 
 QPushButton#IconBtn {
     background: transparent; border: 1px solid transparent; border-radius: 8px;
@@ -150,21 +154,21 @@ QPushButton#Chip {
     padding: 6px 11px; font-size: 12px; font-weight: 600; color: @text_dim@;
 }
 QPushButton#Chip:hover { border-color: @accent@; color: @text@; }
-QPushButton#Chip:checked { background: @accent_soft@; border-color: @accent@; color: #FFFFFF; }
+QPushButton#Chip:checked { background: @accent_soft@; border-color: @accent@; color: @accent@; }
 
 QPushButton#Tool {
     background: transparent; border: 1px solid @border@; border-radius: 8px;
     padding: 6px 10px; color: @text_dim@; font-weight: 600; font-size: 12px;
 }
 QPushButton#Tool:hover { background: @surface_hi@; color: @text@; }
-QPushButton#Tool:checked { background: @accent_soft@; border-color: @accent@; color: #FFFFFF; }
+QPushButton#Tool:checked { background: @accent_soft@; border-color: @accent@; color: @accent@; }
 
 QPushButton#SubTab {
     background: transparent; border: none; border-radius: 8px;
     padding: 8px 12px; text-align: left; color: @text_dim@; font-weight: 600;
 }
 QPushButton#SubTab:hover { background: @surface_hi@; color: @text@; }
-QPushButton#SubTab:checked { background: @accent_soft@; color: #FFFFFF; }
+QPushButton#SubTab:checked { background: @accent_soft@; color: @accent@; }
 
 /* ============================================================ INPUT === */
 QLineEdit, QPlainTextEdit, QTextEdit, QSpinBox, QDoubleSpinBox, QComboBox {
@@ -192,7 +196,7 @@ QComboBox QAbstractItemView {
     padding: 4px;
     outline: none;
     selection-background-color: @accent_soft@;
-    selection-color: #FFFFFF;
+    selection-color: @text@;
 }
 
 QSpinBox::up-button, QDoubleSpinBox::up-button,
@@ -231,12 +235,12 @@ QRadioButton::indicator:checked { border: 5px solid @accent@; background: @bg_al
 QSlider::groove:horizontal { height: 4px; background: @surface_hi@; border-radius: 2px; }
 QSlider::sub-page:horizontal { background: @accent@; border-radius: 2px; }
 QSlider::handle:horizontal {
-    background: #FFFFFF; width: 14px; height: 14px; margin: -6px 0; border-radius: 7px;
+    background: @bg_alt@; width: 14px; height: 14px; margin: -6px 0; border-radius: 7px;
     border: 2px solid @accent@;
 }
 QSlider::handle:horizontal:hover { background: @accent_hi@; }
 QSlider::groove:vertical { width: 4px; background: @surface_hi@; border-radius: 2px; }
-QSlider::handle:vertical { background: #FFFFFF; height: 14px; margin: 0 -6px; border-radius: 7px; }
+QSlider::handle:vertical { background: @bg_alt@; height: 14px; margin: 0 -6px; border-radius: 7px; }
 
 /* ========================================================= PROGRESS === */
 QProgressBar {
@@ -253,17 +257,17 @@ QListWidget, QTreeWidget, QTableWidget, QListView, QTreeView, QTableView {
     border: 1px solid @border@;
     border-radius: 10px;
     outline: none;
-    alternate-background-color: #16161F;
+    alternate-background-color: @surface_alt@;
 }
 QListWidget::item, QTreeWidget::item {
     padding: 6px 8px; border-radius: 7px; color: @text_dim@;
 }
-QListWidget::item:hover, QTreeWidget::item:hover { background: @surface@; }
+QListWidget::item:hover, QTreeWidget::item:hover { background: @surface_hi@; }
 QListWidget::item:selected, QTreeWidget::item:selected {
-    background: @accent_soft@; color: #FFFFFF;
+    background: @accent_soft@; color: @text@;
 }
 QTableWidget::item, QTableView::item { padding: 6px 8px; border: none; }
-QTableWidget::item:selected, QTableView::item:selected { background: @accent_soft@; color: #FFFFFF; }
+QTableWidget::item:selected, QTableView::item:selected { background: @accent_soft@; color: @text@; }
 
 QHeaderView::section {
     background: @surface_alt@;
@@ -283,11 +287,11 @@ QScrollBar:vertical {
     background: transparent; width: 10px; margin: 2px 2px 2px 0;
 }
 QScrollBar::handle:vertical {
-    background: #33334A; min-height: 30px; border-radius: 5px;
+    background: @border_hi@; min-height: 30px; border-radius: 5px;
 }
 QScrollBar::handle:vertical:hover { background: @accent_dim@; }
 QScrollBar:horizontal { background: transparent; height: 10px; margin: 0 2px 2px 2px; }
-QScrollBar::handle:horizontal { background: #33334A; min-width: 30px; border-radius: 5px; }
+QScrollBar::handle:horizontal { background: @border_hi@; min-width: 30px; border-radius: 5px; }
 QScrollBar::handle:horizontal:hover { background: @accent_dim@; }
 QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; background: none; border: none; }
 QScrollBar::add-page, QScrollBar::sub-page { background: none; }
@@ -302,7 +306,7 @@ QTabBar::tab {
     font-weight: 600;
 }
 QTabBar::tab:hover { color: @text@; }
-QTabBar::tab:selected { background: @surface@; color: #FFFFFF; border: 1px solid @border@; border-bottom: none; }
+QTabBar::tab:selected { background: @surface@; color: @text@; border: 1px solid @border@; border-bottom: none; }
 
 /* ============================================================ SPLIT === */
 QSplitter::handle { background: transparent; }
@@ -316,7 +320,7 @@ QMenu {
     border-radius: 10px; padding: 6px;
 }
 QMenu::item { padding: 7px 26px 7px 14px; border-radius: 7px; color: @text_dim@; }
-QMenu::item:selected { background: @accent_soft@; color: #FFFFFF; }
+QMenu::item:selected { background: @accent_soft@; color: @text@; }
 QMenu::separator { height: 1px; background: @border@; margin: 5px 8px; }
 
 QMenuBar { background: @bg_alt@; }
@@ -335,39 +339,125 @@ QMessageBox QLabel { color: @text@; }
 #StatusDot { border-radius: 4px; min-width: 8px; max-width: 8px; min-height: 8px; max-height: 8px; }
 
 #LogView {
-    background: #0B0B12; border: 1px solid @border@; border-radius: 10px;
+    background: @log_bg@; border: 1px solid @border@; border-radius: 10px;
     font-family: "Cascadia Mono", "JetBrains Mono", "Consolas", monospace;
-    font-size: 11.5px; color: #B9B9CF; padding: 8px;
+    font-size: 11.5px; color: @log_text@; padding: 8px;
 }
 
-#Canvas { background: #0A0A10; border: 1px solid @border@; border-radius: 12px; }
+#Canvas { background: @canvas_bg@; border: 1px solid @border@; border-radius: 12px; }
 #ThumbList { background: @bg_alt@; border: 1px solid @border@; border-radius: 10px; }
 """
 
 
-def build_stylesheet(accent: str | None = None) -> str:
-    colors = dict(COLORS)
+def resolve_theme(theme_setting: str | None = None) -> str:
+    """Xác định chủ đề thực tế: 'Dark' hoặc 'Light'."""
+    if not theme_setting:
+        theme_setting = cfg.get("general.theme", "Dark")
+    s = str(theme_setting).strip().lower()
+    if s in ("system", "theo hệ thống", "theo he thong", "auto"):
+        app = QGuiApplication.instance()
+        if app is not None:
+            scheme = app.styleHints().colorScheme()
+            if scheme == Qt.ColorScheme.Dark:
+                return "Dark"
+            elif scheme == Qt.ColorScheme.Light:
+                return "Light"
+        return "Dark"
+    if s in ("light", "sáng", "sang"):
+        return "Light"
+    return "Dark"
+
+
+def get_theme_colors(theme_setting: str | None = None) -> dict[str, str]:
+    """Trả về bảng token màu sắc tương ứng với chủ đề đã resolve."""
+    resolved = resolve_theme(theme_setting)
+    return dict(LIGHT_COLORS) if resolved == "Light" else dict(DARK_COLORS)
+
+
+def apply_theme(
+    app: QApplication | None = None,
+    theme_setting: str | None = None,
+    accent: str | None = None,
+) -> str:
+    """Áp dụng chủ đề mới cho toàn bộ ứng dụng động (đổi nóng)."""
+    from app.theme.icons import icon, pixmap
+
+    if theme_setting is None:
+        theme_setting = cfg.get("general.theme", "Dark")
+    if accent is None:
+        accent = cfg.get("general.accent", None)
+
+    resolved = resolve_theme(theme_setting)
+    tokens = get_theme_colors(resolved)
+
+    # Cập nhật từ điển COLORS toàn cục
+    COLORS.clear()
+    COLORS.update(tokens)
+
+    # Xoá cache icon
+    pixmap.cache_clear()
+    icon.cache_clear()
+
+    # Dọn dẹp cache file asset (png)
+    from app.utils.paths import user_data_dir
+
+    cache_dir = user_data_dir() / "cache"
+    if cache_dir.exists():
+        for f in cache_dir.glob("*.png"):
+            try:
+                f.unlink()
+            except Exception:
+                pass
+
+    qss = build_stylesheet(accent=accent, theme_name=resolved)
+
+    if app is None:
+        app = QApplication.instance()
+    if app is not None:
+        app.setStyleSheet(qss)
+
+    return qss
+
+
+def build_stylesheet(accent: str | None = None, theme_name: str | None = None) -> str:
+    resolved = resolve_theme(theme_name)
+    colors = get_theme_colors(resolved)
+
     if accent:
         colors["accent"] = accent
         colors["accent_hi"] = _shift(accent, 1.22)
         colors["accent_dim"] = _shift(accent, 0.78)
-        colors["accent_soft"] = _mix(accent, COLORS["bg"], 0.26)
-    qss = (_QSS
-           .replace("@check_icon@", _asset("check_white.png", "check", "#FFFFFF", 14, 3.0))
-           .replace("@arrow_up@", _asset("chev_up.png", "chevron_up",
-                                         COLORS["text_dim"], 12, 2.6))
-           .replace("@arrow_down@", _asset("chev_down.png", "chevron_down",
-                                           COLORS["text_dim"], 12, 2.6)))
+        colors["accent_soft"] = _mix(accent, colors["bg"], 0.26)
+
+    qss = (
+        _QSS.replace(
+            "@check_icon@",
+            _asset(
+                f"check_{resolved}.png",
+                "check",
+                "#FFFFFF" if resolved == "Dark" else colors["accent"],
+                14,
+                3.0,
+            ),
+        )
+        .replace(
+            "@arrow_up@",
+            _asset(f"chev_up_{resolved}.png", "chevron_up", colors["text_dim"], 12, 2.6),
+        )
+        .replace(
+            "@arrow_down@",
+            _asset(f"chev_down_{resolved}.png", "chevron_down", colors["text_dim"], 12, 2.6),
+        )
+    )
     for key, val in colors.items():
         qss = qss.replace(f"@{key}@", val)
-    # Don sach token con sot (neu co)
-    qss = re.sub(r"@[a-z_]+@", COLORS["text"], qss)
+    # Dọn sạch token còn sót (nếu có)
+    qss = re.sub(r"@[a-z_]+@", colors["text"], qss)
     return qss
 
 
-def _asset(filename: str, icon_name: str, color: str, size: int,
-           stroke: float) -> str:
-    """Sinh (mot lan) file PNG cho cac phan tu ma QSS chi nhan qua url()."""
+def _asset(filename: str, icon_name: str, color: str, size: int, stroke: float) -> str:
+    """Sinh (một lần) file PNG cho các phần tử mà QSS chỉ nhận qua url()."""
     from app.theme.icons import pixmap
     from app.utils.paths import ensure_dir, user_data_dir
 

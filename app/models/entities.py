@@ -1,4 +1,5 @@
 """Cac doi tuong du lieu cua tang Model."""
+
 from __future__ import annotations
 
 import json
@@ -24,10 +25,14 @@ class ClassDef:
     locked: bool = False
 
     @staticmethod
-    def from_row(row) -> "ClassDef":
+    def from_row(row) -> ClassDef:
         return ClassDef(
-            id=row["id"], index=row["idx"], name=row["name"], color=row["color"],
-            visible=bool(row["visible"]), locked=bool(row["locked"]),
+            id=row["id"],
+            index=row["idx"],
+            name=row["name"],
+            color=row["color"],
+            visible=bool(row["visible"]),
+            locked=bool(row["locked"]),
         )
 
 
@@ -51,15 +56,23 @@ class ImageRecord:
     note: str = ""
 
     @staticmethod
-    def from_row(row) -> "ImageRecord":
+    def from_row(row) -> ImageRecord:
         keys = row.keys()
         return ImageRecord(
-            id=row["id"], path=row["path"], filename=row["filename"],
-            width=row["width"], height=row["height"], source=row["source"],
-            frame_index=row["frame_index"], timestamp=row["timestamp"],
-            phash=row["phash"] or "", blur_score=row["blur_score"] or 0.0,
-            brightness=row["brightness"] or 0.0, status=row["status"],
-            is_duplicate=bool(row["is_duplicate"]), dup_of=row["dup_of"] or 0,
+            id=row["id"],
+            path=row["path"],
+            filename=row["filename"],
+            width=row["width"],
+            height=row["height"],
+            source=row["source"],
+            frame_index=row["frame_index"],
+            timestamp=row["timestamp"],
+            phash=row["phash"] or "",
+            blur_score=row["blur_score"] or 0.0,
+            brightness=row["brightness"] or 0.0,
+            status=row["status"],
+            is_duplicate=bool(row["is_duplicate"]),
+            dup_of=row["dup_of"] or 0,
             n_objects=row["n_objects"] if "n_objects" in keys else 0,
             note=row["note"] or "" if "note" in keys else "",
         )
@@ -85,6 +98,7 @@ class Annotation:
     status: str = ANN_AUTO
     area: float = 0.0
     source: str = "manual"
+    track_id: int | None = None
 
     # ------------------------------------------------------------ tien ich --
     @property
@@ -131,27 +145,44 @@ class Annotation:
     def effective_points(self) -> list[tuple[float, float]]:
         return self.points() if len(self.polygon) >= 6 else self.bbox_polygon()
 
-    def clone(self) -> "Annotation":
+    def clone(self) -> Annotation:
         return Annotation(
-            id=self.id, image_id=self.image_id, class_id=self.class_id,
-            class_index=self.class_index, class_name=self.class_name, shape=self.shape,
-            bbox=list(self.bbox), polygon=list(self.polygon), keypoints=list(self.keypoints),
-            confidence=self.confidence, status=self.status, area=self.area, source=self.source,
+            id=self.id,
+            image_id=self.image_id,
+            class_id=self.class_id,
+            class_index=self.class_index,
+            class_name=self.class_name,
+            shape=self.shape,
+            bbox=list(self.bbox),
+            polygon=list(self.polygon),
+            keypoints=list(self.keypoints),
+            confidence=self.confidence,
+            status=self.status,
+            area=self.area,
+            source=self.source,
+            track_id=self.track_id,
         )
 
     @staticmethod
-    def from_row(row) -> "Annotation":
+    def from_row(row) -> Annotation:
         keys = row.keys()
         return Annotation(
-            id=row["id"], image_id=row["image_id"], class_id=row["class_id"],
+            id=row["id"],
+            image_id=row["image_id"],
+            class_id=row["class_id"],
             class_index=row["class_index"] if "class_index" in keys else 0,
             class_name=row["class_name"] if "class_name" in keys else "",
             shape=row["shape"],
             bbox=json.loads(row["bbox"]) if row["bbox"] else [0, 0, 0, 0],
             polygon=json.loads(row["polygon"]) if row["polygon"] else [],
             keypoints=json.loads(row["keypoints"]) if row["keypoints"] else [],
-            confidence=row["confidence"], status=row["status"],
-            area=row["area"] or 0.0, source=row["source"] or "",
+            confidence=row["confidence"],
+            status=row["status"],
+            area=row["area"] or 0.0,
+            source=row["source"] or "",
+            track_id=row["track_id"]
+            if "track_id" in keys and row["track_id"] is not None
+            else None,
         )
 
 

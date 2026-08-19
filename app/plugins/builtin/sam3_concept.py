@@ -9,12 +9,14 @@ Yeu cau:
   - file sam3.pt dat trong thu muc weights (Meta yeu cau xin quyen tren Hugging Face,
     khong tai tu dong duoc)
 """
+
 from __future__ import annotations
 
 import numpy as np
 
 from app.constants import SHAPE_BBOX, SHAPE_POLYGON
 from app.core.inference import Detection, mask_to_polygons, resolve_device
+from app.i18n import tr
 from app.plugins.base import AnnotatorPlugin, PluginContext, PluginInfo, PluginParam
 from app.plugins.builtin.sam_refiner import ultralytics_version
 
@@ -24,14 +26,15 @@ MIN_VERSION = (8, 3, 237)
 class Sam3ConceptPlugin(AnnotatorPlugin):
     info = PluginInfo(
         key="sam3_concept",
-        name="SAM 3 Concept (prompt van ban)",
+        name=tr("plugins.sam3_concept.name", "SAM 3 Concept (prompt văn bản)"),
         version="1.0",
         author="AutoLabel Studio AI",
-        description=(
-            "Sinh annotation cho TAT CA doi tuong khop voi mot khai niem mo ta bang chu, "
-            "khong can train truoc. Vi du prompt: 'crack, rust, bolt'.\n\n"
-            "Khac voi SAM 2 (chi bam theo box/point ban dua vao), SAM 3 tu tim doi tuong "
-            "theo nghia cua tu. Dung khi ban co lop doi tuong ma YOLO COCO khong biet."
+        description=tr(
+            "plugins.sam3_concept.desc",
+            "Sinh annotation cho TẤT CẢ đối tượng khớp với một khái niệm mô tả bằng chữ, "
+            "không cần train trước. Ví dụ prompt: 'crack, rust, bolt'.\n\n"
+            "Khác với SAM 2 (chỉ bấm theo box/point bạn đưa vào), SAM 3 tự tìm đối tượng "
+            "theo nghĩa của từ. Dùng khi bạn có lớp đối tượng mà YOLO COCO không biết.",
         ),
         requires=["ultralytics", "torch"],
         kind="generate",
@@ -45,28 +48,35 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
         return [
             PluginParam(
                 key="weights",
-                label="Trọng số SAM 3",
+                label=tr("plugins.sam3_concept.weights_label", "Trọng số SAM 3"),
                 type="str",
                 default=self.WEIGHTS,
-                description="Tên file trọng số SAM 3 trong thư mục weights",
+                description=tr(
+                    "plugins.sam3_concept.weights_desc",
+                    "Tên file trọng số SAM 3 trong thư mục weights",
+                ),
             ),
             PluginParam(
                 key="min_area",
-                label="Diện tích tối thiểu (px)",
+                label=tr("plugins.sam3_concept.min_area_label", "Diện tích tối thiểu (px)"),
                 type="float",
                 default=40.0,
                 min_value=0.0,
                 max_value=5000.0,
-                description="Ngưỡng diện tích nhỏ nhất của polygon",
+                description=tr(
+                    "plugins.sam3_concept.min_area_desc", "Ngưỡng diện tích nhỏ nhất của polygon"
+                ),
             ),
             PluginParam(
                 key="simplify",
-                label="Độ giản lược polygon",
+                label=tr("plugins.sam3_concept.simplify_label", "Độ giản lược polygon"),
                 type="float",
                 default=0.002,
                 min_value=0.0,
                 max_value=0.05,
-                description="Mức độ làm mịn đường viền polygon",
+                description=tr(
+                    "plugins.sam3_concept.simplify_desc", "Mức độ làm mịn đường viền polygon"
+                ),
             ),
         ]
 
@@ -102,18 +112,30 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
         if ver < MIN_VERSION:
             have = ".".join(str(v) for v in ver)
             need = ".".join(str(v) for v in MIN_VERSION)
-            return False, (f"Can ultralytics >= {need} (dang co {have}). "
-                           f"Nang cap: pip install -U ultralytics")
+            return False, tr(
+                "plugins.sam3_concept.need_ultralytics",
+                "Cần ultralytics >= {need} (đang có {have}). Nâng cấp: pip install -U ultralytics",
+                need=need,
+                have=have,
+            )
         try:
             from ultralytics.models.sam import SAM3SemanticPredictor  # noqa: F401
         except Exception:
-            return False, "Ban ultralytics nay khong co SAM3SemanticPredictor"
+            return False, tr(
+                "plugins.sam3_concept.missing_predictor",
+                "Bản ultralytics này không có SAM3SemanticPredictor",
+            )
 
         if not self._resolve_weights_path():
             from app.utils.paths import weights_dir
-            return False, (f"Chua co {self.WEIGHTS} trong {weights_dir()} hoac app/models/ - "
-                           f"Meta yeu cau xin quyen tren Hugging Face roi tai thu cong")
-        return True, "San sang"
+
+            return False, tr(
+                "plugins.sam3_concept.missing_weights",
+                "Chưa có {weights} trong {dir} hoặc app/models/ - Meta yêu cầu xin quyền trên Hugging Face rồi tải thủ công",
+                weights=self.WEIGHTS,
+                dir=weights_dir(),
+            )
+        return True, tr("plugins.available", "Sẵn sàng")
 
     # ------------------------------------------------------------------- nap --
     def load(self, ctx: PluginContext | None = None, log_cb=None) -> None:
@@ -133,13 +155,15 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
         device = resolve_device(ctx.device if ctx else "auto")
         if log_cb:
             log_cb(f"[SAM3] Dang nap {path.name} ...")
-        self._model = SAM3SemanticPredictor(overrides={
-            "model": str(path),
-            "device": "cpu" if device == "cpu" else device,
-            "conf": ctx.confidence if ctx else 0.35,
-            "save": False,
-            "verbose": False,
-        })
+        self._model = SAM3SemanticPredictor(
+            overrides={
+                "model": str(path),
+                "device": "cpu" if device == "cpu" else device,
+                "conf": ctx.confidence if ctx else 0.35,
+                "save": False,
+                "verbose": False,
+            }
+        )
         self._loaded = True
         if log_cb:
             log_cb("[SAM3] San sang.")
@@ -179,12 +203,14 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
 
         boxes = getattr(res, "boxes", None)
         masks = getattr(res, "masks", None)
-        mask_data = masks.data.cpu().numpy() if (
-            masks is not None and getattr(masks, "data", None) is not None) else None
+        mask_data = (
+            masks.data.cpu().numpy()
+            if (masks is not None and getattr(masks, "data", None) is not None)
+            else None
+        )
         names = getattr(res, "names", {}) or {}
 
-        n = len(boxes) if boxes is not None else (
-            len(mask_data) if mask_data is not None else 0)
+        n = len(boxes) if boxes is not None else (len(mask_data) if mask_data is not None else 0)
         for i in range(n):
             label = concepts[0]
             conf = 1.0
@@ -192,22 +218,31 @@ class Sam3ConceptPlugin(AnnotatorPlugin):
             if boxes is not None and i < len(boxes):
                 cid = int(boxes.cls[i].item()) if getattr(boxes, "cls", None) is not None else 0
                 label = str(names.get(cid, concepts[min(cid, len(concepts) - 1)]))
-                conf = float(boxes.conf[i].item()) if getattr(
-                    boxes, "conf", None) is not None else 1.0
+                conf = (
+                    float(boxes.conf[i].item()) if getattr(boxes, "conf", None) is not None else 1.0
+                )
                 bbox = [float(v) for v in boxes.xyxy[i].tolist()]
 
             det = Detection(
-                class_id=name_to_id.get(label.lower(), 0), class_name=label,
-                confidence=conf, bbox=bbox, shape=SHAPE_BBOX,
+                class_id=name_to_id.get(label.lower(), 0),
+                class_name=label,
+                confidence=conf,
+                bbox=bbox,
+                shape=SHAPE_BBOX,
             )
             if mask_data is not None and i < len(mask_data):
-                polys = mask_to_polygons((mask_data[i] > 0.5).astype(np.uint8),
-                                         min_area=min_area, simplify=simplify)
+                polys = mask_to_polygons(
+                    (mask_data[i] > 0.5).astype(np.uint8), min_area=min_area, simplify=simplify
+                )
                 if polys:
                     arr = np.asarray(max(polys, key=len), dtype=np.float32)
                     det.polygon = [float(v) for v in arr.flatten()]
                     det.shape = SHAPE_POLYGON
-                    det.bbox = [float(arr[:, 0].min()), float(arr[:, 1].min()),
-                                float(arr[:, 0].max()), float(arr[:, 1].max())]
+                    det.bbox = [
+                        float(arr[:, 0].min()),
+                        float(arr[:, 1].min()),
+                        float(arr[:, 0].max()),
+                        float(arr[:, 1].max()),
+                    ]
             out.append(det)
         return out

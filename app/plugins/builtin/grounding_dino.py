@@ -2,6 +2,7 @@
 
 Dung ban tren HuggingFace transformers (IDEA-Research/grounding-dino-tiny|base).
 """
+
 from __future__ import annotations
 
 from app.constants import SHAPE_BBOX
@@ -97,6 +98,7 @@ class GroundingDinoPlugin(AnnotatorPlugin):
 
         if ctx.image is not None:
             import cv2
+
             pil = Image.fromarray(cv2.cvtColor(ctx.image, cv2.COLOR_BGR2RGB))
         else:
             pil = Image.open(ctx.image_path).convert("RGB")
@@ -122,9 +124,13 @@ class GroundingDinoPlugin(AnnotatorPlugin):
             label = str(label).strip(" .")
             cid = names.get(label.lower(), -1)
             x1, y1, x2, y2 = [float(v) for v in box.tolist()]
-            out.append(Detection(
-                class_id=cid if cid >= 0 else 0,
-                class_name=label or (ctx.class_names[0] if ctx.class_names else "object"),
-                confidence=float(score), bbox=[x1, y1, x2, y2], shape=SHAPE_BBOX,
-            ))
+            out.append(
+                Detection(
+                    class_id=cid if cid >= 0 else 0,
+                    class_name=label or (ctx.class_names[0] if ctx.class_names else "object"),
+                    confidence=float(score),
+                    bbox=[x1, y1, x2, y2],
+                    shape=SHAPE_BBOX,
+                )
+            )
         return out
