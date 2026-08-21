@@ -342,6 +342,9 @@ class ModelTrainer:
     def _install_callbacks(self, progress_cb, _log, metric_cb, t0) -> None:
         model = self._model
         total = int(self.cfg.epochs)
+        # Dem batch train ke tu epoch-end gan nhat: epoch that luon co it nhat
+        # mot batch truoc do, con lan callback "ao" trong final_eval thi khong.
+        self._batches_since_epoch = 0
 
         def safe(fn):
             """Loi trong callback cua ta khong duoc phep lam sap qua trinh train."""
@@ -384,11 +387,17 @@ class ModelTrainer:
             except Exception:
                 m.lr = 0.0
 
-            # Ultralytics goi them mot lan sau vong validate cuoi -> khong tinh trung
-            if self.history and self.history[-1].epoch == epoch:
+            # Ultralytics goi them mot lan trong final_eval SAU khi vong train
+            # ket thuc; luc do trainer.epoch da tang them 1 nen so sanh bang
+            # epoch se truot va sinh "epoch ao" (vd hien 3/2). Nhan dien bang
+            # viec khong co batch train nao ke tu epoch-end truoc, roi cap nhat
+            # metric da validate lai vao epoch cuoi thay vi them epoch moi.
+            if self.history and self._batches_since_epoch == 0:
+                m.epoch = self.history[-1].epoch
                 self.history[-1] = m
                 return
 
+            self._batches_since_epoch = 0
             self.history.append(m)
             _log(m.as_line())
             if metric_cb:
@@ -406,6 +415,7 @@ class ModelTrainer:
                 )
 
         def on_batch_end(trainer):
+            self._batches_since_epoch += 1
             if self._cancelled:
                 trainer.stop_training = True
                 trainer.stop = True

@@ -1,6 +1,6 @@
 # Tài liệu kiểm thử — AutoLabel Studio AI
 
-> Phiên bản 1.0 · Cập nhật 2026-08 · Kèm biên bản 3 lỗi tìm được và đã vá khi kiểm thử luồng Auto Label với model thật.
+> Phiên bản 1.1 · Cập nhật 2026-08 · Kèm biên bản 4 lỗi tìm được và đã vá khi kiểm thử luồng Auto Label + Train với model thật.
 
 ## 1. Chiến lược kiểm thử
 
@@ -32,6 +32,12 @@ Cài đặt tại [tests/test_autolabel_flow.py](../tests/test_autolabel_flow.py
 | TC-AL-04 | (BUG-03) Re-run không detect → status nhất quán | Ảnh có nhãn cũ, chạy lại với model trả về rỗng | Nhãn cũ bị xóa, `n_objects=0`, status trả về `unlabeled` |
 | TC-AL-05 | (BUG-01) Gỡ tracker khỏi predict thường | Model giả có callback tracker + trạng thái trackers; gọi `_detach_tracker()` | Callback tracker bị gỡ, callback khác giữ nguyên, `predictor.trackers` bị xóa để lần track sau đăng ký lại |
 | TC-AL-06 | (BUG-02) Không xóa file model của người dùng | Gọi `purge_corrupt_weight` với file .pt < 1MB ngoài weights_dir và file trong weights_dir | File ngoài: **còn nguyên**, trả về False; file trong weights_dir: xóa, trả về True |
+| TC-TR-01 | (BUG-04) final_eval không sinh epoch ảo | Giả lập 2 epoch (có batch) + 1 callback final_eval (không batch, epoch đã tăng) | `history` đúng `[1, 2]`, metric validate cuối cập nhật vào epoch cuối |
+| TC-TR-02 | Dừng sớm (patience) vẫn không sinh epoch ảo | 3/10 epoch rồi final_eval | `history == [1, 2, 3]` |
+| TC-TR-03 | Đọc đúng metric từ Ultralytics | Callback với loss/mAP/lr giả lập | box/cls loss, mAP50, mAP50-95, lr khớp giá trị |
+| TC-TR-04 | Cancel dừng vòng train | `cancel()` rồi bắn callback batch | `trainer.stop`/`stop_training` = True |
+
+> TC-TR-* nằm tại [tests/test_trainer.py](../tests/test_trainer.py).
 
 ### Nhóm B — E2E model thật (`ALS_E2E=1`)
 
@@ -51,6 +57,8 @@ Kết quả ghi nhận trên RTX 3050 Laptop (4GB):
 - Segmentation: 6/6 detection có polygon.
 - SAHI trên mosaic: 46 detection so với 18 khi inference thường.
 - Export YOLO detection: 73 dòng nhãn = 73 đối tượng, tọa độ chuẩn hóa [0,1], có `data.yaml`.
+
+**Luồng Train (E2E thật, RTX 3050, 2026-08):** project 12 ảnh → auto-label 48 đối tượng → `TrainWorker` tự dựng dataset YOLO (`runs/dataset/data.yaml`) → train yolo11n 2 epoch/imgsz 320 (~20s GPU) → metric bắn về từng epoch → `best.pt` được ghi, nạp lại và suy luận được. Phát hiện + vá BUG-04 trong lần chạy này.
 
 ## 3. Biên bản lỗi (đã vá 2026-08)
 
@@ -72,6 +80,13 @@ Kết quả ghi nhận trên RTX 3050 Laptop (4GB):
 - **Hiện tượng**: ảnh đã có nhãn, chạy lại auto label (overwrite) mà model không phát hiện gì → nhãn cũ bị xóa nhưng ảnh vẫn hiển thị "Máy gán nhãn"/"Cần xem lại" với 0 đối tượng; bộ lọc và thống kê sai.
 - **Cách vá**: khi không có detection và ảnh trước đó có nhãn → đặt status về `unlabeled`.
 - **Hồi quy**: TC-AL-04.
+
+### BUG-04 — Train hiển thị "epoch ảo" vượt tổng (3/2) · Nghiêm trọng: **THẤP**
+
+- **Hiện tượng**: train N epoch nhưng UI/log hiện epoch `N+1/N`, `epochs_done = N+1`, biểu đồ metric có thêm một điểm thừa.
+- **Nguyên nhân gốc**: sau vòng train, Ultralytics tăng `trainer.epoch` thêm 1 **rồi mới** chạy `final_eval`, và final_eval vẫn bắn `on_fit_epoch_end`; guard cũ so sánh bằng epoch nên trượt.
+- **Cách vá**: đếm số batch train kể từ epoch-end gần nhất — epoch thật luôn có ≥1 batch, lần gọi trong final_eval thì không → cập nhật metric validate cuối vào epoch cuối thay vì thêm epoch mới. Cách này đúng cả khi dừng sớm do patience.
+- **Hồi quy**: TC-TR-01, TC-TR-02.
 
 ## 4. Checklist smoke test giao diện (thủ công, trước phát hành)
 
