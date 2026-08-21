@@ -88,6 +88,18 @@ Kết quả ghi nhận trên RTX 3050 Laptop (4GB):
 - **Cách vá**: đếm số batch train kể từ epoch-end gần nhất — epoch thật luôn có ≥1 batch, lần gọi trong final_eval thì không → cập nhật metric validate cuối vào epoch cuối thay vì thêm epoch mới. Cách này đúng cả khi dừng sớm do patience.
 - **Hồi quy**: TC-TR-01, TC-TR-02.
 
+### BUG-05 — Combobox "Trọng số SAM" (trang Auto Label) không có tác dụng · Nghiêm trọng: **THẤP**
+
+- **Hiện tượng**: đổi lựa chọn trọng số SAM ở khung Plugin của trang Auto Label không lưu, không ảnh hưởng suy luận (hàm xử lý được viết nhưng quên `connect` vào combobox).
+- **Cách vá**: nối `currentIndexChanged` với hàm lưu `sam.weights`.
+- **Hồi quy**: TC-UI-05 (`tests/test_ui.py::test_autolabel_plugin_controls`).
+
+### BUG-06 — Ô nhập prompt bị ẩn vĩnh viễn ở trang Auto Label · Nghiêm trọng: **CAO (về tính năng)**
+
+- **Hiện tượng**: ô prompt văn bản được tạo với `setVisible(False)` và về sau chỉ được enable/disable, không bao giờ hiện lại → các plugin cần prompt (**SAM 3 Concept, Grounding DINO, Florence-2, FastSAM**) không thể nhập prompt từ giao diện, tức không dùng được đúng nghĩa từ UI dù backend hoạt động.
+- **Cách vá**: hiện/ẩn ô prompt theo `info.accepts_prompt` khi đổi plugin.
+- **Hồi quy**: TC-UI-05.
+
 ## 4. Checklist smoke test giao diện (thủ công, trước phát hành)
 
 1. ☐ Mở app → Dashboard hiện GPU đúng (hoặc CPU), không lỗi console.

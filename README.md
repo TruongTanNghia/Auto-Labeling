@@ -212,6 +212,8 @@ ALS_E2E=1 pytest tests/test_autolabel_flow.py -k e2e
 | Tài liệu | Nội dung |
 | --- | --- |
 | [Tài liệu hệ thống](docs/TAI-LIEU-HE-THONG.md) | Kiến trúc, luồng nghiệp vụ Auto Label, lược đồ DB, quy tắc phát triển |
+| [Tài liệu nghiệp vụ](docs/TAI-LIEU-NGHIEP-VU.md) | Đặc tả quy tắc nghiệp vụ (BR-xx) cho đội Tester/QA, vòng đời trạng thái, ca biên |
+| [Đặc tả chức năng chi tiết](docs/TAI-LIEU-CHUC-NANG-CHI-TIET.md) | Từng nút, thanh trượt, ô tham số trên cả 9 trang — mặc định/phạm vi/hành vi |
 | [Tài liệu kiểm thử](docs/TAI-LIEU-KIEM-THU.md) | Danh mục test case, biên bản lỗi đã vá, checklist smoke test |
 | [Tài liệu vận hành](docs/TAI-LIEU-VAN-HANH.md) | Cài đặt, sao lưu/phục hồi, CI/CD, xử lý sự cố |
 

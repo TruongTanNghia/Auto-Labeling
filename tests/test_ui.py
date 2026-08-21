@@ -128,3 +128,44 @@ def test_editor_page_initialization_on_show(qapp, tmp_dir: Path):
         ctrl.shutdown()
         win.deleteLater()
         qapp.processEvents()
+
+
+def test_autolabel_plugin_controls(qapp, sample_data):
+    """TC-UI-05 (BUG-05/06): combo SAM phai luu cfg khi doi; o prompt phai HIEN
+    voi plugin nhan prompt van ban va an lai khi bo chon plugin."""
+    from app.config import cfg
+    from app.plugins.base import registry
+
+    ctrl = AppController()
+    win = MainWindow(ctrl)
+    win.show()
+    qapp.processEvents()
+
+    try:
+        win.go_to_page("autolabel")
+        qapp.processEvents()
+        page = win.pages["autolabel"]
+
+        # BUG-05: doi trong so SAM tren trang Auto Label phai duoc luu vao cfg
+        page.plugin_sam_combo.setCurrentIndex(1)  # sam2_b.pt
+        qapp.processEvents()
+        assert cfg.get("sam.weights") == page.plugin_sam_combo.currentData()
+
+        # BUG-06: chon plugin nhan prompt -> o prompt phai hien va go duoc
+        prompt_keys = [i.key for i in registry.infos() if i.accepts_prompt]
+        assert prompt_keys, "khong co plugin nhan prompt de kiem thu"
+        idx = page.plugin_combo.findData(prompt_keys[0])
+        assert idx >= 0
+        page.plugin_combo.setCurrentIndex(idx)
+        qapp.processEvents()
+        assert not page.plugin_prompt.isHidden()  # da duoc setVisible(True)
+        assert page.plugin_prompt.isEnabled()
+
+        # Bo chon plugin -> o prompt an di
+        page.plugin_combo.setCurrentIndex(0)
+        qapp.processEvents()
+        assert page.plugin_prompt.isHidden()
+    finally:
+        ctrl.shutdown()
+        win.deleteLater()
+        qapp.processEvents()

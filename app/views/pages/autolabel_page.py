@@ -536,6 +536,7 @@ class AutoLabelPage(BasePage):
             sam_presets,
             current=cur_sam if any(w == cur_sam for w, _ in sam_presets) else "sam2_l.pt",
         )
+        self.plugin_sam_combo.currentIndexChanged.connect(self._on_plugin_sam_changed)
         self.plugin_sam_field = Field(
             tr("autolabel.sam_weights", "Trọng số SAM"),
             self.plugin_sam_combo,
@@ -671,6 +672,7 @@ class AutoLabelPage(BasePage):
             self.plugin_status.setText("")
             if hasattr(self, "plugin_prompt"):
                 self.plugin_prompt.setEnabled(False)
+                self.plugin_prompt.setVisible(False)
             return
         info = next((i for i in registry.infos() if i.key == key), None)
         if info is None:
@@ -678,6 +680,9 @@ class AutoLabelPage(BasePage):
         self.plugin_desc.setText(info.description)
         if hasattr(self, "plugin_prompt"):
             self.plugin_prompt.setEnabled(info.accepts_prompt)
+            # O prompt phai HIEN cho plugin nhan prompt van ban (SAM3/G-DINO/
+            # Florence-2) — truoc day chi setEnabled nen o bi an vinh vien.
+            self.plugin_prompt.setVisible(info.accepts_prompt)
         ok, msg = registry.status(key)
         color = COLORS["success"] if ok else COLORS["warning"]
         self.plugin_status.setText(msg)
