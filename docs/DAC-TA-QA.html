@@ -1,0 +1,3002 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đặc tả nghiệp vụ AutoLabel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --paper:#FAFBFA; --surface:#FFFFFF; --ink:#1C2725; --ink-dim:#53625E;
+  --line:#DCE5E2; --accent:#0E7C6B; --accent-ink:#0A5A4E; --accent-soft:#E4F0ED;
+  --amber:#9A5B08; --amber-soft:#F7EBD8; --rose:#9E3434; --rose-soft:#F6E4E4;
+  --blue:#2C5E9E; --blue-soft:#E2ECF7; --code-bg:#F0F4F3;
+}
+:root:not([data-theme="light"]) {}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:#111917; --surface:#18211F; --ink:#E4ECE9; --ink-dim:#93A5A0;
+    --line:#2A3634; --accent:#3BAE99; --accent-ink:#6BCBB9; --accent-soft:#1C312D;
+    --amber:#E0A85C; --amber-soft:#332A18; --rose:#E08A8A; --rose-soft:#33201F;
+    --blue:#7FAEE0; --blue-soft:#1B2836; --code-bg:#1F2B28;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:#111917; --surface:#18211F; --ink:#E4ECE9; --ink-dim:#93A5A0;
+  --line:#2A3634; --accent:#3BAE99; --accent-ink:#6BCBB9; --accent-soft:#1C312D;
+  --amber:#E0A85C; --amber-soft:#332A18; --rose:#E08A8A; --rose-soft:#33201F;
+  --blue:#7FAEE0; --blue-soft:#1B2836; --code-bg:#1F2B28;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  font-size:15px; line-height:1.65;
+}
+.shell { display:flex; min-height:100vh; }
+nav {
+  width:280px; flex:0 0 280px; border-right:1px solid var(--line);
+  padding:26px 18px; position:sticky; top:0; height:100vh; overflow-y:auto;
+  background:var(--surface);
+}
+nav .brand { font-weight:800; font-size:15px; letter-spacing:.01em; margin-bottom:2px; }
+nav .brand-sub { font-size:11.5px; color:var(--ink-dim); margin-bottom:18px; }
+nav .grp { font-size:10.5px; text-transform:uppercase; letter-spacing:.09em;
+  color:var(--accent); font-weight:600; margin:18px 0 6px; }
+nav a { display:block; color:var(--ink-dim); text-decoration:none; font-size:12.5px;
+  padding:3px 8px; border-radius:6px; border-left:2px solid transparent; }
+nav a:hover { color:var(--ink); background:var(--accent-soft); }
+nav a.toc-l1 { font-weight:600; color:var(--ink); margin-top:6px; }
+nav a.toc-l2 { padding-left:18px; }
+main { flex:1; min-width:0; padding:40px 48px 90px; }
+.doc { max-width:980px; }
+header.hero { border-bottom:2px solid var(--accent); padding-bottom:22px; margin-bottom:30px; }
+header.hero .eyebrow { font-size:11px; text-transform:uppercase; letter-spacing:.12em;
+  color:var(--accent-ink); font-weight:600; }
+header.hero h1 { font-size:31px; font-weight:800; margin:6px 0 8px; line-height:1.2;
+  text-wrap:balance; }
+header.hero p { color:var(--ink-dim); max-width:64ch; margin:0; }
+h1 { font-size:23px; font-weight:800; margin:44px 0 10px; padding-top:18px;
+  border-top:1px solid var(--line); text-wrap:balance; }
+h2 { font-size:17.5px; font-weight:600; margin:28px 0 8px; text-wrap:balance; }
+h3 { font-size:15px; font-weight:600; margin:20px 0 6px; }
+p { max-width:76ch; }
+blockquote { margin:14px 0; padding:10px 16px; border-left:3px solid var(--accent);
+  background:var(--accent-soft); border-radius:0 8px 8px 0; color:var(--ink); }
+blockquote p { margin:4px 0; }
+.tbl { overflow-x:auto; margin:12px 0 20px; border:1px solid var(--line);
+  border-radius:10px; background:var(--surface); }
+table { border-collapse:collapse; width:100%; font-size:13.5px; }
+th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.07em;
+  color:var(--ink-dim); font-weight:600; padding:9px 12px; border-bottom:2px solid var(--line);
+  white-space:nowrap; }
+td { padding:8px 12px; border-bottom:1px solid var(--line); vertical-align:top;
+  font-variant-numeric:tabular-nums; }
+tr:last-child td { border-bottom:none; }
+tbody tr:hover td { background:var(--accent-soft); }
+code { font-family:"IBM Plex Mono", Consolas, monospace; font-size:12.5px;
+  background:var(--code-bg); padding:1px 5px; border-radius:5px; }
+pre { background:var(--code-bg); border:1px solid var(--line); border-radius:10px;
+  padding:14px 16px; overflow-x:auto; }
+pre code { background:none; padding:0; }
+.chip { display:inline-block; font-family:"IBM Plex Mono", monospace; font-size:11px;
+  font-weight:500; padding:1px 7px; border-radius:999px; white-space:nowrap; }
+.chip-br { background:var(--accent-soft); color:var(--accent-ink); }
+.chip-bug { background:var(--rose-soft); color:var(--rose); }
+.chip-tc { background:var(--blue-soft); color:var(--blue); }
+.chip-edge { background:var(--amber-soft); color:var(--amber); }
+strong { font-weight:600; }
+hr { border:none; border-top:1px solid var(--line); margin:34px 0; }
+a { color:var(--accent-ink); }
+ul, ol { padding-left:22px; }
+li { margin:3px 0; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+@media (max-width: 900px) {
+  .shell { display:block; }
+  nav { position:static; width:auto; height:auto; border-right:none;
+    border-bottom:1px solid var(--line); }
+  main { padding:24px 18px 60px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior:smooth; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav>
+  <div class="brand">AutoLabel Studio AI</div>
+  <div class="brand-sub">Đặc tả nghiệp vụ &amp; chức năng · v1.0 · 08/2026</div>
+  <div class="grp">Phần I — Nghiệp vụ (BR)</div>
+  <a class="toc-l2" href="#br-0">0. Khái niệm cốt lõi (đọc trước khi test)</a><a class="toc-l2" href="#br-1">1. Quản lý Project (Dashboard)</a><a class="toc-l2" href="#br-2">2. Import (nạp dữ liệu vào project)</a><a class="toc-l2" href="#br-3">3. Frame Extractor (cắt frame từ video)</a><a class="toc-l2" href="#br-4">4. Auto Label (gán nhãn tự động) — nghiệp vụ trung tâm</a><a class="toc-l2" href="#br-5">5. Annotation Editor (sửa nhãn)</a><a class="toc-l2" href="#br-6">6. Dataset Manager (quản lý &amp; dọn dẹp)</a><a class="toc-l2" href="#br-7">7. Statistics &amp; Export</a><a class="toc-l2" href="#br-8">8. Train Model</a><a class="toc-l2" href="#br-9">9. Settings</a><a class="toc-l2" href="#br-10">10. Quy tắc xuyên suốt (mọi màn hình)</a><a class="toc-l2" href="#br-11">11. Ca biên &amp; dữ liệu test gợi ý cho đội QA</a><a class="toc-l2" href="#br-12">12. Lỗi đã biết &amp; đã vá (regression bắt buộc mỗi release)</a>
+  <div class="grp">Phần II — Chi tiết từng control</div>
+  <a class="toc-l1" href="#ui-0">1. Trang Import</a><a class="toc-l2" href="#ui-1">1.1. Header (thanh tiêu đề trang)</a><a class="toc-l2" href="#ui-2">1.2. Khung "Nguồn dữ liệu" (cột trái)</a><a class="toc-l2" href="#ui-3">1.3. Khung "Xem trước" (cột phải)</a><a class="toc-l2" href="#ui-4">1.4. Khung "Bước tiếp theo"</a><a class="toc-l2" href="#ui-5">1.5. Khung "Nhập dataset có nhãn" (YOLO/COCO từ Roboflow, CVAT, labelImg…)</a><a class="toc-l2" href="#ui-6">1.6. Thanh tiến trình (cuối trang)</a><a class="toc-l2" href="#ui-7">1.7. Kéo-thả toàn trang</a><a class="toc-l1" href="#ui-8">2. Trang Frame Extractor (Cắt frame)</a><a class="toc-l2" href="#ui-9">2.1. Header</a><a class="toc-l2" href="#ui-10">2.2. Khung "Chế độ cắt frame" — 5 chip chọn một</a><a class="toc-l2" href="#ui-11">2.3. Khung "Lọc chất lượng"</a><a class="toc-l2" href="#ui-12">2.4. Khung "Đầu ra"</a><a class="toc-l2" href="#ui-13">2.5. Cột phải: thông tin &amp; kết quả</a><a class="toc-l1" href="#ui-14">3. Trang Auto Label</a><a class="toc-l2" href="#ui-15">3.1. Header</a><a class="toc-l2" href="#ui-16">3.2. Khung "Ảnh trong project"</a><a class="toc-l2" href="#ui-17">3.3. Khung "Cấu hình model"</a><a class="toc-l2" href="#ui-18">3.4. Khung "Tham số suy luận"</a><a class="toc-l2" href="#ui-19">3.5. Khung "Suy luận cắt lát (ảnh lớn)" — SAHI</a><a class="toc-l2" href="#ui-20">3.6. Khung "Plugin tinh chỉnh"</a><a class="toc-l2" href="#ui-21">3.7. Cột phải</a><a class="toc-l1" href="#ui-22">4. Trang Train Model</a><a class="toc-l2" href="#ui-23">4.1. Header</a><a class="toc-l2" href="#ui-24">4.2. Khung "Model &amp; dữ liệu"</a><a class="toc-l2" href="#ui-25">4.3. Khung "Siêu tham số"</a><a class="toc-l2" href="#ui-26">4.4. Khung "Lịch sử huấn luyện"</a><a class="toc-l2" href="#ui-27">4.5. Cột phải — giám sát realtime (chỉ hiển thị)</a><a class="toc-l1" href="#ui-28">5. Trang Annotation Editor</a><a class="toc-l2" href="#ui-29">5.1. Header</a><a class="toc-l2" href="#ui-30">5.2. Cột trái — khung "Ảnh"</a><a class="toc-l2" href="#ui-31">5.3. Cột trái — khung "Lớp đối tượng"</a><a class="toc-l2" href="#ui-32">5.4. Thanh công cụ (8 nút chọn-một + nút lệnh)</a><a class="toc-l2" href="#ui-33">5.5. Thanh tùy chọn công cụ (ẩn mặc định)</a><a class="toc-l2" href="#ui-34">5.6. Thanh điều hướng dưới canvas</a><a class="toc-l2" href="#ui-35">5.7. Cột phải</a><a class="toc-l1" href="#ui-36">6. Trang Dataset Manager</a><a class="toc-l2" href="#ui-37">6.1. Header</a><a class="toc-l2" href="#ui-38">6.2. Hàng 6 thẻ thống kê</a><a class="toc-l2" href="#ui-39">6.3. Thanh lọc + tìm kiếm</a><a class="toc-l2" href="#ui-40">6.4. Lưới ảnh + thao tác hàng loạt</a><a class="toc-l2" href="#ui-41">6.5. Menu "Dọn dẹp" (6 mục)</a><a class="toc-l2" href="#ui-42">6.6. Cột phải — thống kê lớp (chỉ hiển thị)</a><a class="toc-l1" href="#ui-43">7. Trang Statistics &amp; Export</a><a class="toc-l2" href="#ui-44">7.1. Header + cột chọn mục</a><a class="toc-l2" href="#ui-45">7.2. Mục "Tổng quan" (chỉ hiển thị)</a><a class="toc-l2" href="#ui-46">7.3. Mục "Phân bố lớp" / "Kích thước đối tượng" / "Chất lượng ảnh" (chỉ hiển thị)</a><a class="toc-l2" href="#ui-47">7.4. Mục "Bản đồ nhiệt"</a><a class="toc-l2" href="#ui-48">7.5. Mục "Xuất dataset"</a><a class="toc-l1" href="#ui-49">8. Trang Settings</a><a class="toc-l2" href="#ui-50">8.1. Header</a><a class="toc-l2" href="#ui-51">8.2. Tab "Chung"</a><a class="toc-l2" href="#ui-52">8.3. Tab "Model"</a><a class="toc-l2" href="#ui-53">8.4. Tab "Suy luận"</a><a class="toc-l2" href="#ui-54">8.5. Tab "Gán nhãn"</a><a class="toc-l2" href="#ui-55">8.6. Tab "Plugin"</a><a class="toc-l2" href="#ui-56">8.7. Tab "Phím tắt" &amp; "Giới thiệu"</a><a class="toc-l1" href="#ui-57">9. Trang Dashboard</a><a class="toc-l2" href="#ui-58">9.1. Header</a><a class="toc-l2" href="#ui-59">9.2. Thẻ chào mừng</a><a class="toc-l2" href="#ui-60">9.3. Bốn thẻ thống kê (đều bấm được)</a><a class="toc-l2" href="#ui-61">9.4. Hàng giữa &amp; dưới</a><a class="toc-l2" href="#ui-62">9.5. Hộp thoại "Tạo project mới"</a><a class="toc-l2" href="#ui-63">Phụ lục A. Điều hướng &amp; khung sườn chung</a>
+</nav>
+<main><div class="doc">
+<header class="hero">
+  <div class="eyebrow">Tài liệu cho đội Tester / QA</div>
+  <h1>Đặc tả nghiệp vụ AutoLabel Studio AI</h1>
+  <p>Toàn bộ quy tắc nghiệp vụ của hệ thống (mã <span class="chip chip-br">BR-xx</span> để trace vào test case)
+  và đặc tả từng control trên cả 9 màn hình — giá trị mặc định, phạm vi, hành vi — trích trực tiếp từ mã nguồn.
+  Kèm biên bản 6 lỗi đã phát hiện &amp; vá (<span class="chip chip-bug">BUG-01</span>…<span class="chip chip-bug">BUG-06</span>)
+  và 12 ca biên <span class="chip chip-edge">E-01</span>…<span class="chip chip-edge">E-12</span>.</p>
+</header>
+<section id="phan-1">
+
+<blockquote>
+<p>Phiên bản 1.0 · Cập nhật 2026-08 · <strong>Dành cho đội Tester/QA</strong>: mô tả toàn bộ nghiệp vụ xử lý của hệ thống, quy tắc đánh mã <code>BR-xx</code> để trace vào test case. Mỗi quy tắc là một điều kiện "phải đúng" — vi phạm là bug.</p>
+</blockquote>
+<hr>
+<h2 id="br-0" id="0-khai-niem-cot-loi-oc-truoc-khi-test">0. Khái niệm cốt lõi (đọc trước khi test)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Khái niệm</th>
+<th>Định nghĩa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Project</strong></td>
+<td>Một thư mục độc lập chứa toàn bộ dữ liệu: file <code>project.alsdb</code> (SQLite) + thư mục <code>frames/ images/ exports/ runs/ backups/</code>. Mọi thao tác đều diễn ra trong một project đang mở.</td>
+</tr>
+<tr>
+<td><strong>Task</strong></td>
+<td>Loại bài toán của project: <code>detect</code> (khung chữ nhật) · <code>segment</code> (vùng đa giác) · <code>obb</code> (khung xoay) · <code>pose</code> (khung + điểm khớp). Chọn khi tạo project.</td>
+</tr>
+<tr>
+<td><strong>Class</strong></td>
+<td>Nhãn phân loại đối tượng (vd: person, car). Có tên, màu, thứ tự.</td>
+</tr>
+<tr>
+<td><strong>Annotation</strong></td>
+<td>Một đối tượng được đánh dấu trên ảnh: class + hình học (bbox/polygon/keypoints) + confidence + trạng thái + nguồn (<code>yolo</code> = máy gán, <code>manual</code> = người vẽ).</td>
+</tr>
+<tr>
+<td><strong>Confidence</strong></td>
+<td>Độ tự tin của model, 0.0–1.0. Quyết định trạng thái annotation (xem <span class="chip chip-br">BR-30</span>).</td>
+</tr>
+<tr>
+<td><strong>Track ID</strong></td>
+<td>Số định danh một đối tượng xuyên suốt chuỗi frame video (chỉ có khi bật tracking).</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="vong-oi-trang-thai-anh">Vòng đời trạng thái ẢNH</h3>
+<p>```text
+unlabeled (Chưa gán nhãn)
+   │  auto label có kết quả, mọi nhãn ≥ ngưỡng review
+   ├────────────────────────────▶ auto (Máy gán nhãn)
+   │  auto label có ≥1 nhãn dưới ngưỡng review
+   ├────────────────────────────▶ review (Cần xem lại)
+   │  người dùng bấm duyệt (Enter/duyệt hàng loạt)
+   └──── auto/review ───────────▶ approved (Đã duyệt)</p>
+<p>re-run auto label không phát hiện gì  ⟶  quay về unlabeled (<span class="chip chip-br">BR-34</span>)
+```</p>
+<h3 id="vong-oi-trang-thai-annotation">Vòng đời trạng thái ANNOTATION</h3>
+<p><code>auto</code> (máy gán, đủ tự tin) → <code>review</code> (máy gán, dưới ngưỡng) → <code>approved</code> (người xác nhận). Người vẽ tay trong Editor tạo annotation nguồn <code>manual</code>.</p>
+<hr>
+<h2 id="br-1" id="1-quan-ly-project-dashboard">1. Quản lý Project (Dashboard)</h2>
+<p><strong>Luồng</strong>: mở app → Dashboard → tạo mới / mở project có sẵn / tự mở project gần nhất.</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-01</span></td>
+<td>Tạo project phải sinh đủ 5 thư mục con <code>frames/ images/ exports/ runs/ backups/</code> + file <code>project.alsdb</code>.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-02</span></td>
+<td>Lần chạy sau, app <strong>tự mở project gần nhất</strong>. Nếu project đã bị xóa/di chuyển → báo lỗi rõ ràng và về Dashboard, không crash.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-03</span></td>
+<td>Vào một trang cần project khi chưa mở project → hiển thị 2 nút "Tạo project mới" / "Mở project có sẵn", không hiển thị trang trống hay lỗi.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-04</span></td>
+<td><strong>Autosave</strong> chạy định kỳ (mặc định 5 phút, đổi được trong Settings) kèm backup xoay vòng vào <code>backups/</code>, giữ tối đa <strong>10 bản</strong> gần nhất — bản cũ hơn tự xóa.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-05</span></td>
+<td>Mọi thao tác lớn (tạo project, cắt frame, auto label, export, train, dọn dẹp) đều ghi vào <strong>lịch sử</strong> và hiển thị ở Dashboard.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-06</span></td>
+<td>Dashboard hiển thị đúng thiết bị suy luận: tên GPU + VRAM nếu có CUDA, ngược lại "CPU".</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-07</span></td>
+<td>Có thể mở project bằng dòng lệnh: <code>python main.py "đường/dẫn/project.alsdb"</code>.</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h2 id="br-2" id="2-import-nap-du-lieu-vao-project">2. Import (nạp dữ liệu vào project)</h2>
+<p><strong>Luồng</strong>: Import → thêm video / thư mục ảnh / dataset có nhãn — hoặc kéo-thả thẳng vào cửa sổ app.</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-10</span></td>
+<td>Kéo-thả file/thư mục vào <strong>bất kỳ trang nào</strong> → app tự chuyển sang trang Import và nhận dữ liệu.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-11</span></td>
+<td>Video (mp4, avi, mov, mkv, webm…) <strong>không nạp thẳng vào project được</strong> — phải cắt frame trước. Trang Import phải hiển thị rõ bước kế tiếp là "Cắt frame từ video".</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-12</span></td>
+<td>Chọn video → xem trước phải hiện: frame mẫu, độ phân giải, FPS, thời lượng, codec, dung lượng.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-13</span></td>
+<td>Nạp thư mục ảnh: tùy chọn "Sao chép ảnh vào thư mục project" — bật thì copy vào <code>images/</code>, tắt thì tham chiếu đường dẫn gốc (ảnh gốc bị xóa ngoài app → ảnh trong app thành "mất file").</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-14</span></td>
+<td>Tùy chọn "Phát hiện ảnh trùng khi nạp" (pHash + SSIM): ảnh trùng bị <strong>đánh dấu</strong> <code>duplicate</code> chứ không bị từ chối nạp.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-15</span></td>
+<td>Nạp cùng một ảnh (cùng đường dẫn) 2 lần → không tạo bản ghi trùng trong DB (số ảnh không tăng).</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-16</span></td>
+<td>Đường dẫn/tên file <strong>có dấu tiếng Việt, ký tự Unicode</strong> phải hoạt động bình thường ở mọi bước (nạp, hiển thị, gán nhãn, export).</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="2b-nhap-dataset-co-nhan-san-yolo-coco">2b. Nhập dataset có nhãn sẵn (YOLO / COCO)</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-17</span></td>
+<td>Hỗ trợ nhập dataset <strong>YOLO</strong> (thư mục có <code>data.yaml</code>/<code>classes.txt</code> + <code>labels/</code>) và <strong>COCO JSON</strong>. Định dạng chọn ở combobox.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-18</span></td>
+<td>Phải có bước <strong>Xem trước</strong> hiển thị số ảnh / số annotation / số class <strong>trước khi</strong> nhập thật.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-19</span></td>
+<td>Xung đột class: class trùng tên (không phân biệt hoa thường) với class có sẵn → <strong>gộp vào class cũ</strong>; class chưa có → <strong>tự tạo mới</strong>. Không hỏi lại từng class.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-20</span></td>
+<td>Round-trip phải bảo toàn: export YOLO/COCO từ project A → import vào project B → số annotation, class, tọa độ (sai số &lt; 1px) phải khớp.</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h2 id="br-3" id="3-frame-extractor-cat-frame-tu-video">3. Frame Extractor (cắt frame từ video)</h2>
+<p><strong>Luồng</strong>: chọn video → chọn chế độ + bộ lọc → xem ước lượng → Bắt đầu → ảnh rơi vào <code>frames/</code> và được nạp vào project với <code>frame_index</code> + <code>timestamp</code>.</p>
+<h3 id="31-nam-che-o-cat">3.1. Năm chế độ cắt</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Chế độ</th>
+<th>Quy tắc xử lý</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Every Frame</td>
+<td>Lấy mọi frame trong khoảng đã chọn.</td>
+</tr>
+<tr>
+<td>Every N Frames</td>
+<td>Cứ N frame lấy 1 (N=4, video 40 frame → 10 ảnh).</td>
+</tr>
+<tr>
+<td>Every N Seconds</td>
+<td>Quy đổi theo FPS của video: bước nhảy = N × FPS frame.</td>
+</tr>
+<tr>
+<td>Adaptive Motion</td>
+<td>Chỉ lấy khi khác biệt frame (frame-diff) vượt <code>motion_threshold</code> (mặc định 0.045). Video tĩnh hoàn toàn → rất ít/không có ảnh.</td>
+</tr>
+<tr>
+<td>Scene Detection</td>
+<td>Chỉ lấy khi histogram HSV đổi vượt <code>scene_threshold</code> (mặc định 0.35) — tức đổi cảnh.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="32-quy-tac-chung">3.2. Quy tắc chung</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-21</span></td>
+<td><strong>Khử trùng lặp</strong> (bật mặc định): so pHash 64-bit (khoảng cách ≤ 6) rồi xác nhận lại bằng SSIM (≥ 0.965) mới tính là trùng. Ảnh trùng bị loại (hoặc giữ + đánh dấu nếu bật "keep_rejected").</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-22</span></td>
+<td><strong>Lọc ảnh mờ</strong> (bật mặc định): variance of Laplacian &lt; <code>blur_threshold</code> (mặc định 60) → loại/đánh dấu mờ.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-23</span></td>
+<td><strong>Lọc thiếu sáng</strong> (tắt mặc định): độ sáng trung bình &lt; ngưỡng (mặc định 45) → loại/đánh dấu.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-24</span></td>
+<td>Các giới hạn phải được tôn trọng đồng thời: <code>max_frames</code> (0 = không giới hạn), khoảng thời gian <code>start_time</code>–<code>end_time</code>, thu nhỏ cạnh dài <code>resize_long_side</code>, định dạng JPG/PNG + chất lượng JPEG.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-25</span></td>
+<td><strong>Ước lượng số ảnh đầu ra hiển thị trước khi chạy</strong> và phải sát thực tế với chế độ Every Frame / N Frames / N Seconds (chế độ adaptive/scene chỉ ước lượng tương đối).</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-26</span></td>
+<td>Kết quả trả về phải đếm đúng: <code>n_read</code> (đọc), <code>n_saved</code> (lưu), <code>n_duplicate</code>, <code>n_blurry</code>, <code>n_dark</code>. Tổng hợp lý: saved + loại bỏ ≤ read.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-27</span></td>
+<td>Mỗi ảnh cắt ra lưu kèm <code>frame_index</code> (thứ tự frame gốc) và <code>timestamp</code> (giây) — bắt buộc để tracking hoạt động đúng (<span class="chip chip-br">BR-37</span>).</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-28</span></td>
+<td>Đang cắt có thể <strong>Hủy</strong>: dừng sớm, ảnh đã cắt vẫn giữ, không treo UI, không crash. Video hỏng/không mở được → báo lỗi rõ, không crash.</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h2 id="br-4" id="4-auto-label-gan-nhan-tu-ong-nghiep-vu-trung-tam">4. Auto Label (gán nhãn tự động) — nghiệp vụ trung tâm</h2>
+<p><strong>Luồng</strong>: chọn nhiệm vụ (detect/segment/obb/pose) + trọng số → <strong>Nạp model</strong> → cấu hình ngưỡng → chọn phạm vi ảnh → <strong>Bắt đầu gán nhãn</strong> → theo dõi tiến độ/preview → kết quả ghi vào DB.</p>
+<h3 id="41-nap-model">4.1. Nạp model</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-29a</span></td>
+<td>Hỗ trợ trọng số: <code>.pt</code>, <code>.onnx</code>, <code>.engine</code>, <code>.torchscript</code>. Tên model chuẩn (vd <code>yolo11n.pt</code>) chưa có trên máy → <strong>tự tải</strong> về thư mục weights của app, có hiển thị % tiến độ tải.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-29b</span></td>
+<td>Thiết bị: <code>auto</code> → dùng GPU nếu có CUDA, ngược lại CPU. Chuyển GPU thất bại → <strong>fallback CPU + ghi log</strong>, không crash.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-29c</span></td>
+<td>File trọng số chuẩn tải dở (hỏng) → app tự xóa <strong>chỉ khi file nằm trong thư mục weights của app</strong> và tải lại một lần. File <code>.pt</code> của người dùng ở nơi khác <strong>tuyệt đối không bị xóa</strong> dù nạp lỗi (đã vá <span class="chip chip-bug">BUG-02</span>).</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-29d</span></td>
+<td>Nạp lại cùng weights + task + device → không nạp lại từ đầu (trả về ngay).</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="42-quy-tac-gan-nhan">4.2. Quy tắc gán nhãn</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-30</span></td>
+<td><strong>Ngưỡng 3 tầng</strong> với mỗi detection có confidence <code>c</code>: <code>c ≥ review_threshold</code> (mặc định 0.6) → annotation <code>auto</code>; <code>c &lt; review_threshold</code> → annotation <code>review</code> và <strong>ảnh</strong> chuyển "Cần xem lại"; <code>c &lt; low_conf_threshold</code> (mặc định 0.35) → đếm thêm vào "Low Confidence". Detection dưới <code>confidence</code> suy luận (mặc định 0.45) không xuất hiện.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-31</span></td>
+<td><strong>Class lazy</strong>: chỉ tạo class trong project khi có ít nhất 1 dự đoán thuộc class đó. Nạp model COCO 80 class rồi gán nhãn ảnh chỉ có người + xe → project chỉ có class person, car (không sinh 80 class rỗng). Class trùng tên có sẵn (không phân biệt hoa thường) → dùng lại, không tạo mới.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-32</span></td>
+<td>Detection diện tích &lt; <code>min_area_px</code> (mặc định 24 px²) bị loại. Polygon được đơn giản hóa Douglas–Peucker theo <code>polygon_simplify</code> (0.0025 × chu vi; 0 = giữ nguyên).</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-33</span></td>
+<td><strong>Ghi đè</strong>: bật (mặc định) → nhãn cũ của ảnh bị thay hoàn toàn bằng nhãn mới. Tắt → ảnh đã có nhãn bị <strong>bỏ qua hoàn toàn, không gọi model</strong> (tiết kiệm GPU — kiểm bằng thời gian chạy).</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-34</span></td>
+<td>Re-run trên ảnh từng có nhãn mà lần này <strong>không phát hiện gì</strong> → nhãn cũ bị xóa và status ảnh trả về <code>unlabeled</code> — không được để ảnh 0 đối tượng mang nhãn "Máy gán nhãn" (đã vá <span class="chip chip-bug">BUG-03</span>).</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-35</span></td>
+<td>Ảnh mất file (đường dẫn không tồn tại) → <strong>bỏ qua + ghi log</strong>, các ảnh sau vẫn chạy tiếp. Lỗi suy luận 1 ảnh không được làm dừng cả batch.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-36</span></td>
+<td>Kết quả tổng kết phải khớp DB: số ảnh xử lý, tổng đối tượng, số ảnh cần review, số ảnh rỗng, thống kê theo class, tốc độ ảnh/s. <code>n_objects</code> trên từng ảnh = số annotation thực trong DB.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="43-tracking-theo-doi-oi-tuong-qua-frame">4.3. Tracking (theo dõi đối tượng qua frame)</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-37</span></td>
+<td>Bật tracking → ảnh được <strong>sắp lại theo <code>frame_index</code></strong> trước khi chạy (ảnh không có frame_index xếp cuối). Tracker reset khi bắt đầu phiên mới — track_id đếm lại từ 1.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-38</span></td>
+<td>Cùng một đối tượng di chuyển qua các frame liên tiếp phải giữ <strong>nguyên một track_id</strong>. Đối tượng ra khỏi khung → track_id đó biến mất, không gán nhầm cho đối tượng khác.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-39</span></td>
+<td><strong>Sau phiên tracking, mọi suy luận thường (auto label không tracking, SAHI, "Auto label ảnh này" trong Editor) phải sạch</strong>: không dính track_id, không giảm số detection, không cảnh báo GMC tràn log (đã vá <span class="chip chip-bug">BUG-01</span> — lỗi nghiêm trọng nhất từng phát hiện, đội tester chú ý regression điểm này).</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="44-sahi-suy-luan-cat-lat-cho-anh-lon">4.4. SAHI (suy luận cắt lát cho ảnh lớn)</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-40</span></td>
+<td>Ảnh ≤ kích thước ô (mặc định 640px) → tự động dùng suy luận thường (không cắt lát vô ích).</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-41</span></td>
+<td>Ảnh lớn: cắt ô chồng lấn (mặc định 20%), suy luận từng ô, <strong>dịch tọa độ về ảnh gốc</strong> — mọi bbox/polygon kết quả phải nằm trong phạm vi ảnh gốc.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-42</span></td>
+<td>Box/polygon trùng nhau ở vùng chồng lấn phải được khử (NMS xuyên ô theo class); với segmentation, mảnh polygon cùng class sát ranh giới ô được <strong>gộp thành một vùng liền</strong> (Shapely). Không được thấy "2 box chồng khít nhau" tại ranh giới ô.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-43</span></td>
+<td>SAHI phải tìm được <strong>≥</strong> số đối tượng so với suy luận thường trên cùng ảnh lớn chứa đối tượng nhỏ (đây là lý do tồn tại của tính năng). Tiến độ hiển thị theo từng ô.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="45-plugin-tinh-chinh">4.5. Plugin tinh chỉnh</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-44</span></td>
+<td>Plugin được chọn nhưng thiếu thư viện/trọng số → ghi log lý do và <strong>chạy tiếp không plugin</strong> — không crash, không dừng batch.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-45</span></td>
+<td>Plugin lỗi giữa chừng trên 1 ảnh → giữ detection gốc của YOLO cho ảnh đó, ghi log, chạy tiếp.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-46</span></td>
+<td>Plugin refine (SAM/FastSAM) nhận box thô → trả mask polygon bám sát đối tượng; số đối tượng không đổi trừ khi plugin chủ động lọc.</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h2 id="br-5" id="5-annotation-editor-sua-nhan">5. Annotation Editor (sửa nhãn)</h2>
+<p><strong>Luồng</strong>: chọn ảnh (thường lọc "Cần xem lại") → sửa bằng công cụ → <code>Enter</code> duyệt và sang ảnh kế.</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-50</span></td>
+<td>7 công cụ: Select (V) · Polygon (W) · BBox · Brush (B) · Eraser (E) · Split (S) · Pan (giữ Space). Phím tắt phải đúng như bảng trong README.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-51</span></td>
+<td><strong>Brush/Eraser thao tác trên hình học thật</strong> (Shapely): tô thêm = hợp vùng; tẩy = cắt vùng. Tẩy xuyên giữa vùng → tạo <strong>lỗ</strong>, và lỗ vẫn export được ra YOLO (kỹ thuật keyhole — kiểm bằng export sau khi tẩy lỗ).</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-52</span></td>
+<td>Split: kẻ một đường cắt → 1 vùng tách thành nhiều vùng (mỗi vùng một annotation). Merge (M): các vùng đang chọn gộp thành một. Simplify: giảm số đỉnh nhưng hình dạng không biến dạng rõ rệt.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-53</span></td>
+<td>Kéo đỉnh chỉnh hình; <strong>nháy đúp lên cạnh</strong> thêm đỉnh mới; Delete xóa đối tượng chọn; Esc hủy thao tác vẽ dở.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-54</span></td>
+<td><strong>Undo/Redo tối thiểu 60 bước</strong>, hoạt động đúng với mọi công cụ kể cả brush/eraser/split/merge.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-55</span></td>
+<td><code>A</code>/<code>D</code> chuyển ảnh trước/sau; <code>Enter</code> = duyệt ảnh hiện tại (status → <code>approved</code>) và sang ảnh kế; phím <code>1..9</code> gán class cho đối tượng đang chọn.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-56</span></td>
+<td>Đổi class/confidence được cho <strong>nhiều đối tượng cùng lúc</strong>; thao tác trên ảnh phải cập nhật ngay số liệu (n_objects, trạng thái) ở các trang khác.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-57</span></td>
+<td>Zoom (Ctrl +/-/0), Pan, Navigator (minimap có khung viewport) hoạt động; Alt + cuộn đổi cỡ cọ khi dùng Brush/Eraser.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-58</span></td>
+<td>Vẽ tay annotation mới → nguồn ghi <code>manual</code>, confidence = 1.0.</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h2 id="br-6" id="6-dataset-manager-quan-ly-don-dep">6. Dataset Manager (quản lý &amp; dọn dẹp)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-60</span></td>
+<td>Thumbnail nạp <strong>lazy ở luồng nền</strong> — cuộn danh sách vài nghìn ảnh không giật/đứng UI.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-61</span></td>
+<td>Bộ lọc: Tất cả · Đã gán nhãn · Chưa gán nhãn · Cần review · Đã duyệt · Trùng · Mờ — số lượng mỗi bộ lọc phải khớp thống kê nhanh phía trên.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-62</span></td>
+<td>Thao tác hàng loạt: duyệt, đánh dấu review, xóa. Xóa có tùy chọn "xóa cả file trên đĩa" — không tick thì chỉ gỡ khỏi project, file còn nguyên.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-63</span></td>
+<td><strong>Dọn dẹp</strong>: xóa ảnh trùng / ảnh mờ / ảnh chưa gán nhãn, gỡ ảnh mất file, tính lại số đối tượng, sao lưu trước khi dọn. Mỗi hành động phải báo trước số lượng ảnh hưởng và cho xác nhận.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-64</span></td>
+<td>Xóa ảnh → annotation của ảnh đó bị xóa theo; xóa class → hỏi xác nhận và xử lý annotation thuộc class đó theo lựa chọn.</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h2 id="br-7" id="7-statistics-export">7. Statistics &amp; Export</h2>
+<h3 id="71-thong-ke">7.1. Thống kê</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-70</span></td>
+<td>6 mục: Tổng quan · Phân bố class · Kích thước object · Bản đồ nhiệt · Chất lượng ảnh · Xuất dataset. Số liệu phải khớp DB (đối chiếu với Dataset Manager).</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-71</span></td>
+<td>Heatmap thể hiện mật độ <strong>vị trí</strong> đối tượng trên khung ảnh chuẩn hóa; phân bố confidence/độ nét/độ sáng/số đối tượng mỗi ảnh vẽ đúng dữ liệu.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="72-export-7-inh-dang">7.2. Export — 7 định dạng</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-72</span></td>
+<td>7 định dạng: YOLO Seg · YOLO Det · YOLO OBB · YOLO Pose · COCO JSON (kèm keypoints) · Pascal VOC XML · PNG Mask (kèm mask màu).</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-73</span></td>
+<td><strong>YOLO Det</strong>: mỗi dòng đúng 5 cột <code>class cx cy w h</code>, tọa độ chuẩn hóa 0–1. <strong>YOLO Seg</strong>: <code>class x1 y1 x2 y2 ...</code>. <strong>OBB</strong>: 8 tọa độ + polygon tự quy về hộp xoay nhỏ nhất. <strong>Pose</strong>: ghi kèm <code>kpt_shape</code> vào <code>data.yaml</code>. Tổng số dòng nhãn = tổng đối tượng đã export.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-74</span></td>
+<td>Chia <strong>train/val/test</strong> theo tỉ lệ + seed: cùng seed → cùng cách chia (tái lập được); mỗi ảnh chỉ thuộc một split; tự sinh <code>data.yaml</code> + <code>classes.txt</code>.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-75</span></td>
+<td>Bộ lọc export phải có hiệu lực: chỉ ảnh đã duyệt (<code>only_approved</code>) · loại ảnh trùng · loại ảnh mờ · confidence tối thiểu · chọn class. Không còn ảnh nào thỏa → báo lỗi rõ ràng, không xuất thư mục rỗng.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-76</span></td>
+<td>Export đè lên thư mục dataset cùng tên cũ (xóa sạch trước khi ghi) — không trộn lẫn kết quả cũ mới.</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h2 id="br-8" id="8-train-model">8. Train Model</h2>
+<p><strong>Luồng</strong>: cấu hình → Bắt đầu → app <strong>tự dựng dataset YOLO từ project</strong> (không cần export tay) → train → theo dõi realtime → <code>best.pt</code> lưu lại dùng ngay.</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-80</span></td>
+<td>Dataset tự dựng vào <code>runs/dataset/</code> theo đúng task của project (detect→yolo_det, segment→yolo_seg…), chia val theo tỉ lệ đã chọn, có <code>data.yaml</code>.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-81</span></td>
+<td>Cấu hình đầy đủ: epochs, batch, imgsz, optimizer, lr, patience, workers, device, augmentation, cache. Device auto → GPU nếu có.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-82</span></td>
+<td>Theo dõi <strong>thời gian thực</strong>: vòng tiến độ, biểu đồ mAP50/mAP50-95/P/R, biểu đồ loss, log, thời gian chạy + ước tính còn lại. Metric cập nhật <strong>mỗi epoch</strong>.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-83</span></td>
+<td>Epoch hiển thị <strong>không bao giờ vượt tổng</strong> (không có "3/2"); <code>epochs_done</code> = số epoch thực chạy — kể cả khi dừng sớm do patience (đã vá <span class="chip chip-bug">BUG-04</span>).</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-84</span></td>
+<td><strong>Hủy</strong> giữa chừng: train dừng ở batch/epoch kế tiếp, app không treo, kết quả dở được ghi nhận là đã hủy.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-85</span></td>
+<td>Kết thúc: <code>best.pt</code> + <code>last.pt</code> nằm trong <code>runs/&lt;tên run&gt;/weights/</code>; lịch sử các lần train lưu lại; <code>best.pt</code> nạp được ngay ở trang Auto Label để suy luận.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-86</span></td>
+<td>Chạy train nhiều lần → mỗi lần một thư mục run mới (train1, train2…), không đè kết quả cũ.</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h2 id="br-9" id="9-settings">9. Settings</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-90</span></td>
+<td>7 mục: Chung · Model · Suy luận · Annotation · Plugin · Phím tắt · Giới thiệu. Mọi thay đổi lưu vào <code>settings.json</code> và <strong>giữ nguyên sau khi khởi động lại</strong>.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-91</span></td>
+<td>Đổi ngôn ngữ (Việt/Anh): toàn bộ giao diện đổi theo, không sót chuỗi, không vỡ layout.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-92</span></td>
+<td>Tham số plugin chỉnh được qua form trong Settings → Plugin (không cần sửa code); "Khôi phục mặc định" trả về giá trị gốc; "Quét lại plugin" nhận plugin mới thả vào thư mục plugins.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-93</span></td>
+<td>Plugin thiếu điều kiện (vd SAM 3 thiếu <code>sam3.pt</code>) → Settings hiển thị <strong>đúng lý do + lệnh cần chạy</strong>, các plugin khác vẫn hoạt động.</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h2 id="br-10" id="10-quy-tac-xuyen-suot-moi-man-hinh">10. Quy tắc xuyên suốt (mọi màn hình)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Quy tắc nghiệp vụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-br">BR-100</span></td>
+<td><strong>UI không bao giờ đứng</strong>: mọi tác vụ nặng (cắt frame, suy luận, export, train, quét thư mục) chạy nền, có thanh tiến độ + log + nút <strong>Hủy</strong> hoạt động. Trong lúc chạy vẫn cuộn/di chuyển UI được.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-101</span></td>
+<td>Hủy bất kỳ tác vụ nào: dừng trong vài giây, dữ liệu đã xử lý xong vẫn hợp lệ, không để DB ở trạng thái dở dang.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-102</span></td>
+<td>Lỗi đơn lẻ (1 ảnh hỏng, 1 file mất) → ghi log + bỏ qua + chạy tiếp; lỗi hệ thống (hết VRAM, mất model) → thông báo rõ nguyên nhân bằng ngôn ngữ người dùng, không hiện traceback thô.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-103</span></td>
+<td>Số liệu phải <strong>nhất quán giữa các trang</strong>: n_objects, số class, trạng thái ảnh trên Dashboard = Dataset Manager = Statistics = Editor.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-104</span></td>
+<td>App đóng đột ngột (kill) giữa chừng → mở lại project vẫn đọc được (SQLite WAL), mất tối đa dữ liệu từ lần autosave gần nhất.</td>
+</tr>
+<tr>
+<td><span class="chip chip-br">BR-105</span></td>
+<td>Phím tắt toàn cục: <code>Ctrl+1..9</code> chuyển trang, <code>Ctrl+N/O/S</code> project, <code>F5</code> bắt đầu auto label, <code>F11</code> toàn màn hình.</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h2 id="br-11" id="11-ca-bien-du-lieu-test-goi-y-cho-oi-qa">11. Ca biên &amp; dữ liệu test gợi ý cho đội QA</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Ca biên</th>
+<th>Kỳ vọng</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-edge">E-01</span></td>
+<td>Video 0 frame / file rỗng / đuôi sai</td>
+<td>Báo lỗi rõ, không crash</td>
+</tr>
+<tr>
+<td><span class="chip chip-edge">E-02</span></td>
+<td>Ảnh 1×1 px, ảnh xám, PNG có kênh alpha</td>
+<td>Nạp + gán nhãn không lỗi (có thể 0 detection)</td>
+</tr>
+<tr>
+<td><span class="chip chip-edge">E-03</span></td>
+<td>Ảnh cực lớn (≥ 8000px) + SAHI</td>
+<td>Chạy được, chậm nhưng không hết RAM đột tử</td>
+</tr>
+<tr>
+<td><span class="chip chip-edge">E-04</span></td>
+<td>Project trên đường dẫn có dấu + khoảng trắng</td>
+<td>Mọi luồng hoạt động (<span class="chip chip-br">BR-16</span>)</td>
+</tr>
+<tr>
+<td><span class="chip chip-edge">E-05</span></td>
+<td>Chạy auto label khi GPU đang bận ứng dụng khác</td>
+<td>Chậm hoặc fallback, không crash</td>
+</tr>
+<tr>
+<td><span class="chip chip-edge">E-06</span></td>
+<td>Tắt mạng khi đang tải trọng số</td>
+<td>Báo lỗi tải; nạp lại khi có mạng thành công (file dở bị dọn — <span class="chip chip-br">BR-29c</span>)</td>
+</tr>
+<tr>
+<td><span class="chip chip-edge">E-07</span></td>
+<td>Xóa file ảnh ngoài app rồi auto label / export</td>
+<td>Bỏ qua + log (<span class="chip chip-br">BR-35</span>); export không chứa ảnh mất file</td>
+</tr>
+<tr>
+<td><span class="chip chip-edge">E-08</span></td>
+<td>Hủy ở mọi tác vụ, tại nhiều thời điểm khác nhau</td>
+<td><span class="chip chip-br">BR-101</span></td>
+</tr>
+<tr>
+<td><span class="chip chip-edge">E-09</span></td>
+<td>Train với dataset chỉ 2–3 ảnh / chỉ 1 class / 0 ảnh val</td>
+<td>Chạy được hoặc báo thiếu dữ liệu rõ ràng, không crash</td>
+</tr>
+<tr>
+<td><span class="chip chip-edge">E-10</span></td>
+<td>Hai lần export cùng tên dataset liên tiếp</td>
+<td>Kết quả lần 2 sạch, không lẫn file cũ (<span class="chip chip-br">BR-76</span>)</td>
+</tr>
+<tr>
+<td><span class="chip chip-edge">E-11</span></td>
+<td>Auto label 2 lần liên tiếp: lần 1 tracking, lần 2 thường</td>
+<td>Lần 2 sạch track_id, đủ detection (<span class="chip chip-br">BR-39</span> — regression <span class="chip chip-bug">BUG-01</span>)</td>
+</tr>
+<tr>
+<td><span class="chip chip-edge">E-12</span></td>
+<td>Re-run auto label với confidence 0.99</td>
+<td>Ảnh về <code>unlabeled</code>, không kẹt status cũ (<span class="chip chip-br">BR-34</span> — regression <span class="chip chip-bug">BUG-03</span>)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Dữ liệu test có sẵn</strong>: 2 ảnh mẫu của Ultralytics (<code>bus.jpg</code>, <code>zidane.jpg</code> — nằm trong package, chứa người/xe buýt thật), model nhẹ <code>yolo11n.pt</code> (~5.6MB, tự tải). Kịch bản E2E mẫu và kết quả chuẩn tham khảo tại TAI-LIEU-KIEM-THU.md (nhóm C).</p>
+<hr>
+<h2 id="br-12" id="12-loi-a-biet-a-va-regression-bat-buoc-moi-release">12. Lỗi đã biết &amp; đã vá (regression bắt buộc mỗi release)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Bug</th>
+<th>Tóm tắt</th>
+<th>Quy tắc liên quan</th>
+<th>Test tự động</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip chip-bug">BUG-01</span> (cao)</td>
+<td>Tracker bám vào predict thường sau phiên tracking — nuốt detection, track_id giả</td>
+<td><span class="chip chip-br">BR-39</span></td>
+<td><span class="chip chip-tc">TC-AL-05</span>, <span class="chip chip-tc">TC-E2E-01</span></td>
+</tr>
+<tr>
+<td><span class="chip chip-bug">BUG-02</span> (TB)</td>
+<td>Xóa nhầm file model người dùng ngoài weights_dir</td>
+<td><span class="chip chip-br">BR-29c</span></td>
+<td><span class="chip chip-tc">TC-AL-06</span></td>
+</tr>
+<tr>
+<td><span class="chip chip-bug">BUG-03</span> (thấp)</td>
+<td>Re-run rỗng để lại status "auto"</td>
+<td><span class="chip chip-br">BR-34</span></td>
+<td><span class="chip chip-tc">TC-AL-04</span></td>
+</tr>
+<tr>
+<td><span class="chip chip-bug">BUG-04</span> (thấp)</td>
+<td>Epoch ảo "3/2" từ final_eval của Ultralytics</td>
+<td><span class="chip chip-br">BR-83</span></td>
+<td><span class="chip chip-tc">TC-TR-01</span>, <span class="chip chip-tc">TC-TR-02</span></td>
+</tr>
+<tr>
+<td><span class="chip chip-bug">BUG-05</span> (thấp)</td>
+<td>Combobox "Trọng số SAM" trang Auto Label không được connect</td>
+<td><span class="chip chip-br">BR-44</span></td>
+<td><span class="chip chip-tc">TC-UI-05</span></td>
+</tr>
+<tr>
+<td><span class="chip chip-bug">BUG-06</span> (cao)</td>
+<td>Ô prompt plugin bị ẩn vĩnh viễn → plugin prompt không dùng được từ UI</td>
+<td><span class="chip chip-br">BR-44</span></td>
+<td><span class="chip chip-tc">TC-UI-05</span></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>Chi tiết nguyên nhân gốc và cách vá: TAI-LIEU-KIEM-THU.md mục 3.</p>
+</blockquote>
+</section>
+<hr>
+<section id="phan-2">
+<h1 style="border-top:none; padding-top:0;">Phần II — Đặc tả chức năng chi tiết từng control</h1>
+
+<blockquote>
+<p>Phiên bản 1.0 · Cập nhật 2026-08 · <strong>Dành cho đội Tester/QA</strong>: liệt kê <strong>từng control</strong> trên từng màn hình — mọi nút bấm, thanh trượt, ô tham số — kèm giá trị mặc định, phạm vi cho phép và hành vi, <strong>trích trực tiếp từ mã nguồn giao diện</strong>.</p>
+<p>Cách dùng: mỗi bảng là một nhóm control đúng thứ tự xuất hiện trên màn hình. Cột "Mặc định/Phạm vi" là giá trị phải thấy khi mở app lần đầu — lệch là bug. Cột "Hành vi" là điều phải xảy ra khi thao tác. Quy tắc nghiệp vụ tổng quát (mã BR-xx) xem tại TAI-LIEU-NGHIEP-VU.md.</p>
+</blockquote>
+
+<hr>
+<h1 id="ui-0" id="1-trang-import">1. Trang Import</h1>
+<h2 id="ui-1" id="11-header-thanh-tieu-e-trang">1.1. Header (thanh tiêu đề trang)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Thêm thư mục ảnh</td>
+<td>Nút (ghost, icon thư mục)</td>
+<td>—</td>
+<td>Mở hộp thoại chọn thư mục ("Chọn thư mục chứa ảnh"), quét ảnh; thư mục rỗng → toast "Thư mục này không chứa ảnh nào."</td>
+</tr>
+<tr>
+<td>Thêm video</td>
+<td>Nút (primary, icon video)</td>
+<td>—</td>
+<td>Mở hộp thoại chọn nhiều file video (mp4/avi/mov/mkv/webm…), thêm vào danh sách nguồn</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-2" id="12-khung-nguon-du-lieu-cot-trai">1.2. Khung "Nguồn dữ liệu" (cột trái)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>"Kéo thả video, ảnh hoặc cả thư mục vào đây"</td>
+<td>Khu kéo-thả (viền nét đứt)</td>
+<td>Hiện khi danh sách rỗng</td>
+<td>Thả file/thư mục → tự phân loại video/ảnh; <strong>tự ẩn</strong> khi đã có dữ liệu</td>
+</tr>
+<tr>
+<td>Danh sách nguồn</td>
+<td>Danh sách (chọn nhiều, item cao 52px, tooltip = đường dẫn đầy đủ)</td>
+<td>Rỗng</td>
+<td>Chọn item → xem trước bên phải (video: frame ở 1/3 phim + bảng thông số; thư mục: ảnh đầu tiên); cũng nhận kéo-thả</td>
+</tr>
+<tr>
+<td>Bỏ mục đang chọn</td>
+<td>Nút (ghost, icon trừ)</td>
+<td>—</td>
+<td>Xóa các item đang chọn; chưa chọn gì → toast "Hãy chọn mục muốn bỏ ở danh sách bên trái."</td>
+</tr>
+<tr>
+<td>Xoá hết</td>
+<td>Nút (danger, icon thùng rác)</td>
+<td>—</td>
+<td>Xóa toàn bộ danh sách, reset khung xem trước</td>
+</tr>
+<tr>
+<td>Nhãn đếm</td>
+<td>Nhãn động</td>
+<td>"Chưa có gì"</td>
+<td>Hiển thị "{n} video · {n} ảnh" theo nội dung danh sách</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-3" id="13-khung-xem-truoc-cot-phai">1.3. Khung "Xem trước" (cột phải)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ảnh xem trước</td>
+<td>Nhãn ảnh (min 200px, giữ tỉ lệ) + nhận kéo-thả</td>
+<td>"Chọn một mục ở bên trái để xem trước"</td>
+<td>Hiện frame video/ảnh đầu thư mục; lỗi → "Không mở được video này" / "Không đọc được ảnh"</td>
+</tr>
+<tr>
+<td>Bảng thông tin video</td>
+<td>Lưới key-value</td>
+<td>Rỗng</td>
+<td>Tên file · Độ phân giải · FPS · Thời lượng · Tổng số frame · Codec · Dung lượng</td>
+</tr>
+<tr>
+<td>Bảng thông tin thư mục ảnh</td>
+<td>Lưới key-value</td>
+<td>Rỗng</td>
+<td>Thư mục · Số ảnh · Kích thước ảnh đầu · Dung lượng (ước tính từ 400 ảnh mẫu)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-4" id="14-khung-buoc-tiep-theo">1.4. Khung "Bước tiếp theo"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nhãn hướng dẫn</td>
+<td>Nhãn HTML động</td>
+<td>"Chưa chọn gì. Dùng nút <strong>Thêm video</strong> / <strong>Thêm thư mục ảnh</strong>…"</td>
+<td>Đổi theo 4 trạng thái: rỗng / chỉ video / chỉ ảnh / lẫn lộn; chưa mở project → nối thêm cảnh báo màu vàng "Chưa mở project — bấm nút bên dưới sẽ hỏi tạo project trước."</td>
+</tr>
+<tr>
+<td>Nạp ảnh vào project</td>
+<td>Nút (primary, icon import)</td>
+<td><strong>Chỉ hiện khi có ảnh</strong>; disable khi đang chạy</td>
+<td>Chạy worker quét-nạp ảnh (khử trùng theo toggle bên dưới, phát hiện mờ bật, thiếu sáng tắt); chưa có project → hỏi tạo trước</td>
+</tr>
+<tr>
+<td>Cắt frame từ video</td>
+<td>Nút (primary, icon phim)</td>
+<td><strong>Chỉ hiện khi có video</strong></td>
+<td>Chuyển sang trang Cắt frame kèm danh sách video, toast "Đã chuyển video sang trang cắt frame."</td>
+</tr>
+<tr>
+<td>Sao chép ảnh vào thư mục project <em>(hint: Giữ nguyên vị trí gốc nếu tắt)</em></td>
+<td>Toggle</td>
+<td><strong>Tắt</strong></td>
+<td>Bật → copy ảnh vào <code>images/</code> của project; tắt → chỉ tham chiếu đường dẫn gốc</td>
+</tr>
+<tr>
+<td>Phát hiện ảnh trùng khi nạp <em>(hint: So sánh bằng perceptual hash + SSIM)</em></td>
+<td>Toggle</td>
+<td><strong>Bật</strong></td>
+<td>Bật/tắt khử trùng lặp khi nạp ảnh</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-5" id="15-khung-nhap-dataset-co-nhan-yolococo-tu-roboflow-cvat-labelimg">1.5. Khung "Nhập dataset có nhãn" (YOLO/COCO từ Roboflow, CVAT, labelImg…)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ô đường dẫn dataset</td>
+<td>Ô text <strong>chỉ đọc</strong></td>
+<td>Placeholder "Chưa chọn thư mục dataset"</td>
+<td>Hiển thị thư mục đã chọn, không gõ tay được</td>
+</tr>
+<tr>
+<td>Chọn thư mục</td>
+<td>Nút (ghost)</td>
+<td>—</td>
+<td>Mở hộp thoại "Chọn thư mục dataset"; chọn xong ẩn khung kết quả xem trước cũ</td>
+</tr>
+<tr>
+<td>Định dạng</td>
+<td>Combobox</td>
+<td><strong>YOLO Segmentation</strong>; lựa chọn: YOLO Segmentation / YOLO Detection / COCO JSON</td>
+<td>Chọn parser tương ứng</td>
+</tr>
+<tr>
+<td>Nhãn kết quả xem trước</td>
+<td>Nhãn động</td>
+<td><strong>Ẩn</strong> ban đầu</td>
+<td>Sau "Xem trước": Số ảnh phát hiện · Số vùng nhãn · Class mới sẽ thêm / Gộp vào class cũ; lỗi → chữ đỏ</td>
+</tr>
+<tr>
+<td>Xem trước</td>
+<td>Nút (ghost, icon mắt)</td>
+<td>—</td>
+<td>Đọc thử dataset và hiện thống kê; chưa chọn thư mục → toast "Hãy chọn thư mục dataset trước."</td>
+</tr>
+<tr>
+<td>Nhập vào project</td>
+<td>Nút (primary)</td>
+<td>Disable khi đang chạy</td>
+<td>Chạy worker nhập (copy ảnh vào project); xong thông báo số ảnh/nhãn/class đã nhập</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-6" id="16-thanh-tien-trinh-cuoi-trang">1.6. Thanh tiến trình (cuối trang)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nhãn giai đoạn</td>
+<td>Nhãn đậm</td>
+<td>Ẩn tới khi chạy</td>
+<td>Vd "Đang nạp {n} ảnh vào project ..."</td>
+</tr>
+<tr>
+<td>Phần trăm</td>
+<td>Nhãn màu accent</td>
+<td>0%</td>
+<td>Cập nhật theo tiến độ</td>
+</tr>
+<tr>
+<td>Hủy</td>
+<td>Nút (ghost, icon ×)</td>
+<td>—</td>
+<td>Hủy worker đang chạy</td>
+</tr>
+<tr>
+<td>Thanh tiến trình</td>
+<td>Progress bar</td>
+<td>0–100</td>
+<td>Theo tiến độ worker</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-7" id="17-keo-tha-toan-trang">1.7. Kéo-thả toàn trang</h2>
+<p>Thả file/thư mục vào <strong>bất kỳ đâu</strong> trên trang (kể cả danh sách, khung xem trước) → tự phân loại video/ảnh (quét đệ quy trong thư mục); không tìm thấy gì → toast "Không tìm thấy video hoặc ảnh nào trong thứ vừa thả."</p>
+<hr>
+<h1 id="ui-8" id="2-trang-frame-extractor-cat-frame">2. Trang Frame Extractor (Cắt frame)</h1>
+<h2 id="ui-9" id="21-header">2.1. Header</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chọn video</td>
+<td>Nút (ghost, icon video)</td>
+<td>—</td>
+<td>Chọn nhiều video, thay danh sách hiện tại, refresh thông tin + ước lượng</td>
+</tr>
+<tr>
+<td>Bắt đầu cắt frame</td>
+<td>Nút (primary, icon play)</td>
+<td><strong>Disable khi đang chạy</strong></td>
+<td>Lưu cấu hình rồi chạy worker cắt; chưa chọn video → toast "Chưa chọn video nào."; chưa có project → hỏi tạo</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-10" id="22-khung-che-o-cat-frame-5-chip-chon-mot">2.2. Khung "Chế độ cắt frame" — 5 chip chọn một</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mọi frame</td>
+<td>Chip chọn (tooltip: "Lấy toàn bộ frame của video")</td>
+<td>—</td>
+<td>Chọn chế độ <code>every_frame</code>, ẩn hết tham số riêng</td>
+</tr>
+<tr>
+<td>Mỗi N frame</td>
+<td>Chip chọn (tooltip: "Lấy 1 frame sau mỗi N frame")</td>
+<td>—</td>
+<td>Hiện ô "Lấy 1 frame mỗi … frame"</td>
+</tr>
+<tr>
+<td>Mỗi N giây</td>
+<td>Chip chọn (tooltip: "Lấy 1 frame sau mỗi N giây")</td>
+<td><strong>Được chọn mặc định</strong></td>
+<td>Hiện ô "Lấy 1 frame mỗi … giây"</td>
+</tr>
+<tr>
+<td>Theo chuyển động</td>
+<td>Chip chọn (tooltip: "Chỉ lấy frame khi có chuyển động đáng kể")</td>
+<td>—</td>
+<td>Hiện thanh "Ngưỡng chuyển động"</td>
+</tr>
+<tr>
+<td>Đổi cảnh</td>
+<td>Chip chọn (tooltip: "Lấy frame mỗi khi khung hình đổi cảnh")</td>
+<td>—</td>
+<td>Hiện thanh "Ngưỡng đổi cảnh"</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Tham số theo chế độ</strong> (chỉ hiện đúng ô của chế độ đang chọn):</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lấy 1 frame mỗi (frame)</td>
+<td>Ô số nguyên, hậu tố " frame"</td>
+<td><strong>5</strong>; min 1 – max 10000, bước 1</td>
+<td>Đổi → cập nhật ngay ô ước lượng số ảnh</td>
+</tr>
+<tr>
+<td>Lấy 1 frame mỗi (giây)</td>
+<td>Ô số thập phân, hậu tố " giây"</td>
+<td><strong>1.00</strong>; min 0.02 – max 600, bước 0.1</td>
+<td>Đổi → cập nhật ước lượng</td>
+</tr>
+<tr>
+<td>Ngưỡng chuyển động <em>(Càng thấp càng lấy nhiều frame)</em></td>
+<td>Thanh trượt + ô số đồng bộ</td>
+<td><strong>0.045</strong>; min 0.005 – max 0.4, bước 0.005</td>
+<td>Ghi ngưỡng frame-diff</td>
+</tr>
+<tr>
+<td>Ngưỡng đổi cảnh <em>(Càng thấp càng nhạy)</em></td>
+<td>Thanh trượt + ô số</td>
+<td><strong>0.35</strong>; min 0.05 – max 0.95, bước 0.01</td>
+<td>Ghi ngưỡng histogram HSV</td>
+</tr>
+<tr>
+<td>Giới hạn số ảnh</td>
+<td>Ô số nguyên, hậu tố " ảnh"</td>
+<td><strong>0 = "Không giới hạn"</strong>; max 1.000.000</td>
+<td>Chặn số ảnh tối đa; đổi → cập nhật ước lượng</td>
+</tr>
+<tr>
+<td>Khoảng thời gian: bắt đầu</td>
+<td>Ô số thập phân, hậu tố " s"</td>
+<td><strong>0.0</strong>; max 100000, bước 1</td>
+<td>Cắt từ giây này</td>
+</tr>
+<tr>
+<td>Khoảng thời gian: kết thúc</td>
+<td>Ô số thập phân, hậu tố " s"</td>
+<td><strong>0.0 = "Hết video"</strong></td>
+<td>Cắt đến giây này</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-11" id="23-khung-loc-chat-luong">2.3. Khung "Lọc chất lượng"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Loại ảnh trùng lặp <em>(pHash + SSIM)</em></td>
+<td>Toggle</td>
+<td><strong>Bật</strong></td>
+<td>Bật/tắt khử trùng khi cắt</td>
+</tr>
+<tr>
+<td>Phương pháp</td>
+<td>Combobox</td>
+<td><strong>"pHash + SSIM — khuyên dùng"</strong>; lựa chọn: pHash — nhanh / SSIM — chính xác / pHash + SSIM — khuyên dùng</td>
+<td>Chọn thuật toán so trùng</td>
+</tr>
+<tr>
+<td>Khoảng cách pHash <em>(Càng nhỏ càng chặt, 0 = giống hệt)</em></td>
+<td>Ô số nguyên</td>
+<td><strong>6</strong>; min 0 – max 32</td>
+<td>Ngưỡng Hamming distance</td>
+</tr>
+<tr>
+<td>Ngưỡng SSIM</td>
+<td>Thanh trượt + ô số</td>
+<td><strong>0.965</strong>; min 0.7 – max 0.999, bước 0.001</td>
+<td>Ngưỡng xác nhận trùng</td>
+</tr>
+<tr>
+<td>Phát hiện ảnh mờ <em>(variance of Laplacian)</em></td>
+<td>Toggle</td>
+<td><strong>Bật</strong></td>
+<td>Bật/tắt lọc mờ</td>
+</tr>
+<tr>
+<td>Ngưỡng độ nét</td>
+<td>Ô số thập phân</td>
+<td><strong>60.0</strong>; min 0 – max 5000, bước 5</td>
+<td>Dưới ngưỡng = mờ</td>
+</tr>
+<tr>
+<td>Lọc ảnh thiếu sáng <em>(độ sáng trung bình 0–255)</em></td>
+<td>Toggle</td>
+<td><strong>Tắt</strong></td>
+<td>Bật/tắt lọc tối</td>
+</tr>
+<tr>
+<td>Ngưỡng độ sáng</td>
+<td>Ô số thập phân</td>
+<td><strong>45.0</strong>; min 0 – max 255, bước 5</td>
+<td>Dưới ngưỡng = thiếu sáng</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-12" id="24-khung-au-ra">2.4. Khung "Đầu ra"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Định dạng</td>
+<td>Combobox</td>
+<td><strong>JPG</strong>; lựa chọn JPG / PNG</td>
+<td>Định dạng ảnh lưu</td>
+</tr>
+<tr>
+<td>Chất lượng JPG</td>
+<td>Thanh trượt</td>
+<td><strong>92</strong>; min 50 – max 100</td>
+<td>Chất lượng nén JPEG</td>
+</tr>
+<tr>
+<td>Thu nhỏ cạnh dài</td>
+<td>Ô số nguyên, hậu tố " px"</td>
+<td><strong>0 = "Giữ nguyên"</strong>; max 8192</td>
+<td>Resize cạnh dài về giá trị này</td>
+</tr>
+<tr>
+<td>Thư mục lưu</td>
+<td>Ô text (gõ tay được)</td>
+<td>Placeholder "Mặc định: thư mục frames của project"</td>
+<td>Trống → lưu vào <code>frames/</code> của project</td>
+</tr>
+<tr>
+<td>Nút chọn thư mục</td>
+<td>Nút icon thư mục, tooltip "Chọn thư mục…"</td>
+<td>—</td>
+<td>Mở hộp thoại chọn thư mục lưu</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-13" id="25-cot-phai-thong-tin-ket-qua">2.5. Cột phải: thông tin &amp; kết quả</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Khung "Video đang xử lý"</td>
+<td>Lưới key-value</td>
+<td>"Trạng thái: Chưa chọn video"</td>
+<td>1 video: Tên · Độ phân giải · FPS · Thời lượng · Tổng frame. Nhiều video: Số video · Tổng frame · Tổng thời lượng. Lỗi → "Không đọc được video này"</td>
+</tr>
+<tr>
+<td>Khung "Ước lượng kết quả" — con số lớn</td>
+<td>Nhãn số lớn giữa khung</td>
+<td><strong>"0"</strong></td>
+<td>Tính lại tức thì khi đổi N frame/N giây/giới hạn/khoảng thời gian/danh sách video; chú thích "ảnh sẽ được sinh ra (trước khi lọc)"</td>
+</tr>
+<tr>
+<td>Khung "Bước tiếp theo"</td>
+<td>Cả khung</td>
+<td><strong>Ẩn mặc định</strong></td>
+<td>Chỉ hiện sau khi cắt xong có ≥1 ảnh: "Đã có <strong>{n} ảnh</strong> trong project…" + nút <strong>Gán nhãn tự động cho ảnh vừa cắt</strong> → chuyển sang trang Auto Label kèm đúng loạt ảnh vừa cắt</td>
+</tr>
+<tr>
+<td>Khung "Xem trước frame"</td>
+<td>Nhãn ảnh</td>
+<td>"Chưa có frame nào"</td>
+<td>Hiện frame vừa cắt theo thời gian thực</td>
+</tr>
+<tr>
+<td>Khung "Nhật ký"</td>
+<td>Ô log chỉ đọc</td>
+<td>Rỗng</td>
+<td>Log từng bước, tự cuộn cuối; xóa mỗi lần bấm Bắt đầu; kết thúc ghi "KẾT QUẢ: lưu {n} ảnh / đọc {n} frame"</td>
+</tr>
+<tr>
+<td>Thanh tiến trình + Hủy</td>
+<td>Như trang Import</td>
+<td>0%</td>
+<td>"Đang cắt frame …"; Hủy dừng worker, ảnh đã cắt giữ nguyên</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h1 id="ui-14" id="3-trang-auto-label">3. Trang Auto Label</h1>
+<h2 id="ui-15" id="31-header">3.1. Header</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nạp model</td>
+<td>Nút (ghost, icon tải xuống)</td>
+<td>Disable khi đang nạp</td>
+<td>Lưu cấu hình model rồi nạp trọng số ở luồng nền</td>
+</tr>
+<tr>
+<td>Bắt đầu gán nhãn</td>
+<td>Nút (primary, icon play)</td>
+<td>Disable khi đang chạy</td>
+<td>Chạy gán nhãn trên ảnh đang chọn (hoặc toàn bộ); <strong>model chưa nạp → tự nạp trước rồi chạy tiếp</strong>. Chặn kèm toast khi: chưa mở project ("Hãy mở hoặc tạo project trước.") / đang chạy ("Đang gán nhãn, vui lòng đợi.") / không có ảnh ("Không có ảnh nào để gán nhãn.")</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-16" id="32-khung-anh-trong-project">3.2. Khung "Ảnh trong project"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bộ lọc ảnh</td>
+<td>Combobox</td>
+<td><strong>"Tất cả ảnh"</strong>; lựa chọn: Tất cả ảnh / Chưa gán nhãn / Cần xem lại / Đã duyệt / Bỏ qua ảnh trùng</td>
+<td>Đổi → nạp lại danh sách theo bộ lọc</td>
+</tr>
+<tr>
+<td>Nhãn "Đang chọn sẵn <strong>N ảnh vừa cắt</strong>…"</td>
+<td>Nhãn động</td>
+<td><strong>Ẩn</strong> mặc định</td>
+<td>Chỉ hiện khi được chuyển sang từ trang Cắt frame; đồng thời tự đặt lọc "Chưa gán nhãn" và chọn sẵn đúng loạt ảnh vừa cắt</td>
+</tr>
+<tr>
+<td>Danh sách ảnh</td>
+<td>Danh sách thumbnail, chọn nhiều; tooltip = đường dẫn, kích thước, số đối tượng, trạng thái</td>
+<td>—</td>
+<td>Chọn ảnh → xem trước kết quả suy luận đã có ở khung bên phải</td>
+</tr>
+<tr>
+<td>Chọn tất cả</td>
+<td>Nút (ghost)</td>
+<td>—</td>
+<td>Chọn toàn bộ danh sách</td>
+</tr>
+<tr>
+<td>Nhãn đếm</td>
+<td>Nhãn</td>
+<td>"0 ảnh"</td>
+<td>Cập nhật "{n} ảnh" sau mỗi lần refresh</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-17" id="33-khung-cau-hinh-model">3.3. Khung "Cấu hình model"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nhiệm vụ</td>
+<td>Combobox</td>
+<td><strong>Segmentation</strong>; lựa chọn: Detection / Segmentation / OBB — hộp xoay / Pose — điểm khớp</td>
+<td>Đổi → nạp lại danh sách trọng số theo nhiệm vụ</td>
+</tr>
+<tr>
+<td>Trọng số</td>
+<td>Combobox</td>
+<td>Điền động theo nhiệm vụ (vd segment: yolov8n-seg → yolo12m-seg; detect: yolov8n → yolo12x)</td>
+<td>Chọn model chuẩn (bị bỏ qua nếu có Model riêng)</td>
+</tr>
+<tr>
+<td>Model riêng</td>
+<td>Nhãn "Không dùng" + nút <strong>Chọn file</strong> + nút <strong>Xoá</strong></td>
+<td>"Không dùng"</td>
+<td>Chọn file <code>.pt/.onnx/.engine/.torchscript</code> → ưu tiên dùng thay model chuẩn; Xoá → về "Không dùng"</td>
+</tr>
+<tr>
+<td>Thiết bị</td>
+<td>Combobox</td>
+<td><strong>Auto (ưu tiên GPU)</strong>; lựa chọn: Auto / CPU / CUDA:i - tên GPU</td>
+<td>Thiết bị nạp model</td>
+</tr>
+<tr>
+<td>Cỡ ảnh vào model</td>
+<td>Ô số nguyên</td>
+<td><strong>640</strong>; min 128 – max 4096, bước 32</td>
+<td>Kích thước ảnh đưa vào model</td>
+</tr>
+<tr>
+<td>Nhãn trạng thái model</td>
+<td>Nhãn màu</td>
+<td><strong>"Chưa nạp model"</strong> (vàng)</td>
+<td>→ "Đang nạp model …" (xanh dương) → mô tả model (xanh lá) → "Nạp model thất bại" (đỏ)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-18" id="34-khung-tham-so-suy-luan">3.4. Khung "Tham số suy luận"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Độ tin cậy</td>
+<td>Thanh trượt + ô số</td>
+<td><strong>0.45</strong>; min 0.01 – max 0.99, bước 0.01</td>
+<td>Ngưỡng confidence tối thiểu của detection</td>
+</tr>
+<tr>
+<td>IOU (khử trùng)</td>
+<td>Thanh trượt + ô số</td>
+<td><strong>0.5</strong>; min 0.05 – max 0.95</td>
+<td>Ngưỡng NMS</td>
+</tr>
+<tr>
+<td>Ngưỡng xem lại <em>(Dự đoán thấp hơn ngưỡng này sẽ bị đánh dấu Cần xem lại)</em></td>
+<td>Thanh trượt + ô số</td>
+<td><strong>0.6</strong>; min 0.05 – max 0.99</td>
+<td>Ảnh có nhãn dưới ngưỡng → trạng thái "Cần xem lại"</td>
+</tr>
+<tr>
+<td>Số đối tượng tối đa</td>
+<td>Ô số nguyên</td>
+<td><strong>1000</strong>; min 1 – max 30000, bước 50</td>
+<td>Giới hạn detection mỗi ảnh</td>
+</tr>
+<tr>
+<td>Giản lược polygon</td>
+<td>Thanh trượt + ô số</td>
+<td><strong>0.0025</strong>; min 0 – max 0.02, bước 0.0005</td>
+<td>Mức đơn giản hóa Douglas–Peucker</td>
+</tr>
+<tr>
+<td>Diện tích tối thiểu</td>
+<td>Ô số nguyên, hậu tố " px"</td>
+<td><strong>24</strong>; min 0 – max 100000, bước 4</td>
+<td>Loại detection nhỏ hơn</td>
+</tr>
+<tr>
+<td>Ghi đè nhãn đã có</td>
+<td>Toggle</td>
+<td><strong>Bật</strong></td>
+<td>Tắt → bỏ qua ảnh đã có nhãn (không gọi model)</td>
+</tr>
+<tr>
+<td>Theo dõi đối tượng qua frame</td>
+<td>Toggle</td>
+<td><strong>Tắt</strong></td>
+<td>Bật → mở combobox tracker + cập nhật cảnh báo</td>
+</tr>
+<tr>
+<td>Thuật toán tracker</td>
+<td>Combobox</td>
+<td><strong>BoT-SORT</strong>; lựa chọn: BoT-SORT / ByteTrack</td>
+<td><strong>Chỉ enable khi tracking bật</strong></td>
+</tr>
+<tr>
+<td>Nhãn cảnh báo tracking</td>
+<td>Nhãn động màu vàng</td>
+<td>Rỗng</td>
+<td>"Chỉ bật theo dõi khi ảnh có thứ tự frame (từ Frame Extractor)." — toggle bị <strong>disable + tự tắt</strong> khi không ảnh nào có frame_index; cảnh báo thêm khi khoảng cách frame trung bình &gt; 3 ("khá thưa…")</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-19" id="35-khung-suy-luan-cat-lat-anh-lon-sahi">3.5. Khung "Suy luận cắt lát (ảnh lớn)" — SAHI</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bật suy luận cắt lát</td>
+<td>Toggle</td>
+<td><strong>Tắt</strong></td>
+<td>Bật → mở 2 control dưới + hiện dòng cảnh báo hiệu năng</td>
+</tr>
+<tr>
+<td>Cỡ ô <em>(Khuyến nghị: bằng cỡ ảnh vào model)</em></td>
+<td>Ô số nguyên, hậu tố " px"</td>
+<td><strong>640</strong>; min 64 – max 2048, bước 64</td>
+<td>Kích thước mỗi ô cắt; <strong>disable khi SAHI tắt</strong></td>
+</tr>
+<tr>
+<td>Tỉ lệ chồng lấn <em>(Tăng để bắt đối tượng sát biên ô)</em></td>
+<td>Thanh trượt + ô số</td>
+<td><strong>0.2</strong>; min 0 – max 0.5, bước 0.05</td>
+<td>Chồng lấn giữa các ô; <strong>disable khi SAHI tắt</strong></td>
+</tr>
+<tr>
+<td>Dòng cảnh báo hiệu năng</td>
+<td>Nhãn mờ</td>
+<td>Chỉ hiện khi bật</td>
+<td>"Ảnh 4K với ô 640px tạo ~35 ô — chậm hơn ~10–30 lần so với suy luận thường."</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-20" id="36-khung-plugin-tinh-chinh">3.6. Khung "Plugin tinh chỉnh"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chọn plugin</td>
+<td>Combobox</td>
+<td><strong>"Không dùng plugin"</strong>; các mục: Chọn thông minh (SAM 2/SAM 1) / FastSAM / Florence-2 / SAM 3 Concept (prompt văn bản) / Grounding DINO</td>
+<td>Đổi → hiện mô tả plugin + trạng thái cài đặt (xanh/vàng); plugin SAM → hiện thêm combobox trọng số SAM</td>
+</tr>
+<tr>
+<td>Mô tả plugin</td>
+<td>Nhãn động</td>
+<td>"Chỉ dùng YOLO, không qua plugin."</td>
+<td>Mô tả plugin đang chọn</td>
+</tr>
+<tr>
+<td>Trọng số SAM</td>
+<td>Combobox (<strong>ẩn</strong>, chỉ hiện khi chọn plugin SAM)</td>
+<td><strong>SAM 2 Large (300 MB)</strong>; lựa chọn: SAM 2 Large / SAM 2 Base (148 MB) / SAM 1 Base (366 MB) / SAM 1 Large (1.2 GB) / FastSAM Small (25 MB) / FastSAM XL (140 MB)</td>
+<td>Đổi → lưu ngay vào cấu hình <code>sam.weights</code> (đã vá <span class="chip chip-bug">BUG-05</span>)</td>
+</tr>
+<tr>
+<td>Ô prompt</td>
+<td>Ô text, placeholder "Mô tả bằng chữ, ví dụ: crack, rust, bolt"</td>
+<td><strong>Chỉ hiện khi plugin nhận prompt</strong> (FastSAM, Florence-2, G-DINO, SAM 3); ẩn khi không chọn plugin (đã vá <span class="chip chip-bug">BUG-06</span>)</td>
+<td>Truyền prompt văn bản cho plugin</td>
+</tr>
+<tr>
+<td>Nhãn trạng thái plugin</td>
+<td>Nhãn màu</td>
+<td>Rỗng</td>
+<td>Trạng thái cài đặt: đủ điều kiện (xanh) / thiếu gì (vàng, kèm lý do)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-21" id="37-cot-phai">3.7. Cột phải</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Vùng</th>
+<th>Nội dung / Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Khung "Xem trước kết quả"</td>
+<td>Vẽ ảnh + box/polygon màu theo class, nhãn "class conf"; trống → "Kết quả suy luận sẽ hiện ở đây"; cập nhật realtime khi đang chạy</td>
+</tr>
+<tr>
+<td>Khung "Kết quả"</td>
+<td>5 chỉ số đều khởi đầu "0": Ảnh đã xử lý · Đối tượng sinh ra · Ảnh cần xem lại (vàng) · Dự đoán độ tin cậy thấp (đỏ) · Ảnh không có đối tượng (xám)</td>
+</tr>
+<tr>
+<td>Nút "Mở trình sửa nhãn để xem lại"</td>
+<td>Chuyển sang trang Editor</td>
+</tr>
+<tr>
+<td>Khung "Nhật ký"</td>
+<td>Log chỉ đọc, tự cuộn, xóa mỗi lần bắt đầu</td>
+</tr>
+<tr>
+<td>Thanh tiến trình</td>
+<td>"Đang gán nhãn {n} ảnh …" + % + nút Hủy; kết thúc "Gán nhãn hoàn tất"</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h1 id="ui-22" id="4-trang-train-model">4. Trang Train Model</h1>
+<h2 id="ui-23" id="41-header">4.1. Header</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mở thư mục huấn luyện</td>
+<td>Nút (ghost, icon thư mục)</td>
+<td>—</td>
+<td>Mở thư mục <code>runs/</code> của project trong Explorer</td>
+</tr>
+<tr>
+<td>Dừng</td>
+<td>Nút (danger, icon stop)</td>
+<td><strong>Disable mặc định</strong>, chỉ enable khi đang train</td>
+<td>Hủy train, trạng thái "Đang dừng …"</td>
+</tr>
+<tr>
+<td>Bắt đầu huấn luyện</td>
+<td>Nút (primary, icon play)</td>
+<td>Disable khi đang train</td>
+<td>Lưu cấu hình, xóa log + 2 biểu đồ, chạy train. Chặn khi: chưa mở project / đang chạy / <strong>dưới 2 ảnh đã gán nhãn</strong> ("Cần tối thiểu 2 ảnh đã gán nhãn để huấn luyện.")</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-24" id="42-khung-model-du-lieu">4.2. Khung "Model &amp; dữ liệu"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nhiệm vụ</td>
+<td>Combobox</td>
+<td><strong>Segmentation</strong>; Segmentation / Detection / OBB / Pose</td>
+<td>Đổi → nạp lại danh sách model</td>
+</tr>
+<tr>
+<td>Model</td>
+<td>Combobox</td>
+<td>Theo nhiệm vụ (MODEL_ZOO)</td>
+<td>Model nền để train</td>
+</tr>
+<tr>
+<td>Model riêng</td>
+<td>Ô text, placeholder "Đường dẫn file .pt / .onnx" + nút duyệt (lọc PyTorch *.pt)</td>
+<td>Rỗng</td>
+<td>Có nội dung → <strong>ghi đè</strong> lựa chọn Model; sau khi train xong ô này tự điền đường dẫn <code>best.pt</code> vừa tạo</td>
+</tr>
+<tr>
+<td>File data.yaml</td>
+<td>Ô text, placeholder "Mặc định: tự sinh dataset.yaml" + nút duyệt (lọc <em>.yaml/</em>.yml)</td>
+<td>Rỗng</td>
+<td>Chọn file yaml → <strong>tự tắt</strong> toggle "Tự sinh dataset"</td>
+</tr>
+<tr>
+<td>Tự sinh dataset từ project</td>
+<td>Toggle</td>
+<td><strong>Bật</strong></td>
+<td>App tự export dataset YOLO từ project trước khi train</td>
+</tr>
+<tr>
+<td>Chỉ huấn luyện trên ảnh đã duyệt</td>
+<td>Toggle</td>
+<td><strong>Tắt</strong></td>
+<td>Lọc chỉ ảnh <code>approved</code> khi dựng dataset</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-25" id="43-khung-sieu-tham-so">4.3. Khung "Siêu tham số"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Số epoch</td>
+<td>Ô số nguyên</td>
+<td><strong>100</strong>; min 1 – max 5000, bước 10</td>
+<td>Số epoch train</td>
+</tr>
+<tr>
+<td>Cỡ batch</td>
+<td>Ô số nguyên</td>
+<td><strong>16</strong>; min 1 – max 512</td>
+<td>Batch size</td>
+</tr>
+<tr>
+<td>Cỡ ảnh vào model</td>
+<td>Ô số nguyên</td>
+<td><strong>640</strong>; min 128 – max 2048, bước 32</td>
+<td>imgsz</td>
+</tr>
+<tr>
+<td>Patience</td>
+<td>Ô số nguyên</td>
+<td><strong>50</strong>; min 0 – max 1000, bước 5</td>
+<td>Dừng sớm khi metric không cải thiện</td>
+</tr>
+<tr>
+<td>Số worker</td>
+<td>Ô số nguyên</td>
+<td><strong>4</strong>; min 0 – max 32</td>
+<td>Worker nạp dữ liệu</td>
+</tr>
+<tr>
+<td>Learning rate (lr0)</td>
+<td>Ô số thập phân (5 chữ số)</td>
+<td><strong>0.01</strong>; min 0.00001 – max 1.0, bước 0.001</td>
+<td>Tốc độ học ban đầu</td>
+</tr>
+<tr>
+<td>Optimizer</td>
+<td>Combobox</td>
+<td><strong>Auto</strong>; Auto / SGD / Adam / AdamW / NAdam / RMSProp</td>
+<td>Bộ tối ưu</td>
+</tr>
+<tr>
+<td>Thiết bị</td>
+<td>Combobox</td>
+<td><strong>Auto (ưu tiên GPU)</strong> / CPU / CUDA:i</td>
+<td>Thiết bị train</td>
+</tr>
+<tr>
+<td>Tỷ lệ tập kiểm định</td>
+<td>Thanh trượt + ô số</td>
+<td><strong>0.2</strong>; min 0.05 – max 0.5</td>
+<td>Tỉ lệ val khi tự dựng dataset</td>
+</tr>
+<tr>
+<td>Bật tăng cường dữ liệu (Augmentation)</td>
+<td>Toggle</td>
+<td><strong>Bật</strong></td>
+<td>Bật/tắt augmentation</td>
+</tr>
+<tr>
+<td>Cache ảnh vào RAM</td>
+<td>Toggle</td>
+<td><strong>Tắt</strong></td>
+<td>Cache dataset để train nhanh hơn</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-26" id="44-khung-lich-su-huan-luyen">4.4. Khung "Lịch sử huấn luyện"</h2>
+<p>Danh sách <strong>chỉ đọc</strong> 15 lần chạy gần nhất: <code>ngày • tên model • N epochs • mAP x.xxx • trạng thái</code> (icon màu: xong = xanh lá, đang chạy = xanh dương, lỗi = đỏ); tooltip = thư mục kết quả.</p>
+<h2 id="ui-27" id="45-cot-phai-giam-sat-realtime-chi-hien-thi">4.5. Cột phải — giám sát realtime (chỉ hiển thị)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Vùng</th>
+<th>Nội dung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vòng tiến độ</td>
+<td>% hoàn thành theo epoch</td>
+</tr>
+<tr>
+<td>Bảng thông tin</td>
+<td>Epoch <code>0 / 0</code> · Thời gian đã chạy <code>00:00:00</code> (đồng hồ cập nhật mỗi giây) · Ước tính còn lại <code>--:--:--</code> · Thiết bị · Trạng thái ("Sẵn sàng" → "Đang chuẩn bị ..." → tên giai đoạn → "Train hoàn tất." / "Đã dừng" / "Thất bại")</td>
+</tr>
+<tr>
+<td>Biểu đồ "Chỉ số đánh giá"</td>
+<td>4 đường theo epoch: mAP50, mAP50-95, Precision, Recall</td>
+</tr>
+<tr>
+<td>Biểu đồ "Hàm mất mát (Loss)"</td>
+<td>box_loss, seg_loss, cls_loss theo epoch (chỉ vẽ khi ≠ 0)</td>
+</tr>
+<tr>
+<td>Nhật ký huấn luyện</td>
+<td>Log chỉ đọc; kết thúc ghi "Best weights: …"; lỗi ghi "LỖI: {msg}"</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h1 id="ui-28" id="5-trang-annotation-editor">5. Trang Annotation Editor</h1>
+<h2 id="ui-29" id="51-header">5.1. Header</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Phím tắt</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gán nhãn ảnh này</td>
+<td>Nút (ghost, icon đũa phép)</td>
+<td>—</td>
+<td>Suy luận YOLO riêng ảnh đang mở, thêm kết quả vào canvas; model chưa nạp → toast "Hãy nạp model ở trang Auto Label trước."; disable khi đang suy luận</td>
+</tr>
+<tr>
+<td>Lưu</td>
+<td>Nút (ghost, icon lưu)</td>
+<td>Ctrl+S</td>
+<td>Ghi toàn bộ annotation của ảnh vào DB + toast số đối tượng</td>
+</tr>
+<tr>
+<td>Duyệt &amp;&amp; sang ảnh sau</td>
+<td>Nút (primary, icon check)</td>
+<td>Enter</td>
+<td>Lưu → duyệt ảnh (approved) → sang ảnh kế</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-30" id="52-cot-trai-khung-anh">5.2. Cột trái — khung "Ảnh"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bộ lọc</td>
+<td>Combobox</td>
+<td><strong>Tất cả</strong>; Tất cả / Cần xem lại / Chưa gán nhãn / Đã duyệt</td>
+<td>Nạp lại danh sách ảnh theo bộ lọc</td>
+</tr>
+<tr>
+<td>Nút xóa ảnh (icon thùng rác)</td>
+<td>Nút icon, phím <strong>Shift+Del</strong></td>
+<td>—</td>
+<td>Hộp thoại xóa ảnh hiện tại (xem 5.2b)</td>
+</tr>
+<tr>
+<td>Danh sách ảnh</td>
+<td>Danh sách (chọn một)</td>
+<td>—</td>
+<td>Chọn → nạp ảnh + nhãn lên canvas</td>
+</tr>
+<tr>
+<td>Chuột phải lên ảnh</td>
+<td>Menu ngữ cảnh</td>
+<td>—</td>
+<td>"Xoá ảnh này khỏi project" / "Đánh dấu ảnh cần xem lại" / "Đánh dấu ảnh đã duyệt"</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>5.2b. Hộp thoại xóa ảnh</strong> — "Xoá ảnh '{tên}' khỏi project?": 3 nút <strong>Chỉ gỡ khỏi project</strong> (giữ file) / <strong>Xoá luôn file trên đĩa</strong> / <strong>Huỷ</strong> (mặc định). Sau xóa tự chuyển sang ảnh kế.</p>
+<h2 id="ui-31" id="53-cot-trai-khung-lop-oi-tuong">5.3. Cột trái — khung "Lớp đối tượng"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Phím tắt</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Danh sách lớp (icon màu)</td>
+<td>Danh sách</td>
+<td>Phím <strong>1..9</strong> chọn lớp thứ n <strong>và gán ngay cho đối tượng đang chọn</strong></td>
+<td>Chọn → đặt lớp vẽ hiện hành; <strong>nháy đúp</strong> → gán lớp cho các đối tượng đang chọn</td>
+</tr>
+<tr>
+<td>Thêm lớp</td>
+<td>Nút (ghost, icon +)</td>
+<td>—</td>
+<td>Hộp nhập "Tên lớp:"</td>
+</tr>
+<tr>
+<td>Chuột phải lên lớp</td>
+<td>Menu ngữ cảnh</td>
+<td>—</td>
+<td>Đổi tên / Đổi màu (color picker) / Ẩn-hiện / <strong>Xoá lớp</strong> (hỏi "Xoá lớp này và toàn bộ nhãn thuộc nó?")</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-32" id="54-thanh-cong-cu-8-nut-chon-mot-nut-lenh">5.4. Thanh công cụ (8 nút chọn-một + nút lệnh)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Công cụ</th>
+<th>Phím</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Chọn</strong> (mặc định)</td>
+<td>V</td>
+<td>Chọn/kéo đối tượng, kéo đỉnh chỉnh hình, nháy đúp cạnh thêm đỉnh</td>
+</tr>
+<tr>
+<td>Chọn thông minh</td>
+<td>Q</td>
+<td>Nhấp điểm hoặc kéo khung để SAM tự khoanh vùng; hiện thanh chọn model SAM</td>
+</tr>
+<tr>
+<td>Polygon</td>
+<td>W</td>
+<td>Bấm từng đỉnh; chuột phải/Enter đóng hình, Backspace bỏ đỉnh, Esc hủy</td>
+</tr>
+<tr>
+<td>Hộp bao</td>
+<td>—</td>
+<td>Kéo tạo bbox</td>
+</tr>
+<tr>
+<td>Cọ vẽ</td>
+<td>B</td>
+<td>Tô thêm vùng (Alt+cuộn đổi cỡ cọ); hiện thanh cỡ cọ</td>
+</tr>
+<tr>
+<td>Tẩy</td>
+<td>E</td>
+<td>Xóa bớt vùng; tẩy giữa tạo <strong>lỗ</strong> trong mask</td>
+</tr>
+<tr>
+<td>Cắt đôi</td>
+<td>S</td>
+<td>Kẻ đường cắt tách vùng làm hai</td>
+</tr>
+<tr>
+<td>Di chuyển</td>
+<td>giữ Space / chuột giữa</td>
+<td>Pan ảnh</td>
+</tr>
+</tbody>
+</table></div>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Nút lệnh</th>
+<th>Phím</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gộp vùng</td>
+<td>M</td>
+<td>Gộp các vùng đang chọn thành một</td>
+</tr>
+<tr>
+<td>Giản lược</td>
+<td>—</td>
+<td>Giảm số đỉnh polygon đang chọn (epsilon cố định 1.8)</td>
+</tr>
+<tr>
+<td>Xoá đối tượng</td>
+<td>Delete</td>
+<td>Xóa đối tượng đang chọn</td>
+</tr>
+<tr>
+<td>Hoàn tác / Làm lại</td>
+<td>Ctrl+Z / Ctrl+Y (và Ctrl+Shift+Z)</td>
+<td>Undo/Redo — nút tự mờ khi hết bước</td>
+</tr>
+<tr>
+<td>Phóng to / Thu nhỏ / Vừa khung</td>
+<td>Ctrl+= / Ctrl+- / Ctrl+0</td>
+<td>Zoom ×1.2, ×1/1.2, fit</td>
+</tr>
+<tr>
+<td>(không nút) Chọn tất cả</td>
+<td>Ctrl+A</td>
+<td>Chọn mọi đối tượng trên ảnh</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-33" id="55-thanh-tuy-chon-cong-cu-an-mac-inh">5.5. Thanh tùy chọn công cụ (ẩn mặc định)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Điều kiện hiện</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cỡ cọ / tẩy</td>
+<td>Thanh trượt + ô số</td>
+<td><strong>20</strong>; min 2 – max 200</td>
+<td>Chỉ hiện khi dùng Cọ vẽ / Tẩy; giá trị được nhớ vào cấu hình</td>
+</tr>
+<tr>
+<td>Mô hình SAM</td>
+<td>Combobox</td>
+<td><strong>SAM 2 Large (300 MB)</strong>; 6 lựa chọn như mục 3.6</td>
+<td>Chỉ hiện khi dùng Chọn thông minh; lưu ngay vào cấu hình</td>
+</tr>
+<tr>
+<td>Banner tiến độ SAM</td>
+<td>Nhãn + progress 0–100</td>
+<td>Ẩn</td>
+<td>Hiện khi đang tải model SAM / đang phân tích ảnh</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-34" id="56-thanh-ieu-huong-duoi-canvas">5.6. Thanh điều hướng dưới canvas</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Phím</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ảnh trước / Ảnh sau</td>
+<td>A / D</td>
+<td>Chuyển ảnh trong danh sách đã lọc (kẹp ở 2 đầu)</td>
+</tr>
+<tr>
+<td>Nhãn vị trí "0 / 0"</td>
+<td>—</td>
+<td>"{thứ tự} / {tổng}"</td>
+</tr>
+<tr>
+<td>Nhãn zoom "100%"</td>
+<td>—</td>
+<td>Cập nhật theo mức zoom</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-35" id="57-cot-phai">5.7. Cột phải</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Khung</th>
+<th>Control</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Navigator</strong></td>
+<td>Minimap cao 150px có khung viewport</td>
+<td>Bấm điểm bất kỳ → canvas cuộn tới đó</td>
+</tr>
+<tr>
+<td><strong>Đối tượng trên ảnh</strong></td>
+<td>Danh sách chọn nhiều: <code>#n tên-lớp [T#track] · conf</code> (conf="manual" nếu vẽ tay; màu vàng nếu cần xem lại)</td>
+<td>Chọn đồng bộ 2 chiều với canvas. Chuột phải → menu <strong>kéo-thả được</strong>: Xoá / Gộp vùng / Giản lược / Chuyển thành polygon / "Áp dụng sửa đổi cho track" (chỉ hiện khi đối tượng có track_id)</td>
+</tr>
+<tr>
+<td><strong>Thuộc tính</strong></td>
+<td>Lớp (combobox)</td>
+<td>Đổi lớp cho đối tượng đang chọn; không chọn gì → đặt lớp vẽ hiện hành</td>
+</tr>
+<tr>
+<td></td>
+<td>Độ tin cậy (ô số)</td>
+<td><strong>1.0</strong>; 0.0–1.0 bước 0.01; <strong>disable khi không chọn đối tượng</strong></td>
+</tr>
+<tr>
+<td></td>
+<td>Nhãn thông tin</td>
+<td>1 đối tượng: mã/track/số đỉnh/kích thước/diện tích; nhiều: số lượng + tổng diện tích</td>
+</tr>
+<tr>
+<td></td>
+<td>Nút "Áp dụng sửa đổi cho track"</td>
+<td><strong>Ẩn</strong>; chỉ hiện khi chọn đúng 1 đối tượng có track_id → hỏi xác nhận rồi đổi lớp toàn track trong project</td>
+</tr>
+<tr>
+<td></td>
+<td>Nút "Cần xem lại" / "Đã duyệt"</td>
+<td>Đặt trạng thái cho các đối tượng đang chọn</td>
+</tr>
+<tr>
+<td><strong>Hiển thị</strong></td>
+<td>Hiện độ tin cậy (toggle, <strong>Bật</strong>) · Hiện tên lớp (toggle, <strong>Bật</strong>) · Độ đậm (thanh trượt, <strong>0.35</strong>; 0–0.9)</td>
+<td>Tùy chỉnh cách vẽ trên canvas, lưu vào cấu hình</td>
+</tr>
+</tbody>
+</table></div>
+<p>Bố cục: 3 cột kéo giãn được bằng splitter (khởi tạo 240 / 850 / 310 px, không cột nào thu về 0).</p>
+<hr>
+<h1 id="ui-36" id="6-trang-dataset-manager">6. Trang Dataset Manager</h1>
+<h2 id="ui-37" id="61-header">6.1. Header</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dọn dẹp</td>
+<td>Nút (ghost, icon lấp lánh)</td>
+<td>Mở menu dọn dẹp 6 mục (xem 6.5)</td>
+</tr>
+<tr>
+<td>Mở trình sửa nhãn</td>
+<td>Nút (primary)</td>
+<td>Chuyển sang trang Editor</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-38" id="62-hang-6-the-thong-ke">6.2. Hàng 6 thẻ thống kê</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Thẻ</th>
+<th>Màu</th>
+<th>Bấm được?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tổng số ảnh</td>
+<td>tím</td>
+<td>Không</td>
+</tr>
+<tr>
+<td>Đã gán nhãn</td>
+<td>xanh lá</td>
+<td><strong>Có</strong> → lọc "Đã gán nhãn"</td>
+</tr>
+<tr>
+<td>Chưa gán nhãn</td>
+<td>vàng</td>
+<td><strong>Có</strong> → lọc "Chưa gán nhãn"</td>
+</tr>
+<tr>
+<td>Tổng đối tượng</td>
+<td>xanh dương</td>
+<td>Không</td>
+</tr>
+<tr>
+<td>Số lớp</td>
+<td>tím sáng</td>
+<td>Không</td>
+</tr>
+<tr>
+<td>Ảnh trùng</td>
+<td>đỏ</td>
+<td><strong>Có</strong> → lọc "Trùng"</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-39" id="63-thanh-loc-tim-kiem">6.3. Thanh lọc + tìm kiếm</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>7 chip lọc</td>
+<td>Chip chọn-một</td>
+<td><strong>"Tất cả"</strong> được chọn</td>
+<td>Tất cả / Đã gán nhãn / Chưa gán nhãn / Cần xem lại / Đã duyệt / Trùng / Mờ</td>
+</tr>
+<tr>
+<td>Ô tìm kiếm</td>
+<td>Ô text có icon kính lúp + nút xóa, rộng 210px</td>
+<td>Placeholder "Tìm theo tên file …"</td>
+<td>Lọc realtime theo tên file (không phân biệt hoa thường), áp <strong>sau</strong> chip lọc</td>
+</tr>
+<tr>
+<td>Cỡ thumbnail</td>
+<td>Combobox 88px</td>
+<td><strong>"Vừa" (150px)</strong>; Nhỏ (118) / Vừa (150) / Lớn (198)</td>
+<td>Đổi cỡ ô lưới ảnh</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-40" id="64-luoi-anh-thao-tac-hang-loat">6.4. Lưới ảnh + thao tác hàng loạt</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lưới thumbnail</td>
+<td>Chọn nhiều (Ctrl/Shift), nạp lazy nền</td>
+<td><strong>Nháy đúp</strong> một ảnh → mở thẳng trong Editor</td>
+</tr>
+<tr>
+<td>Nhãn chọn</td>
+<td>"Chưa chọn ảnh nào" → "Đang chọn {n} ảnh"</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Duyệt</td>
+<td>Nút (ghost)</td>
+<td>Duyệt hàng loạt ảnh chọn; chưa chọn → toast "Hãy chọn ảnh trước."</td>
+</tr>
+<tr>
+<td>Đánh dấu xem lại</td>
+<td>Nút (ghost)</td>
+<td>Đặt "Cần xem lại" hàng loạt</td>
+</tr>
+<tr>
+<td>Xoá</td>
+<td>Nút (danger)</td>
+<td>Hộp thoại: <strong>Yes</strong> = chỉ gỡ khỏi project / <strong>Yes to All</strong> = xóa cả file trên đĩa / <strong>Cancel</strong> (mặc định)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-41" id="65-menu-don-dep-6-muc">6.5. Menu "Dọn dẹp" (6 mục)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Mục</th>
+<th>Xác nhận?</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Xoá tất cả ảnh trùng</td>
+<td>Có ("Xoá {n} ảnh trùng?")</td>
+<td>Không có ảnh trùng → toast "Không có ảnh trùng nào."</td>
+</tr>
+<tr>
+<td>Xoá ảnh mờ dưới ngưỡng</td>
+<td>Có</td>
+<td>Ngưỡng lấy từ cấu hình cắt frame (mặc định 60.0)</td>
+</tr>
+<tr>
+<td>Xoá ảnh chưa gán nhãn</td>
+<td>Có</td>
+<td>Xóa khỏi project (không xóa file)</td>
+</tr>
+<tr>
+<td>Gỡ ảnh không còn tồn tại trên ổ đĩa</td>
+<td><strong>Không hỏi</strong> — chạy ngay</td>
+<td>Toast số ảnh đã gỡ</td>
+</tr>
+<tr>
+<td>Tính lại số đối tượng</td>
+<td>Không hỏi</td>
+<td>Đếm lại <code>n_objects</code> toàn bộ ảnh</td>
+</tr>
+<tr>
+<td>Sao lưu project</td>
+<td>Không hỏi</td>
+<td>Tạo backup ngay</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-42" id="66-cot-phai-thong-ke-lop-chi-hien-thi">6.6. Cột phải — thống kê lớp (chỉ hiển thị)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Khung</th>
+<th>Nội dung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Đối tượng theo lớp</td>
+<td>Biểu đồ cột ngang (chỉ lớp có đối tượng)</td>
+</tr>
+<tr>
+<td>Tỷ lệ ảnh theo lớp</td>
+<td>Biểu đồ donut, tâm hiện tổng số ảnh</td>
+</tr>
+<tr>
+<td>Chi tiết từng lớp</td>
+<td>Bảng chỉ đọc 6 cột: Lớp (tô màu) · Ảnh · Đối tượng · Mask · Diện tích TB (px²) · Độ phủ (%)</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h1 id="ui-43" id="7-trang-statistics-export">7. Trang Statistics &amp; Export</h1>
+<h2 id="ui-44" id="71-header-cot-chon-muc">7.1. Header + cột chọn mục</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Làm mới</td>
+<td>Nút (ghost, icon refresh)</td>
+<td>Tính lại toàn bộ số liệu/biểu đồ</td>
+</tr>
+<tr>
+<td>Xuất dataset</td>
+<td>Nút (primary)</td>
+<td>Nhảy thẳng sang mục "Xuất dataset"</td>
+</tr>
+<tr>
+<td>Cột "Mục" (6 tab con, chọn một)</td>
+<td><strong>"Tổng quan"</strong> chọn mặc định</td>
+<td>Tổng quan / Phân bố lớp / Kích thước đối tượng / Bản đồ nhiệt / Chất lượng ảnh / Xuất dataset</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-45" id="72-muc-tong-quan-chi-hien-thi">7.2. Mục "Tổng quan" (chỉ hiển thị)</h2>
+<p>4 thẻ: Tổng số ảnh · Tổng đối tượng · Tổng số mask · Đối tượng/ảnh (2 chữ số). Biểu đồ donut phân bố lớp; histogram diện tích (28 cột, đơn vị px²); thanh tiến độ gán nhãn nhiều màu + 4 chú giải (Đã duyệt/Cần xem lại/Máy gán nhãn/Chưa gán nhãn); bảng "Thông tin project" 9 dòng (tên, thư mục, loại bài toán, ngày tạo/cập nhật, số lớp, tổng diện tích mask, số track, độ dài track trung bình).</p>
+<h2 id="ui-46" id="73-muc-phan-bo-lop-kich-thuoc-oi-tuong-chat-luong-anh-chi-hien-thi">7.3. Mục "Phân bố lớp" / "Kích thước đối tượng" / "Chất lượng ảnh" (chỉ hiển thị)</h2>
+<ul>
+<li><strong>Phân bố lớp</strong>: cột dọc "Số đối tượng theo lớp"; cột ngang "Số ảnh chứa mỗi lớp"; cột ngang "Độ cân bằng dữ liệu" (% ảnh chứa lớp); histogram "Phân bố độ tin cậy" (20 cột, trục 0.0→1.0).</li>
+<li><strong>Kích thước</strong>: histogram diện tích mask/box; histogram "Số đối tượng trên mỗi ảnh"; bảng thống kê 5 dòng (diện tích min/max, đối tượng/ảnh TB, nhiều nhất, tổng mask).</li>
+<li><strong>Chất lượng ảnh</strong>: 4 thẻ Ảnh đạt chuẩn / Ảnh trùng lặp / Ảnh mờ / Ảnh thiếu sáng (ngưỡng lấy từ cấu hình cắt frame); histogram độ nét + histogram độ sáng (26 cột).</li>
+</ul>
+<h2 id="ui-47" id="74-muc-ban-o-nhiet">7.4. Mục "Bản đồ nhiệt"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bản đồ nhiệt vị trí đối tượng</td>
+<td>Heatmap</td>
+<td>—</td>
+<td>Mật độ tâm đối tượng trên khung chuẩn hóa</td>
+</tr>
+<tr>
+<td>Độ phân giải lưới</td>
+<td>Ô số nguyên</td>
+<td><strong>24</strong>; min 6 – max 64, bước 2</td>
+<td>Đổi → vẽ lại heatmap ngay</td>
+</tr>
+<tr>
+<td>Bảng màu</td>
+<td>Combobox</td>
+<td><strong>Tím</strong>; Tím / Nóng</td>
+<td>Đổi màu heatmap ngay</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-48" id="75-muc-xuat-dataset">7.5. Mục "Xuất dataset"</h2>
+<p><strong>Chọn định dạng</strong> — 7 chip chọn-một (mặc định theo Settings, gốc là <strong>YOLO Segmentation</strong>), mỗi chip có dòng mô tả khi chọn:</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Chip</th>
+<th>Mô tả hiện ra</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>YOLO Segmentation</td>
+<td>"Polygon chuẩn hoá — dùng cho model *-seg.pt"</td>
+</tr>
+<tr>
+<td>YOLO Detection</td>
+<td>"Bounding box chuẩn hoá: cx cy w h"</td>
+</tr>
+<tr>
+<td>YOLO OBB</td>
+<td>"Hộp xoay 4 đỉnh chuẩn hoá — dùng cho model *-obb.pt"</td>
+</tr>
+<tr>
+<td>YOLO Pose</td>
+<td>"Box kèm keypoint — dùng cho model *-pose.pt"</td>
+</tr>
+<tr>
+<td>COCO JSON</td>
+<td>"File instances.json chuẩn COCO, có cả keypoints"</td>
+</tr>
+<tr>
+<td>Pascal VOC XML</td>
+<td>"Một file .xml cho mỗi ảnh"</td>
+</tr>
+<tr>
+<td>PNG Mask</td>
+<td>"Ảnh mask 8-bit theo chỉ số lớp, kèm bản mask màu"</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Khung "Cấu hình"</strong>:</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tên dataset</td>
+<td>Ô text</td>
+<td><strong>"dataset"</strong> (rỗng → tự về "dataset")</td>
+<td>Tên thư mục xuất</td>
+</tr>
+<tr>
+<td>Thư mục xuất + nút duyệt</td>
+<td>Ô text</td>
+<td>Placeholder "Mặc định: thư mục exports của project"</td>
+<td>Nơi ghi kết quả</td>
+</tr>
+<tr>
+<td>Tỷ lệ tập kiểm định</td>
+<td>Thanh trượt + ô số</td>
+<td><strong>0.20</strong>; min 0 – max 0.5</td>
+<td>val split (train = 1 − val − test)</td>
+</tr>
+<tr>
+<td>Tỷ lệ tập kiểm tra</td>
+<td>Thanh trượt + ô số</td>
+<td><strong>0.00</strong>; min 0 – max 0.3</td>
+<td>test split</td>
+</tr>
+<tr>
+<td>Seed ngẫu nhiên</td>
+<td>Ô số nguyên</td>
+<td><strong>42</strong>; min 0 – max 99999</td>
+<td>Cùng seed → cùng cách chia</td>
+</tr>
+<tr>
+<td>Độ tin cậy tối thiểu</td>
+<td>Thanh trượt + ô số</td>
+<td><strong>0.00</strong>; min 0 – max 0.99</td>
+<td>Bỏ nhãn dưới ngưỡng</td>
+</tr>
+<tr>
+<td>Chỉ ảnh đã duyệt <em>(Bỏ qua ảnh máy gán/cần xem lại)</em></td>
+<td>Toggle</td>
+<td><strong>Tắt</strong></td>
+<td>Lọc <code>approved</code></td>
+</tr>
+<tr>
+<td>Loại ảnh trùng lặp</td>
+<td>Toggle</td>
+<td><strong>Bật</strong></td>
+<td>Loại ảnh duplicate</td>
+</tr>
+<tr>
+<td>Loại ảnh mờ</td>
+<td>Toggle</td>
+<td><strong>Tắt</strong></td>
+<td>Loại ảnh dưới ngưỡng nét</td>
+</tr>
+<tr>
+<td>Sao chép file ảnh <em>(Tắt để chỉ sinh file nhãn)</em></td>
+<td>Toggle</td>
+<td><strong>Bật</strong></td>
+<td>Copy ảnh vào dataset</td>
+</tr>
+<tr>
+<td>Không chia train/val <em>(Xuất tất cả vào thư mục "all")</em></td>
+<td>Toggle</td>
+<td><strong>Tắt</strong></td>
+<td>Bố cục phẳng</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Khung "Thực hiện"</strong>: nút <strong>Bắt đầu xuất</strong> (disable khi đang xuất; đang chạy → toast "Đang xuất, vui lòng đợi."); nút <strong>Mở thư mục kết quả</strong> (<strong>disable cho đến khi xuất xong</strong>); ô nhật ký; thanh tiến trình + Hủy.</p>
+<hr>
+<h1 id="ui-49" id="8-trang-settings">8. Trang Settings</h1>
+<p><em>(Luôn dùng được kể cả chưa mở project)</em></p>
+<h2 id="ui-50" id="81-header">8.1. Header</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Khôi phục mặc định</td>
+<td>Hỏi "Đưa toàn bộ cài đặt về giá trị mặc định?" → reset + toast nhắc khởi động lại</td>
+</tr>
+<tr>
+<td>Lưu cài đặt</td>
+<td>Lưu toàn bộ form (kể cả form plugin đang mở), áp dụng ngôn ngữ/theme ngay, toast xác nhận</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-51" id="82-tab-chung">8.2. Tab "Chung"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ngôn ngữ</td>
+<td>Combobox</td>
+<td><strong>Tiếng Việt</strong> / English</td>
+<td>Đổi ngôn ngữ khi Lưu</td>
+</tr>
+<tr>
+<td>Chủ đề</td>
+<td>Combobox</td>
+<td><strong>Tối</strong> / Sáng / Theo hệ thống</td>
+<td>Đổi theme khi Lưu</td>
+</tr>
+<tr>
+<td>Màu nhấn</td>
+<td>8 ô màu 26×26 (ô đang chọn viền trắng) + nút "Màu khác…" (color picker)</td>
+<td>Màu tím mặc định</td>
+<td>Áp dụng sau khi khởi động lại (có ghi chú)</td>
+</tr>
+<tr>
+<td>Thư mục project + nút duyệt</td>
+<td>Ô text</td>
+<td>Rỗng</td>
+<td>Thư mục mặc định chứa project</td>
+</tr>
+<tr>
+<td>Tự động lưu mỗi</td>
+<td>Ô số nguyên, hậu tố " phút"</td>
+<td><strong>5</strong>; min 0 – max 120; <strong>0 hiện chữ "Tắt"</strong></td>
+<td>Chu kỳ autosave</td>
+</tr>
+<tr>
+<td>Định dạng xuất mặc định</td>
+<td>Combobox 7 định dạng</td>
+<td><strong>YOLO Segmentation</strong></td>
+<td>Quyết định chip chọn sẵn ở trang Export</td>
+</tr>
+<tr>
+<td>Hỏi trước khi thoát</td>
+<td>Toggle</td>
+<td><strong>Bật</strong></td>
+<td>Xác nhận khi đóng app</td>
+</tr>
+<tr>
+<td>Mở lại project gần nhất khi khởi động</td>
+<td>Toggle</td>
+<td><strong>Bật</strong></td>
+<td>Tắt → luôn mở màn hình trống</td>
+</tr>
+<tr>
+<td>Đường dẫn hệ thống</td>
+<td>Bảng chỉ đọc + 3 nút "Mở thư mục dữ liệu/nhật ký/trọng số"</td>
+<td>—</td>
+<td>Mở Explorer đúng thư mục</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-52" id="83-tab-model">8.3. Tab "Model"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nhiệm vụ</td>
+<td>Combobox</td>
+<td><strong>Segment</strong>; Detect/Segment/Obb/Pose</td>
+<td>Nhiệm vụ mặc định</td>
+</tr>
+<tr>
+<td>Chọn mô hình YOLO sẵn có</td>
+<td>Combobox 7 preset</td>
+<td><strong>YOLO11 Medium (50 MB)</strong>; Nano 6MB → X-Large 120MB + 2 bản v8</td>
+<td>Chọn → tự điền ô "Tên tệp trọng số"</td>
+</tr>
+<tr>
+<td>Tên tệp trọng số</td>
+<td>Ô text</td>
+<td><strong>yolo11m-seg.pt</strong></td>
+<td>Gõ tay được tên khác</td>
+</tr>
+<tr>
+<td>Model riêng + nút duyệt</td>
+<td>Ô text, placeholder ".pt / .onnx / .engine"</td>
+<td>Rỗng</td>
+<td>Trọng số tùy chỉnh</td>
+</tr>
+<tr>
+<td>Thiết bị</td>
+<td>Combobox</td>
+<td><strong>Auto (ưu tiên GPU)</strong> / CPU / CUDA:i</td>
+<td>Thiết bị mặc định</td>
+</tr>
+<tr>
+<td>Cỡ ảnh vào model</td>
+<td>Ô số nguyên</td>
+<td><strong>640</strong>; 128–4096, bước 32</td>
+<td>imgsz mặc định</td>
+</tr>
+<tr>
+<td>Dùng FP16 <em>(Nhanh hơn trên GPU có tensor core)</em></td>
+<td>Toggle</td>
+<td><strong>Tắt</strong></td>
+<td>Half precision</td>
+</tr>
+<tr>
+<td>Thiết bị hiện tại</td>
+<td>Bảng chỉ đọc</td>
+<td>—</td>
+<td>CUDA khả dụng / Tên thiết bị / Số GPU / VRAM / Phiên bản torch / Phiên bản CUDA</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-53" id="84-tab-suy-luan">8.4. Tab "Suy luận"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Mặc định/Phạm vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Độ tin cậy</td>
+<td><strong>0.45</strong>; 0.01–0.99</td>
+</tr>
+<tr>
+<td>IOU (khử trùng)</td>
+<td><strong>0.5</strong>; 0.05–0.95</td>
+</tr>
+<tr>
+<td>Ngưỡng cần xem lại</td>
+<td><strong>0.6</strong>; 0.05–0.99</td>
+</tr>
+<tr>
+<td>Ngưỡng tin cậy thấp</td>
+<td><strong>0.35</strong>; 0.01–0.9</td>
+</tr>
+<tr>
+<td>Số đối tượng tối đa</td>
+<td><strong>1000</strong>; 1–30000, bước 50</td>
+</tr>
+<tr>
+<td>Giản lược polygon</td>
+<td><strong>0.0025</strong>; 0–0.02, bước 0.0005</td>
+</tr>
+<tr>
+<td>Diện tích tối thiểu</td>
+<td><strong>24 px</strong>; 0–100000, bước 4</td>
+</tr>
+<tr>
+<td>Mask độ phân giải cao <em>(sắc nét hơn, chậm hơn chút)</em></td>
+<td>Toggle <strong>Bật</strong></td>
+</tr>
+<tr>
+<td>Khử trùng không phân biệt lớp</td>
+<td>Toggle <strong>Tắt</strong></td>
+</tr>
+<tr>
+<td>Ghi đè nhãn đã có khi gán nhãn tự động</td>
+<td>Toggle <strong>Bật</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-54" id="85-tab-gan-nhan">8.5. Tab "Gán nhãn"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Mặc định/Phạm vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hiện độ tin cậy / Tô màu theo lớp / Hiện tên lớp / Tự chọn đối tượng vừa tạo</td>
+<td>4 toggle, đều <strong>Bật</strong></td>
+</tr>
+<tr>
+<td>Cỡ cọ vẽ</td>
+<td><strong>20 px</strong>; 2–300, bước 2</td>
+</tr>
+<tr>
+<td>Độ đậm vùng tô</td>
+<td><strong>0.35</strong>; 0–0.9</td>
+</tr>
+<tr>
+<td>Độ dày đường viền</td>
+<td><strong>2</strong>; 0.5–8, bước 0.5</td>
+</tr>
+<tr>
+<td>Cỡ điểm đỉnh</td>
+<td><strong>6</strong>; 2–16, bước 1</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-55" id="86-tab-plugin">8.6. Tab "Plugin"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bảng plugin 4 cột (Plugin/Loại/Trạng thái/Yêu cầu)</td>
+<td>Bảng chỉ đọc, chọn hàng</td>
+<td>Chọn → hiện chi tiết + form tham số; trạng thái tô xanh (sẵn sàng) / vàng (thiếu, kèm lệnh <code>pip install …</code>)</td>
+</tr>
+<tr>
+<td>Quét lại plugin</td>
+<td>Nút</td>
+<td>Khám phá lại plugin (nhận plugin mới thả vào thư mục)</td>
+</tr>
+<tr>
+<td>Mở thư mục plugin</td>
+<td>Nút</td>
+<td>Mở Explorer thư mục plugins</td>
+</tr>
+<tr>
+<td>Form "Cấu hình tham số plugin"</td>
+<td><strong>Form động theo từng plugin</strong>: số nguyên/số thực (bước và số thập phân tự chỉnh theo độ lớn) / toggle / combobox / ô text, kèm dòng mô tả từng tham số</td>
+<td>Lưu khi bấm "Lưu cài đặt" hoặc khi chuyển plugin khác</td>
+</tr>
+<tr>
+<td>Khôi phục mặc định plugin</td>
+<td>Nút (ẩn nếu plugin không có tham số)</td>
+<td>Hỏi xác nhận → trả tham số plugin về mặc định</td>
+</tr>
+<tr>
+<td>Khung "Tự viết plugin"</td>
+<td>Nhãn hướng dẫn</td>
+<td>Chỉ đọc</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-56" id="87-tab-phim-tat-gioi-thieu">8.7. Tab "Phím tắt" &amp; "Giới thiệu"</h2>
+<ul>
+<li><strong>Phím tắt</strong>: bảng <strong>chỉ đọc</strong> 3 cột (Nhóm/Phím/Chức năng) — chưa gán lại phím trong UI được.</li>
+<li><strong>Giới thiệu</strong>: logo, phiên bản, mô tả, bảng công nghệ, ghi chú giấy phép AGPL-3.0 — không có gì bấm được.</li>
+</ul>
+<hr>
+<h1 id="ui-57" id="9-trang-dashboard">9. Trang Dashboard</h1>
+<h2 id="ui-58" id="91-header">9.1. Header</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mở project</td>
+<td>Hộp thoại mở file <code>.alsdb</code> (bắt đầu tại thư mục project mặc định)</td>
+</tr>
+<tr>
+<td>Tạo project mới</td>
+<td>Mở hộp thoại tạo project (xem 9.5)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-59" id="92-the-chao-mung">9.2. Thẻ chào mừng</h2>
+<ul>
+<li>Tiêu đề động: "Chào mừng đến với {app}" (chưa có project) / "Project: {tên}" + dòng phụ "… · Cập nhật: {giờ}".</li>
+<li><strong>5 chip hành động nhanh</strong> (luôn bấm được, kể cả chưa mở project — trang đích tự xử lý): Nạp video → Import · Cắt frame → Extract · Gán nhãn tự động → Auto Label · Sửa nhãn → Editor · Xuất / Huấn luyện → Train.</li>
+<li>Vòng "Tiến độ gán nhãn": % = ảnh đã gán nhãn / tổng ảnh.</li>
+</ul>
+<h2 id="ui-60" id="93-bon-the-thong-ke-eu-bam-uoc">9.3. Bốn thẻ thống kê (đều bấm được)</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Thẻ</th>
+<th>Bấm → đi đến</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tổng số ảnh</td>
+<td>Dataset Manager</td>
+</tr>
+<tr>
+<td>Đã gán nhãn</td>
+<td>Editor</td>
+</tr>
+<tr>
+<td>Đối tượng</td>
+<td>Statistics</td>
+</tr>
+<tr>
+<td>Số lớp</td>
+<td>Statistics</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-61" id="94-hang-giua-duoi">9.4. Hàng giữa &amp; dưới</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Khung</th>
+<th>Control</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Project gần đây</td>
+<td>Danh sách (tên + ngày giờ + dung lượng)</td>
+<td><strong>Nháy đúp</strong> → mở project. Chuột phải → Mở / Mở thư mục chứa project / <strong>Bỏ khỏi danh sách</strong> (không xóa file). Rỗng → dòng "Chưa có project nào…" (không bấm được)</td>
+</tr>
+<tr>
+<td>Trạng thái dataset</td>
+<td>Donut + thanh nhiều màu + 4 chú giải</td>
+<td>Chỉ hiển thị</td>
+</tr>
+<tr>
+<td>Hệ thống</td>
+<td>Tên GPU (xanh lá nếu CUDA, vàng nếu CPU) + chi tiết + dòng "Model: chưa nạp / {tên model}" + nút <strong>Kiểm tra lại thiết bị</strong></td>
+<td>Nút → dò lại GPU và cập nhật</td>
+</tr>
+<tr>
+<td>Hoạt động gần đây</td>
+<td>Danh sách 30 dòng lịch sử (icon theo loại thao tác)</td>
+<td>Chỉ đọc</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="ui-62" id="95-hop-thoai-tao-project-moi">9.5. Hộp thoại "Tạo project mới"</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Loại</th>
+<th>Mặc định/Phạm vi</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tên project</td>
+<td>Ô text, placeholder "Ví dụ: Railway Crack Detection"</td>
+<td>Rỗng</td>
+<td>Gõ → cập nhật dòng "Sẽ tạo tại: {đường dẫn}"; <strong>để trống rồi bấm Tạo → toast "Tên project không được để trống"</strong></td>
+</tr>
+<tr>
+<td>Thư mục lưu + nút Duyệt...</td>
+<td>Ô text</td>
+<td>Thư mục project mặc định</td>
+<td>Nơi tạo thư mục project</td>
+</tr>
+<tr>
+<td>Loại bài toán</td>
+<td>Combobox</td>
+<td><strong>Segmentation — mask polygon</strong>; + Detection / OBB / Pose</td>
+<td>Task của project (không đổi được sau khi tạo từ UI)</td>
+</tr>
+<tr>
+<td>Mô tả</td>
+<td>Ô text nhiều dòng, cao 72px</td>
+<td>Rỗng (không bắt buộc)</td>
+<td>Mô tả hiện ở Dashboard</td>
+</tr>
+<tr>
+<td>Tạo project / Hủy</td>
+<td>2 nút</td>
+<td>—</td>
+<td>Tạo (kiểm tra tên sau khi đóng hộp thoại) / bỏ</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h2 id="ui-63" id="phu-luc-a-ieu-huong-khung-suon-chung">Phụ lục A. Điều hướng &amp; khung sườn chung</h2>
+<ul>
+<li>Sidebar 9 mục = 9 trang, phím <code>Ctrl+1</code> … <code>Ctrl+9</code> theo đúng thứ tự; <code>F11</code> toàn màn hình; <code>Ctrl+Q</code> thoát (có hỏi nếu bật "Hỏi trước khi thoát").</li>
+<li>Mọi trang cần project mà chưa mở project → hiện màn hình 2 nút "Tạo project mới" / "Mở project có sẵn" (trừ Dashboard và Settings luôn dùng được).</li>
+<li>Kéo-thả file vào bất kỳ trang nào → tự chuyển sang Import.</li>
+</ul>
+</section>
+</div></main>
+</div>
+
+</body>
+</html>
