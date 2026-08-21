@@ -13,6 +13,7 @@ from app.constants import (
     ANN_REVIEW,
     IMG_AUTO,
     IMG_REVIEW,
+    IMG_UNLABELED,
     SHAPE_POLYGON,
 )
 from app.core.image_quality import imread_unicode
@@ -227,6 +228,11 @@ class AutoLabelWorker(BaseWorker):
             status = IMG_REVIEW if stats["need_review"] else IMG_AUTO
             if anns:
                 self.repo.set_image_status(image_id, status)
+            elif rec.n_objects > 0:
+                # Lan chay truoc co nhan, lan nay khong phat hien gi va nhan cu
+                # da bi replace_annotations xoa -> tra status ve "chua gan nhan"
+                # de anh khong ke khai sai la "may da gan nhan".
+                self.repo.set_image_status(image_id, IMG_UNLABELED)
             res.n_images += 1
             res.n_objects += len(anns)
             res.n_review += 1 if stats["need_review"] else 0

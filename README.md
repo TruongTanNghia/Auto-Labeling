@@ -201,6 +201,20 @@ pHash/SSIM/blur/khử trùng lặp, canvas (polygon · brush · eraser · split 
 xuất đủ 7 định dạng (kiểm tra cả số cột nhãn của OBB/Pose và `kpt_shape`),
 và vòng đời plugin (kể cả điểm tích hợp trong `AutoLabelWorker`).
 
+Kiểm thử **E2E với model YOLO thật** (tải yolo11n.pt ~5.6MB, khuyến nghị có GPU):
+
+```bash
+ALS_E2E=1 pytest tests/test_autolabel_flow.py -k e2e
+```
+
+### Tài liệu
+
+| Tài liệu | Nội dung |
+| --- | --- |
+| [Tài liệu hệ thống](docs/TAI-LIEU-HE-THONG.md) | Kiến trúc, luồng nghiệp vụ Auto Label, lược đồ DB, quy tắc phát triển |
+| [Tài liệu kiểm thử](docs/TAI-LIEU-KIEM-THU.md) | Danh mục test case, biên bản lỗi đã vá, checklist smoke test |
+| [Tài liệu vận hành](docs/TAI-LIEU-VAN-HANH.md) | Cài đặt, sao lưu/phục hồi, CI/CD, xử lý sự cố |
+
 ### Giới hạn đã biết
 
 - Giao diện chỉ có **tiếng Việt** ở bản 1.0 (ô chọn ngôn ngữ bị khoá thay vì hứa suông).

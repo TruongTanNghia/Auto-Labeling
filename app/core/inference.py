@@ -190,16 +190,18 @@ def ensure_amp_asset(log_cb=None) -> None:
 
 
 def purge_corrupt_weight(path: str) -> bool:
-    """Xoa file trong so hong (tai do dang). Tra ve True neu da xoa."""
+    """Xoa file trong so hong (tai do dang). Tra ve True neu da xoa.
+
+    CHI xoa file nam trong thu muc weights cua ung dung — do la noi chua cac
+    trong so chuan tai tu dong, xoa xong co the tai lai. Tuyet doi khong dong
+    vao file cua nguoi dung o ngoai (model custom nho < 1MB van la tai san
+    cua ho; nap loi co the chi do lech phien ban ultralytics).
+    """
     try:
         p = Path(path)
         from app.utils.paths import weights_dir
 
-        if (
-            p.exists()
-            and p.suffix == ".pt"
-            and (p.parent == weights_dir() or p.stat().st_size < 1_000_000)
-        ):
+        if p.exists() and p.suffix == ".pt" and p.parent == weights_dir():
             p.unlink()
             log.warning("Da xoa file trong so hong: %s", p)
             return True
@@ -296,10 +298,40 @@ class YoloEngine:
         )
 
     def reset_tracker(self) -> None:
-        """Reset trang thai theo doi truoc khi chay chuoi frame moi."""
-        if self.loaded and hasattr(self.model, "predictor") and self.model.predictor:
-            if hasattr(self.model.predictor, "trackers"):
-                self.model.predictor.trackers = None
+        """Reset trang thai theo doi truoc khi chay chuoi frame moi.
+
+        Go han callback + trackers de lan track() ke tiep dang ky lai tu dau
+        (neu chi dat trackers = None, model.track() se khong dang ky lai va
+        callback cu cham vao trackers None gay loi).
+        """
+        self._detach_tracker()
+
+    def _detach_tracker(self) -> None:
+        """Go tracker do model.track() dang ky, tra model ve che do predict sach.
+
+        Ultralytics dang ky callback tracking MOT LAN tren model va khong kiem
+        tra mode: sau mot phien tracking, moi lenh predict() thuong van chay
+        BoT-SORT/ByteTrack ngam — ton GPU, sinh canh bao "GMC failed" khi kich
+        thuoc anh doi (vd cac o SAHI) va gan track_id gia vao ket qua detect.
+        """
+        m = self.model
+        if m is None:
+            return
+        try:
+            for event in ("on_predict_start", "on_predict_postprocess_end"):
+                cbs = getattr(m, "callbacks", {}).get(event)
+                if cbs:
+                    m.callbacks[event] = [
+                        cb
+                        for cb in cbs
+                        if "ultralytics.trackers"
+                        not in str(getattr(getattr(cb, "func", cb), "__module__", ""))
+                    ]
+            pred = getattr(m, "predictor", None)
+            if pred is not None and hasattr(pred, "trackers"):
+                delattr(pred, "trackers")  # de model.track() lan sau dang ky lai
+        except Exception as exc:  # pragma: no cover
+            log.debug("Khong go duoc tracker: %s", exc)
 
     # ------------------------------------------------------------------ nap --
     def load(self, weights: str, task: str = "detect", device: str = "auto", log_cb=None) -> None:
@@ -410,6 +442,7 @@ class YoloEngine:
         """source: duong dan anh hoac ndarray BGR. Tra ve danh sach Detection."""
         if not self.loaded:
             raise RuntimeError("Model chua duoc nap.")
+        self._detach_tracker()  # phien tracking truoc khong duoc "bam" vao predict thuong
         cfg = config or InferenceConfig()
 
         kwargs = dict(
@@ -473,6 +506,7 @@ class YoloEngine:
     ) -> list[list[Detection]]:
         if not self.loaded:
             raise RuntimeError("Model chua duoc nap.")
+        self._detach_tracker()
         cfg = config or InferenceConfig()
         kwargs = dict(
             conf=float(cfg.confidence),
