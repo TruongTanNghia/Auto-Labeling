@@ -33,3 +33,6 @@ dist/
 coverage.xml
 
 
+
+# Moi truong build rieng (PyInstaller, torch CPU)
+build_env/

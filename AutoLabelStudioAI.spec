@@ -30,7 +30,7 @@ hiddenimports = [
     'app.models.repository',
     'app.plugins',
     'app.plugins.base',
-    'app.plugins.sam2_plugin',
+    'app.plugins.builtin',
     'app.theme',
     'app.theme.icons',
     'app.theme.style',

@@ -1,0 +1,68 @@
+=====================================================================
+  AutoLabel Studio AI  v1.0.0  -  Ban dong goi Windows (khong can cai Python)
+=====================================================================
+
+CACH CHAY
+---------
+1. Giai nen toan bo file zip ra mot thu muc (vi du D:\AutoLabelStudioAI\).
+   KHONG chay truc tiep tu trong file zip.
+2. Nhay dup  AutoLabelStudioAI.exe
+3. Lan dau mo, ung dung o trang Dashboard -> bam "Tao project moi".
+
+YEU CAU MAY
+-----------
+- Windows 10/11 64-bit. Khong can cai Python, khong can cai gi them.
+- RAM >= 8 GB khuyen nghi. O dia trong >= 3 GB.
+- Khong bat buoc co GPU: ban nay dung torch CPU -> chay tren MOI may
+  (co GPU NVIDIA van chay duoc, nhung se suy luan bang CPU).
+- Lan dau bam "Nap model" can MANG de tai trong so YOLO (~6-50 MB)
+  ve  %LOCALAPPDATA%\AutoLabelStudioAI\weights\ . Tu lan sau khong can mang.
+
+TU KIEM TRA MAY TRUOC KHI TEST (khuyen nghi lam dau tien)
+---------------------------------------------------------
+Mo CMD trong thu muc giai nen va chay:
+      AutoLabelStudioAI.exe --selftest
+Ung dung se tu chay ngam toan bo luong: kiem tra thu vien -> tao project
+tam -> cat frame -> tai & nap model yolo11n -> suy luan -> gan nhan ->
+export, roi hien hop thoai "PASS" hoac "FAIL" kem bao cao chi tiet.
+Bao cao luu tai  %LOCALAPPDATA%\AutoLabelStudioAI\logs\selftest-report.txt
+-> Neu FAIL, gui file nay cho dev thay vi mo ta bang loi.
+(Can mang o lan chay dau de tai yolo11n.pt ~5 MB; mat khoang 30-60 giay.)
+
+DU LIEU MAU DE TEST NHANH
+-------------------------
+- Bat ky video .mp4 hoac thu muc anh .jpg/.png nao cung duoc.
+- Model nhe de test: chon nhiem vu "Detection" + trong so "yolo11n.pt"
+  (6 MB, tai tu dong) -> bam "Nap model" -> "Bat dau gan nhan".
+
+NEU GAP LOI
+-----------
+- Log ung dung:   %LOCALAPPDATA%\AutoLabelStudioAI\logs\
+  (dan duong dan do vao thanh dia chi Explorer). Khi bao bug hay dinh kem
+  file log moi nhat + anh chup man hinh + buoc tai hien.
+- Windows SmartScreen canh bao "ung dung khong xac dinh": bam
+  "Thong tin khac" -> "Van chay" (file exe chua ky so).
+- Antivirus chan: them thu muc giai nen vao danh sach loai tru.
+- Man hinh trang / khong mo duoc: chay bang CMD de xem loi:
+      cd /d <thu muc giai nen>
+      AutoLabelStudioAI.exe
+  (cua so se khong hien traceback vi la ban GUI; xem file log o tren).
+
+TAI LIEU KIEM THU (nam trong thu muc  docs\  cua ban gói nay)
+----------------------------------------------------------------
+- DAC-TA-QA.html            : dac ta nghiep vu (BR-xx) + tung control
+                              tren 9 man hinh -> MO BANG TRINH DUYET
+- TAI-LIEU-KIEM-THU.md      : danh muc test case, bien ban 6 bug da va,
+                              checklist smoke test 10 buoc
+- TAI-LIEU-NGHIEP-VU.md     : quy tac nghiep vu dang markdown
+- TAI-LIEU-CHUC-NANG-CHI-TIET.md : tung nut / thanh truot / o tham so
+- TAI-LIEU-VAN-HANH.md      : sao luu, phuc hoi, xu ly su co
+
+LUU Y
+-----
+- Moi project la mot thu muc rieng (co file project.alsdb). Muon xoa sach
+  de test lai tu dau: xoa thu muc project + thu muc
+  %LOCALAPPDATA%\AutoLabelStudioAI\ (settings, log, weights).
+- Model YOLO cua Ultralytics theo giay phep AGPL-3.0.
+
+Ma nguon & issue:  https://github.com/TruongTanNghia/Auto-Labeling

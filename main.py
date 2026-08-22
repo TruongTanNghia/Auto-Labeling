@@ -57,6 +57,13 @@ def main() -> int:
     app.setApplicationVersion(APP_VERSION)
     app.setOrganizationName(ORG_NAME)
 
+    # `--selftest`: tu kiem tra may (headless) — dung cho ban dong goi .exe
+    # de xac nhan may dich chay duoc torch/ultralytics/opencv truoc khi test.
+    if "--selftest" in sys.argv[1:]:
+        from app.selftest import run_selftest
+
+        return run_selftest(show_dialog=os.environ.get("ALS_SELFTEST_NOGUI") != "1")
+
     apply_theme(app, cfg.get("general.theme", "Dark"), cfg.get("general.accent"))
 
     def _on_color_scheme_changed():
