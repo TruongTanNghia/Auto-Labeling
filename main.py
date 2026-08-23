@@ -10,6 +10,18 @@ from pathlib import Path
 # Cho phep chay truc tiep `python main.py` tu bat ky thu muc nao
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+# Ghi stack Python ra file khi crash native (segfault trong DLL torch/Qt/cv2)
+# — ban .exe khong co console nen day la cach duy nhat biet crash o dau.
+try:
+    import faulthandler
+
+    from app.utils.paths import log_dir as _log_dir
+
+    _crash_log = open(_log_dir() / "crash-native.log", "a", encoding="utf-8")  # noqa: SIM115
+    faulthandler.enable(file=_crash_log, all_threads=True)
+except Exception:
+    pass
+
 os.environ.setdefault("QT_ENABLE_HIGHDPI_SCALING", "1")
 os.environ.setdefault("YOLO_VERBOSE", "False")
 # QUAN TRONG: cam Ultralytics tu dong `pip install` de nang cap goi.

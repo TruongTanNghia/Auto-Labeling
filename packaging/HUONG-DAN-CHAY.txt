@@ -37,7 +37,10 @@ DU LIEU MAU DE TEST NHANH
 
 NEU GAP LOI
 -----------
-- Log ung dung:   %LOCALAPPDATA%\AutoLabelStudioAI\logs\
+- Log ung dung:   %LOCALAPPDATA%\AutoLabelStudioAI\logs\n  + autolabel.log      : log thong thuong
+  + crash-native.log   : CHI xuat hien khi ung dung chet im lang (segfault) —
+                         chua stack chinh xac, bat buoc dinh kem khi bao loi nay
+  + selftest-report.txt: ket qua --selftest
   (dan duong dan do vao thanh dia chi Explorer). Khi bao bug hay dinh kem
   file log moi nhat + anh chup man hinh + buoc tai hien.
 - Windows SmartScreen canh bao "ung dung khong xac dinh": bam

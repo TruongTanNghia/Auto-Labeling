@@ -19,6 +19,13 @@ DIST = ROOT / "dist" / "AutoLabelStudioAI"
 if not (DIST / "AutoLabelStudioAI.exe").exists():
     sys.exit("Chua co dist/AutoLabelStudioAI/AutoLabelStudioAI.exe - hay build PyInstaller truoc.")
 
+# 0. Kiem tra bundle (DLL runtime MSVC o goc phai la ban moi nhat) — tu choi
+#    dong goi neu lech, vi se crash im lang khi khoi dong tren may nguoi dung.
+import subprocess  # noqa: E402
+
+if subprocess.call([sys.executable, str(ROOT / "packaging" / "check_bundle.py")]) != 0:
+    sys.exit("check_bundle FAIL - khong dong goi. Hay build lai bang AutoLabelStudioAI.spec.")
+
 # 1. Tai lieu + huong dan vao ban goi
 docs_out = DIST / "docs"
 docs_out.mkdir(exist_ok=True)

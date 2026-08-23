@@ -279,5 +279,6 @@ re-run auto label không phát hiện gì  ⟶  quay về unlabeled (BR-34)
 | BUG-04 (thấp) | Epoch ảo "3/2" từ final_eval của Ultralytics | BR-83 | TC-TR-01, TC-TR-02 |
 | BUG-05 (thấp) | Combobox "Trọng số SAM" trang Auto Label không được connect | BR-44 | TC-UI-05 |
 | BUG-06 (cao) | Ô prompt plugin bị ẩn vĩnh viễn → plugin prompt không dùng được từ UI | BR-44 | TC-UI-05 |
+| BUG-07 (cao) | Bản .exe chết im lặng lúc khởi động do DLL runtime MSVC cũ "thắng" ở gốc bundle (torch_python.dll) | BR-100 | `packaging/check_bundle.py`, `--selftest`, khởi động 5 lần |
 
 > Chi tiết nguyên nhân gốc và cách vá: [TAI-LIEU-KIEM-THU.md](TAI-LIEU-KIEM-THU.md) mục 3.

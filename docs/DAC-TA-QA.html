@@ -119,7 +119,7 @@ li { margin:3px 0; }
   <h1>Đặc tả nghiệp vụ AutoLabel Studio AI</h1>
   <p>Toàn bộ quy tắc nghiệp vụ của hệ thống (mã <span class="chip chip-br">BR-xx</span> để trace vào test case)
   và đặc tả từng control trên cả 9 màn hình — giá trị mặc định, phạm vi, hành vi — trích trực tiếp từ mã nguồn.
-  Kèm biên bản 6 lỗi đã phát hiện &amp; vá (<span class="chip chip-bug">BUG-01</span>…<span class="chip chip-bug">BUG-06</span>)
+  Kèm biên bản 7 lỗi đã phát hiện &amp; vá (<span class="chip chip-bug">BUG-01</span>…<span class="chip chip-bug">BUG-07</span>)
   và 12 ca biên <span class="chip chip-edge">E-01</span>…<span class="chip chip-edge">E-12</span>.</p>
 </header>
 <section id="phan-1">
@@ -863,6 +863,12 @@ unlabeled (Chưa gán nhãn)
 <td>Ô prompt plugin bị ẩn vĩnh viễn → plugin prompt không dùng được từ UI</td>
 <td><span class="chip chip-br">BR-44</span></td>
 <td><span class="chip chip-tc">TC-UI-05</span></td>
+</tr>
+<tr>
+<td>BUG-07 (cao)</td>
+<td>Bản .exe chết im lặng lúc khởi động do DLL runtime MSVC cũ "thắng" ở gốc bundle (torch_python.dll)</td>
+<td><span class="chip chip-br">BR-100</span></td>
+<td><code>packaging/check_bundle.py</code>, <code>--selftest</code>, khởi động 5 lần</td>
 </tr>
 </tbody>
 </table></div>

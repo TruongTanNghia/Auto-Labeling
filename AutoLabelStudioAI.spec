@@ -90,6 +90,40 @@ a = Analysis(
     noarchive=False,
 )
 
+# --- Runtime DLL MSVC: chi giu MOT ban o thu muc goc, uu tien ban cua torch ---
+# torch (14.50) moi hon PySide6/shiboken6 (14.44). Windows nap DLL o goc
+# _internal truoc; neu ban cu "thang" o goc (thu tu gom cua PyInstaller khong
+# xac dinh giua cac lan build) -> torch_python.dll access violation khi
+# import torch (crash im lang luc khoi dong). Ep ban moi nhat o goc va bo
+# cac ban trung ten trong thu muc con de ket qua build luon dung.
+_RUNTIME = {
+    "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "msvcp140_atomic_wait.dll",
+    "msvcp140_codecvt_ids.dll", "vcruntime140.dll", "vcruntime140_1.dll",
+    "vcomp140.dll", "concrt140.dll",
+}
+
+
+def _dedupe_runtime(binaries):
+    import os
+
+    best = {}  # ten thuong -> (uu_tien, (dest, src, kind))
+    keep = []
+    for dest, src, kind in binaries:
+        name = os.path.basename(dest).lower()
+        if name not in _RUNTIME:
+            keep.append((dest, src, kind))
+            continue
+        prio = 2 if "torch" in src.lower().replace("\\", "/") else 1
+        cur = best.get(name)
+        if cur is None or prio > cur[0]:
+            best[name] = (prio, (name, src, kind))  # dest = ten o goc
+    for _, entry in best.values():
+        keep.append(entry)
+    return keep
+
+
+a.binaries = _dedupe_runtime(a.binaries)
+
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(

@@ -1,6 +1,6 @@
 # Tài liệu kiểm thử — AutoLabel Studio AI
 
-> Phiên bản 1.1 · Cập nhật 2026-08 · Kèm biên bản 4 lỗi tìm được và đã vá khi kiểm thử luồng Auto Label + Train với model thật.
+> Phiên bản 1.2 · Cập nhật 2026-08 · Kèm biên bản 7 lỗi tìm được và đã vá: luồng Auto Label + Train với model thật, soát UI từng control, và bản đóng gói .exe.
 
 ## 1. Chiến lược kiểm thử
 
@@ -99,6 +99,13 @@ Kết quả ghi nhận trên RTX 3050 Laptop (4GB):
 - **Hiện tượng**: ô prompt văn bản được tạo với `setVisible(False)` và về sau chỉ được enable/disable, không bao giờ hiện lại → các plugin cần prompt (**SAM 3 Concept, Grounding DINO, Florence-2, FastSAM**) không thể nhập prompt từ giao diện, tức không dùng được đúng nghĩa từ UI dù backend hoạt động.
 - **Cách vá**: hiện/ẩn ô prompt theo `info.accepts_prompt` khi đổi plugin.
 - **Hồi quy**: TC-UI-05.
+
+### BUG-07 — Bản đóng gói .exe chết im lặng khi khởi động (torch_python.dll) · Nghiêm trọng: **CAO (chặn phát hành)**
+
+- **Hiện tượng**: nháy đúp `AutoLabelStudioAI.exe` → không có cửa sổ, không thông báo; Event Viewer ghi *Faulting module torch_python.dll, exception 0xc0000005*. Xảy ra ở build #2 nhưng không ở build #1/#3 dù cùng mã nguồn.
+- **Nguyên nhân gốc**: PyInstaller gom các DLL runtime MSVC trùng tên từ nhiều package vào thư mục gốc `_internal` theo thứ tự **không xác định giữa các lần build**. torch biên dịch với `msvcp140.dll` 14.50, PySide6/shiboken6 mang theo bản 14.44 — Windows nạp bản ở gốc trước; build nào để bản 14.44 "thắng" ở gốc thì `import torch` crash ở mức native (không có traceback Python).
+- **Cách vá**: `AutoLabelStudioAI.spec` lọc `a.binaries` — với mỗi DLL runtime chỉ giữ **một** bản ở gốc, ưu tiên bản của torch (mới nhất), bỏ các bản trùng trong thư mục con → kết quả build luôn xác định. Thêm `packaging/check_bundle.py` đọc FileVersion từng DLL và **từ chối đóng gói** nếu bản ở gốc cũ hơn bất kỳ bản nào khác (được `make_package.py` gọi tự động). Thêm `faulthandler` ghi `logs/crash-native.log` để crash native về sau có stack Python.
+- **Hồi quy**: `python packaging/check_bundle.py` PASS sau mỗi build; `AutoLabelStudioAI.exe --selftest` PASS; khởi động 5 lần liên tiếp với cấu hình thật không crash.
 
 ## 4. Checklist smoke test giao diện (thủ công, trước phát hành)
 
