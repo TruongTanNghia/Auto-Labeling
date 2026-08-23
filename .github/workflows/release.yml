@@ -28,30 +28,44 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
           pip install pyinstaller
 
       - name: Run tests before packaging
         env:
           QT_QPA_PLATFORM: offscreen
           YOLO_AUTOINSTALL: "false"
-        run: python tests/test_pipeline.py
+        run: pytest -q
 
       - name: Build with PyInstaller
-        run: pyinstaller AutoLabelStudioAI.spec --noconfirm
+        run: pyinstaller AutoLabelStudioAI.spec --noconfirm --clean
 
-      - name: Zip build output
-        run: Compress-Archive -Path dist/AutoLabelStudioAI -DestinationPath AutoLabelStudioAI-windows-x64.zip
+      # Chan phat hanh neu DLL runtime MSVC o goc bundle khong phai ban moi nhat (BUG-07)
+      - name: Check bundle (runtime DLLs)
+        run: python packaging/check_bundle.py
+
+      - name: Self-test packaged exe (headless)
+        env:
+          ALS_SELFTEST_NOGUI: "1"
+        run: |
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'als_sandbox'
+          $p = Start-Process -FilePath '.\dist\AutoLabelStudioAI\AutoLabelStudioAI.exe' -ArgumentList '--selftest' -Wait -PassThru
+          $report = Join-Path $env:LOCALAPPDATA 'AutoLabelStudioAI\logs\selftest-report.txt'
+          if (Test-Path $report) { Get-Content $report }
+          if ($p.ExitCode -ne 0) { Write-Error "selftest exit $($p.ExitCode)"; exit 1 }
+
+      - name: Package zip with docs
+        run: python packaging/make_package.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: AutoLabelStudioAI-windows-x64
-          path: AutoLabelStudioAI-windows-x64.zip
+          path: dist/AutoLabelStudioAI-v*-windows-x64.zip
 
       - name: Attach to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: AutoLabelStudioAI-windows-x64.zip
+          files: dist/AutoLabelStudioAI-v*-windows-x64.zip
           generate_release_notes: true
