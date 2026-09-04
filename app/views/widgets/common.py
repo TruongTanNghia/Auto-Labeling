@@ -34,7 +34,6 @@ from PySide6.QtWidgets import (
 
 from app.constants import COLORS
 from app.theme import icons
-from app.theme.style import resolve_theme
 
 
 # ================================================================== LABEL ===

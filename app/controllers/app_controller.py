@@ -363,7 +363,7 @@ class AppController(QObject):
             self._workers.pop(key, None)
 
     def cancel_all(self) -> None:
-        for k, w in list(self._workers.items()):
+        for _k, w in list(self._workers.items()):
             try:
                 if w and w.isRunning():
                     w.stop_and_wait(3000)

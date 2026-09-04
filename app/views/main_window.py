@@ -325,7 +325,7 @@ class MainWindow(QMainWindow):
 
         self.title_bar.set_project("")
         self.sidebar.set_project(tr("main.no_project", "Chưa mở project"))
-        for key, page in self.pages.items():
+        for _key, page in self.pages.items():
             if hasattr(page, "on_project_changed"):
                 page.on_project_changed()
             if getattr(page, "_built", False):

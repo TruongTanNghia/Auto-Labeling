@@ -435,6 +435,3 @@ class DatasetPage(BasePage):
         n = self.repo.delete_images(ids)
         self.toast(f"Đã xoá {n:,} ảnh.", "success")
         self.ctrl.notify_images_changed()
-
-    def on_hide(self) -> None:
-        pass

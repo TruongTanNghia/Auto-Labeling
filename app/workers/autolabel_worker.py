@@ -21,7 +21,10 @@ from app.i18n import tr
 from app.models.entities import Annotation
 from app.models.repository import ProjectRepository
 from app.plugins.base import PluginContext, registry
+from app.utils.logger import get_logger
 from app.workers.base import BaseWorker
+
+log = get_logger(__name__)
 
 
 @dataclass

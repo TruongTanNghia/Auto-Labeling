@@ -458,7 +458,7 @@ def build_stylesheet(accent: str | None = None, theme_name: str | None = None) -
     # Add primary text color - white for dark mode, dark text for light mode
     primary_text_color = "#FFFFFF" if resolved == "Dark" else colors["text"]
     colors["primary_text"] = primary_text_color
-    
+
     for key, val in colors.items():
         qss = qss.replace(f"@{key}@", val)
     # Dọn sạch token còn sót (nếu có)

@@ -323,7 +323,7 @@ def test_autolabel_cancel_and_project_change(qapp, sample_data, tmp_dir: Path):
 def test_editor_mark_status(qapp, tmp_path):
     p = tmp_path / "proj_ed"
     repo = ProjectRepository.create(p, "ProjED", "", "detect")
-    c1 = repo.add_class("car", "#ff0000")
+    repo.add_class("car", "#ff0000")
     f1 = p / "f1.jpg"
     f2 = p / "f2.jpg"
     f1.write_bytes(b"fake1")

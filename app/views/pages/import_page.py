@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QSize, Qt, Signal
-from PySide6.QtGui import QImage, QPixmap, QIcon
+from PySide6.QtGui import QIcon, QImage, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -625,18 +625,18 @@ class ImportPage(BasePage):
         # Normalize folder path để so sánh đúng
         normalized_folder = str(Path(folder).resolve())
         files = [
-            p for p in self.image_files 
+            p for p in self.image_files
             if str(Path(p).resolve().parent) == normalized_folder
         ]
         self._current_info = None
-        
+
         # Thử load ảnh, nếu ảnh đầu fail thì thử ảnh tiếp theo
         pm = QPixmap()
         for f in files:
             pm = QPixmap(f)
             if not pm.isNull():
                 break
-        
+
         # Luôn gọi _set_preview để hiển thị preview hoặc lỗi
         if files or not pm.isNull():
             self._set_preview(pm)
@@ -644,7 +644,7 @@ class ImportPage(BasePage):
             # Không có file ảnh nào
             self.preview_label.setPixmap(QPixmap())
             self.preview_label.setText(tr("import.no_images_in_folder", "Thư mục không có ảnh hợp lệ"))
-        
+
         sample = files[:400]
         total_size = 0
         for f in sample:
@@ -664,7 +664,7 @@ class ImportPage(BasePage):
                 (tr("import.est_size", "Dung lượng (ước tính)"), human_size(est)),
             ]
         )
-        
+
         # Populate gallery với thumbnails
         self._populate_gallery(files)
 
@@ -690,18 +690,18 @@ class ImportPage(BasePage):
             w = item.widget()
             if w is not None:
                 w.deleteLater()
-        
+
         if not files:
             self.gallery_card.setVisible(False)
             return
-        
+
         self.gallery_card.setVisible(True)
-        
+
         # Thêm thumbnail cho mỗi ảnh (giới hạn 50 ảnh đầu để không quá chậm)
         for i, fpath in enumerate(files[:50]):
             thumb = self._create_thumbnail_btn(fpath, i)
             self.gallery_layout.addWidget(thumb)
-        
+
         if len(files) > 50:
             label_txt = label(
                 f"+{len(files) - 50}...",
