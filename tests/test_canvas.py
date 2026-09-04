@@ -82,4 +82,3 @@ def test_canvas_label_confidence_independence(qapp, repo: ProjectRepository):
     cv.set_style(show_labels=True, show_confidence=False)
     assert cv.style.show_labels is True
     assert cv.style.show_confidence is False
-

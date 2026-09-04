@@ -288,7 +288,9 @@ class EditorPage(BasePage):
         self.next_btn.clicked.connect(lambda: self.step_image(1))
         self.pos_label = label("0 / 0", bold=True, size=12.5)
         self.pos_label.setAlignment(Qt.AlignCenter)
-        self.bottom_status_badge = Badge(tr("status.unlabeled", "Chưa gán nhãn"), COLORS["text_mute"])
+        self.bottom_status_badge = Badge(
+            tr("status.unlabeled", "Chưa gán nhãn"), COLORS["text_mute"]
+        )
         self.status_label = label("", size=11.5, color=COLORS["text_mute"])
         bl.addWidget(self.prev_btn)
         bl.addWidget(self.pos_label)
@@ -1243,7 +1245,7 @@ class EditorPage(BasePage):
         if not self.repo or not self._image_id:
             return
 
-        is_approved = (status == ANN_APPROVED or status == IMG_APPROVED)
+        is_approved = status == ANN_APPROVED or status == IMG_APPROVED
         img_status = IMG_APPROVED if is_approved else IMG_REVIEW
         ann_status = ANN_APPROVED if is_approved else ANN_REVIEW
 

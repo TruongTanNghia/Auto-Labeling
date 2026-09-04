@@ -99,7 +99,9 @@ class _CompactDelegate(QStyledItemDelegate):
         status = index.data(ROLE_STATUS) or IMG_UNLABELED
         n = index.data(ROLE_NOBJ) or 0
         status_text, status_color = get_image_status_label().get(status, ("", COLORS["text_mute"]))
-        dot_color = status_color if status != IMG_UNLABELED else (class_color or COLORS["text_mute"])
+        dot_color = (
+            status_color if status != IMG_UNLABELED else (class_color or COLORS["text_mute"])
+        )
 
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(dot_color))

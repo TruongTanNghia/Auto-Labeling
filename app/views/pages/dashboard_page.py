@@ -352,8 +352,12 @@ class DashboardPage(BasePage):
         self.check_device_btn.setEnabled(False)
         self.check_device_btn.setText(tr("dashboard.checking_device", "Đang kiểm tra..."))
         self.gpu_name.setText(tr("dashboard.scanning_hardware", "Đang quét phần cứng..."))
-        self.gpu_name.setStyleSheet(f"font-weight: 700; font-size: 13.5px; color: {COLORS['text_mute']};")
-        self.gpu_detail.setText(tr("dashboard.analyzing_device", "Đang phân tích cấu hình hệ thống..."))
+        self.gpu_name.setStyleSheet(
+            f"font-weight: 700; font-size: 13.5px; color: {COLORS['text_mute']};"
+        )
+        self.gpu_detail.setText(
+            tr("dashboard.analyzing_device", "Đang phân tích cấu hình hệ thống...")
+        )
         delay_ms = random.randint(500, 1000)
         QTimer.singleShot(delay_ms, self._finish_check_device)
 

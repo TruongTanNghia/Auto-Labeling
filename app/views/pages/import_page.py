@@ -172,8 +172,9 @@ class ImportPage(BasePage):
         self.gallery_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.gallery_scroll.setFixedHeight(92)
         self.gallery_scroll.setStyleSheet(
-            "QScrollArea { background: transparent; border: 1px solid @border@; border-radius: 8px; }"
-            .replace("@border@", COLORS["border"])
+            "QScrollArea { background: transparent; border: 1px solid @border@; border-radius: 8px; }".replace(
+                "@border@", COLORS["border"]
+            )
         )
         self.gallery_widget = QWidget()
         self.gallery_layout = QHBoxLayout(self.gallery_widget)
@@ -231,10 +232,14 @@ class ImportPage(BasePage):
         # --- Section divider ---
         lay.addSpacing(8)
         lay.addWidget(hline())
-        lay.addWidget(label(
-            tr("import.alternative_workflow", "HOẶC: Nhập dataset có sẵn nhãn"),
-            size=11, color=COLORS["text_mute"], bold=False
-        ))
+        lay.addWidget(
+            label(
+                tr("import.alternative_workflow", "HOẶC: Nhập dataset có sẵn nhãn"),
+                size=11,
+                color=COLORS["text_mute"],
+                bold=False,
+            )
+        )
         lay.addSpacing(4)
 
         # --- Nhập dataset có nhãn ---
@@ -291,7 +296,9 @@ class ImportPage(BasePage):
 
         # Nút hành động
         btn_row = QHBoxLayout()
-        self._ds_preview_btn = ghost_button(tr("import.dataset_preview_detailed", "Kiểm tra dữ liệu"), "eye")
+        self._ds_preview_btn = ghost_button(
+            tr("import.dataset_preview_detailed", "Kiểm tra dữ liệu"), "eye"
+        )
         self._ds_preview_btn.clicked.connect(self._preview_dataset)
         self._ds_import_btn = primary_button(
             tr("import.dataset_import", "Nhập vào project"), "import"
@@ -484,7 +491,8 @@ class ImportPage(BasePage):
             elif kind == "folder":
                 norm_val = str(Path(value).resolve())
                 self.image_files = [
-                    p for p in self.image_files
+                    p
+                    for p in self.image_files
                     if str(Path(p).resolve().parent) != norm_val and str(Path(p).parent) != value
                 ]
             self.source_list.takeItem(self.source_list.row(item))
@@ -624,10 +632,7 @@ class ImportPage(BasePage):
     def _preview_folder(self, folder: str) -> None:
         # Normalize folder path để so sánh đúng
         normalized_folder = str(Path(folder).resolve())
-        files = [
-            p for p in self.image_files
-            if str(Path(p).resolve().parent) == normalized_folder
-        ]
+        files = [p for p in self.image_files if str(Path(p).resolve().parent) == normalized_folder]
         self._current_info = None
 
         # Thử load ảnh, nếu ảnh đầu fail thì thử ảnh tiếp theo
@@ -643,7 +648,9 @@ class ImportPage(BasePage):
         else:
             # Không có file ảnh nào
             self.preview_label.setPixmap(QPixmap())
-            self.preview_label.setText(tr("import.no_images_in_folder", "Thư mục không có ảnh hợp lệ"))
+            self.preview_label.setText(
+                tr("import.no_images_in_folder", "Thư mục không có ảnh hợp lệ")
+            )
 
         sample = files[:400]
         total_size = 0

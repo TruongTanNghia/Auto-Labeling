@@ -252,6 +252,7 @@ def test_import_page_reset_on_project_changed(qapp, sample_data, tmp_dir: Path):
 
 def test_autolabel_cancel_and_project_change(qapp, sample_data, tmp_dir: Path):
     import time
+
     img_dir, video = sample_data
     ctrl = AppController()
     win = MainWindow(ctrl)
@@ -278,9 +279,11 @@ def test_autolabel_cancel_and_project_change(qapp, sample_data, tmp_dir: Path):
         ctrl.engine._loaded = True
         ctrl.engine.model = object()
         ctrl.engine.names = {0: "object"}
+
         def mock_predict(path, cfg):
             time.sleep(0.05)
             return []
+
         ctrl.engine.predict = mock_predict
 
         win.go_to_page("autolabel")
@@ -405,8 +408,3 @@ def test_train_autolabel_conflict(qapp, tmp_path):
         ctrl.shutdown()
         win.deleteLater()
         qapp.processEvents()
-
-
-
-
-
