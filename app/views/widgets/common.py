@@ -34,9 +34,17 @@ from PySide6.QtWidgets import (
 
 from app.constants import COLORS
 from app.theme import icons
+from app.theme.style import resolve_theme
 
 
 # ================================================================== LABEL ===
+def _get_button_text_color() -> str:
+    """Lấy màu text/icon cho button - thích ứng theo theme.
+    Primary buttons (accent color) luôn dùng white để contrast tốt.
+    """
+    return "#FFFFFF"
+
+
 def label(
     text: str,
     obj: str = "",
@@ -314,7 +322,10 @@ def primary_button(text: str, icon_name: str = "", parent=None) -> QPushButton:
     btn.setObjectName("Primary")
     btn.setCursor(Qt.PointingHandCursor)
     if icon_name:
-        btn.setIcon(icons.icon(icon_name, "#FFFFFF", 17))
+        # Icon cho primary button: luôn white để contrast tốt với accent color
+        # Không cache để tránh vấn đề khi theme đổi
+        icon_obj = icons.icon(icon_name, "#FFFFFF", 17)
+        btn.setIcon(icon_obj)
         btn.setIconSize(QSize(17, 17))
     return btn
 
@@ -588,24 +599,21 @@ class Toast(QFrame):
         "info": ("info", COLORS["info"]),
     }
 
-    def __init__(self, text: str, kind: str = "info", parent=None, duration: int = 3200) -> None:
+    def __init__(self, text: str, kind: str = "info", parent=None, duration: int = 2800) -> None:
         super().__init__(parent)
-        icon_name, color = self.KINDS.get(kind, self.KINDS["info"])
         self.setObjectName("Card")
-        self.setStyleSheet(
-            f"#Card {{ background: {COLORS['surface_alt']};"
-            f"border: 1px solid {color}; border-radius: 11px; }}"
-        )
+
         lay = QHBoxLayout(self)
         lay.setContentsMargins(13, 11, 15, 11)
         lay.setSpacing(10)
-        ic = QLabel()
-        ic.setPixmap(icons.pixmap(icon_name, color, 18))
-        ic.setFixedSize(20, 20)
-        lay.addWidget(ic)
-        lb = label(text, color=COLORS["text"], size=12.5, wrap=True)
-        lb.setMaximumWidth(420)
-        lay.addWidget(lb, 1)
+
+        self.ic = QLabel()
+        self.ic.setFixedSize(20, 20)
+        lay.addWidget(self.ic)
+
+        self.lb = label(text, color=COLORS["text"], size=12.5, wrap=True)
+        self.lb.setMaximumWidth(420)
+        lay.addWidget(self.lb, 1)
 
         eff = QGraphicsDropShadowEffect(self)
         eff.setBlurRadius(30)
@@ -613,54 +621,86 @@ class Toast(QFrame):
         eff.setColor(QColor(0, 0, 0, 170))
         self.setGraphicsEffect(eff)
 
-        self.adjustSize()
-        self._duration = duration
         self._anim = QPropertyAnimation(self, b"pos", self)
-        self._anim.setDuration(230)
+        self._anim.setDuration(200)
         self._anim.setEasingCurve(QEasingCurve.OutCubic)
 
+        self._out_anim = QPropertyAnimation(self, b"pos", self)
+        self._out_anim.setDuration(180)
+        self._out_anim.setEasingCurve(QEasingCurve.InCubic)
+        self._out_anim.finished.connect(self.hide)
+
+        self._timer = QTimer(self)
+        self._timer.setSingleShot(True)
+        self._timer.timeout.connect(self._fade_out)
+
+        self.update_content(text, kind, duration)
+
+    def update_content(self, text: str, kind: str = "info", duration: int = 2800) -> None:
+        self._timer.stop()
+        self._out_anim.stop()
+
+        icon_name, color = self.KINDS.get(kind, self.KINDS["info"])
+        self.setStyleSheet(
+            f"#Card {{ background: {COLORS['surface_alt']};"
+            f"border: 1px solid {color}; border-radius: 11px; }}"
+        )
+        self.ic.setPixmap(icons.pixmap(icon_name, color, 18))
+        self.lb.setText(text)
+        self.adjustSize()
+
+        self._timer.start(duration)
+
     def show_at(self, target: QPoint) -> None:
-        self.move(target + QPoint(0, 28))
-        self.show()
-        self.raise_()
-        self._anim.stop()
-        self._anim.setStartValue(self.pos())
-        self._anim.setEndValue(target)
-        self._anim.start()
-        QTimer.singleShot(self._duration, self._fade_out)
+        if not self.isVisible() or self.pos().y() > target.y() + 10:
+            self.move(target + QPoint(0, 24))
+            self.show()
+            self.raise_()
+            self._anim.stop()
+            self._anim.setStartValue(self.pos())
+            self._anim.setEndValue(target)
+            self._anim.start()
+        else:
+            self.move(target)
+            self.show()
+            self.raise_()
 
     def _fade_out(self) -> None:
-        self._out = QPropertyAnimation(self, b"pos", self)
-        self._out.setDuration(200)
-        self._out.setEasingCurve(QEasingCurve.InCubic)
-        self._out.setStartValue(self.pos())
-        self._out.setEndValue(self.pos() + QPoint(0, 24))
-        self._out.finished.connect(self.deleteLater)
-        self._out.start()
+        self._anim.stop()
+        self._out_anim.stop()
+        self._out_anim.setStartValue(self.pos())
+        self._out_anim.setEndValue(self.pos() + QPoint(0, 24))
+        self._out_anim.start()
 
 
 class ToastManager:
-    """Quan ly xep chong nhieu toast tren mot cua so."""
+    """Quan ly thong bao don tren cua so, gom nhom va tu lam moi thoi gian tat."""
 
     def __init__(self, host: QWidget) -> None:
         self.host = host
-        self._items: list[Toast] = []
+        self._current: Toast | None = None
 
-    def show(self, text: str, kind: str = "info", duration: int = 3200) -> None:
-        toast = Toast(text, kind, self.host, duration)
-        self._items = [t for t in self._items if not t.isHidden() and t.parent() is not None]
-        offset = 0
-        for t in reversed(self._items[-3:]):
-            offset += t.height() + 9
-        x = self.host.width() - toast.width() - 24
-        y = self.host.height() - toast.height() - 24 - offset
-        self._items.append(toast)
-        toast.show_at(QPoint(max(12, x), max(12, y)))
-        QTimer.singleShot(duration + 420, lambda: self._drop(toast))
+    def show(self, text: str, kind: str = "info", duration: int = 2800) -> None:
+        if not text:
+            return
 
-    def _drop(self, toast: Toast) -> None:
-        if toast in self._items:
-            self._items.remove(toast)
+        toast_valid = False
+        if self._current is not None:
+            try:
+                _ = self._current.parent()
+                toast_valid = True
+            except (RuntimeError, ReferenceError):
+                self._current = None
+
+        if not toast_valid or self._current is None:
+            self._current = Toast(text, kind, self.host, duration)
+        else:
+            self._current.update_content(text, kind, duration)
+
+        self._current.adjustSize()
+        x = self.host.width() - self._current.width() - 24
+        y = self.host.height() - self._current.height() - 24
+        self._current.show_at(QPoint(max(12, x), max(12, y)))
 
 
 # ============================================================ EMPTY STATE ===
@@ -742,7 +782,7 @@ class ProgressPanel(QFrame):
         top.addWidget(self.percent_label)
         self.cancel_btn = ghost_button(tr("common.cancel", "Hủy"), "close")
         self.cancel_btn.setFixedHeight(28)
-        self.cancel_btn.clicked.connect(self.cancelled.emit)
+        self.cancel_btn.clicked.connect(self._on_cancel_clicked)
         top.addWidget(self.cancel_btn)
         lay.addLayout(top)
 
@@ -759,14 +799,23 @@ class ProgressPanel(QFrame):
         lay.addWidget(self.detail_label)
         self.hide()
 
+    def _on_cancel_clicked(self) -> None:
+        from app.i18n import tr
+
+        self.cancel_btn.setEnabled(False)
+        self.cancel_btn.setText(tr("progress.stopping", "Đang dừng..."))
+        self.stage_label.setText(tr("progress.stopping_stage", "Đang dừng an toàn..."))
+        self.cancelled.emit()
+
     def start(self, stage: str = "") -> None:
         from app.i18n import tr
 
+        self.cancel_btn.setText(tr("common.cancel", "Hủy"))
+        self.cancel_btn.setEnabled(True)
         self.stage_label.setText(stage or tr("progress.processing", "Đang xử lý …"))
         self.bar.setValue(0)
         self.percent_label.setText("0%")
         self.detail_label.setText("")
-        self.cancel_btn.setEnabled(True)
         self.show()
 
     def set_stage(self, text: str) -> None:
@@ -782,11 +831,23 @@ class ProgressPanel(QFrame):
     def finish(self, text: str = "") -> None:
         from app.i18n import tr
 
+        self.cancel_btn.setText(tr("common.cancel", "Hủy"))
+        self.cancel_btn.setEnabled(False)
         self.bar.setValue(100)
         self.percent_label.setText("100%")
         self.stage_label.setText(text or tr("progress.done", "Hoàn tất"))
-        self.cancel_btn.setEnabled(False)
-        QTimer.singleShot(1600, self.hide)
+        QTimer.singleShot(1200, self.hide)
+
+    def reset(self) -> None:
+        from app.i18n import tr
+
+        self.cancel_btn.setText(tr("common.cancel", "Hủy"))
+        self.cancel_btn.setEnabled(True)
+        self.bar.setValue(0)
+        self.percent_label.setText("0%")
+        self.stage_label.setText("")
+        self.detail_label.setText("")
+        self.hide()
 
 
 # ========================================================= KEY VALUE GRID ===

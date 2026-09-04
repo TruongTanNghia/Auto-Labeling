@@ -149,7 +149,7 @@ class AutoLabelPage(BasePage):
         self._pending_batch: list[int] = []
 
     # -------------------------------------------------- nhan anh tu buoc truoc --
-    def set_batch(self, image_ids) -> None:
+    def set_batch(self, image_ids, auto_start: bool = False) -> None:
         """Nhận đúng loạt ảnh vừa cắt ra từ trang Frame Extractor.
 
         Có thể được gọi trước khi trang này dựng giao diện.
@@ -158,14 +158,16 @@ class AutoLabelPage(BasePage):
         self._pending_batch = [int(i) for i in image_ids]
         if not self._pending_batch:
             return
-        # Loạt ảnh mới cắt luôn là ảnh chưa gán nhãn -> lọc đúng nhóm đó
-        idx = self.filter_combo.findData("unlabeled")
+        # Loạt ảnh mới cắt luôn là ảnh chưa gán nhãn -> chọn nhóm tất cả để không bị ẩn sau khi gán nhãn
+        idx = self.filter_combo.findData("all")
         if idx >= 0:
             self.filter_combo.blockSignals(True)
             self.filter_combo.setCurrentIndex(idx)
             self.filter_combo.blockSignals(False)
         self.refresh()
         self._apply_batch_selection()
+        if auto_start:
+            self.start()
 
     def _apply_batch_selection(self) -> None:
         if not self._pending_batch:
@@ -765,9 +767,13 @@ class AutoLabelPage(BasePage):
         if getattr(self, "_pending_start", False):
             self._pending_start = False
             self.start()
+        else:
+            self.start_btn.setEnabled(True)
 
     def _on_model_failed(self, msg: str) -> None:
         self.load_model_btn.setEnabled(True)
+        self.start_btn.setEnabled(True)
+        self.progress.finish(tr("autolabel.model_load_failed", "Nạp model thất bại"))
         self._pending_start = False
         self.model_status.setText(tr("autolabel.model_load_failed", "Nạp model thất bại"))
         self.model_status.setStyleSheet(f"font-size: 11.5px; color: {COLORS['danger']};")
@@ -782,16 +788,29 @@ class AutoLabelPage(BasePage):
         if self.ctrl.is_running("autolabel"):
             self.toast(tr("autolabel.labeling_wait", "Đang gán nhãn, vui lòng đợi."), "warning")
             return
+        if self.ctrl.is_running("train"):
+            self.toast(
+                tr(
+                    "autolabel.train_conflict",
+                    "Đang có tiến trình huấn luyện mô hình chạy. Vui lòng dừng hoặc đợi hoàn tất trước khi gán nhãn.",
+                ),
+                "warning",
+            )
+            return
         if not self.ctrl.engine.loaded:
             self.toast(
                 tr("autolabel.loading_model_first", "Đang nạp model trước khi chạy …"), "info"
             )
             self._pending_start = True
+            self.progress.start(tr("autolabel.model_loading", "Đang nạp model …"))
+            self.start_btn.setEnabled(False)
             self.load_model()
             return
 
         ids = self.image_list.selected_ids() or self.image_list.all_ids()
         if not ids:
+            self.start_btn.setEnabled(True)
+            self.progress.finish()
             self.toast(
                 tr("autolabel.no_images_to_label", "Không có ảnh nào để gán nhãn."), "warning"
             )
@@ -859,7 +878,8 @@ class AutoLabelPage(BasePage):
             on_stage=self.progress.set_stage,
             on_log=self._append_log,
             on_done=self._on_done,
-            on_fail=lambda _m: self.start_btn.setEnabled(True),
+            on_fail=self._on_autolabel_failed,
+            on_cancelled=self._on_autolabel_cancelled,
         )
 
     def _on_image_done(self, image_id: int, n_objects: int, max_conf: float) -> None:
@@ -881,6 +901,8 @@ class AutoLabelPage(BasePage):
     def _on_done(self, result) -> None:
         self.start_btn.setEnabled(True)
         self.progress.finish(tr("autolabel.labeling_done", "Gán nhãn hoàn tất"))
+        if hasattr(self, "batch_hint"):
+            self.batch_hint.setVisible(False)
         if result is None:
             return
         self.leg_total.set_value(f"{result.n_images:,}")
@@ -900,6 +922,20 @@ class AutoLabelPage(BasePage):
         )
         self.ctrl.notify_images_changed()
         self.ctrl.notify_classes_changed()
+        self.refresh()
+
+    def _on_autolabel_cancelled(self) -> None:
+        self.start_btn.setEnabled(True)
+        self.progress.finish(tr("autolabel.cancelled", "Đã dừng gán nhãn"))
+        if hasattr(self, "batch_hint"):
+            self.batch_hint.setVisible(False)
+        self.toast(tr("autolabel.cancelled_toast", "Đã dừng gán nhãn an toàn."), "info")
+        self.ctrl.notify_images_changed()
+        self.refresh()
+
+    def _on_autolabel_failed(self, msg: str) -> None:
+        self.start_btn.setEnabled(True)
+        self.progress.finish(tr("autolabel.failed", "Gán nhãn thất bại"))
         self.refresh()
 
     def _append_log(self, text: str) -> None:
@@ -957,6 +993,19 @@ class AutoLabelPage(BasePage):
             self.tracking_warning.setText("")
 
     # =============================================================== REFRESH ==
+    def on_project_changed(self) -> None:
+        if hasattr(self, "preview"):
+            self.preview.clear()
+        if hasattr(self, "log_view"):
+            self.log_view.clear()
+        if hasattr(self, "leg_total"):
+            for lg in (self.leg_total, self.leg_objects, self.leg_review, self.leg_lowconf):
+                lg.set_value("0")
+        if hasattr(self, "start_btn"):
+            self.start_btn.setEnabled(True)
+        if hasattr(self, "progress"):
+            self.progress.reset()
+
     def refresh(self) -> None:
         if not self.repo:
             return

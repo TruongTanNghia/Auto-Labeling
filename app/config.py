@@ -14,7 +14,7 @@ from app.utils.paths import config_file, default_projects_dir, ensure_dir
 
 DEFAULTS: dict[str, Any] = {
     "general": {
-        "language": "Tieng Viet",
+        "language": "vi",
         "theme": "Dark",
         "accent": "#7C5CFF",
         "autosave_minutes": 5,
@@ -173,6 +173,9 @@ class Config:
 
     def section(self, name: str) -> dict:
         return self._data.setdefault(name, {})
+
+    def get_section(self, name: str) -> dict:
+        return self.section(name)
 
     def update_section(self, name: str, values: dict) -> None:
         self.section(name).update(values)

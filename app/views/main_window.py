@@ -212,7 +212,9 @@ class MainWindow(QMainWindow):
         self.pages[PAGE_IMPORT].videosSelected.connect(self.pages[PAGE_EXTRACT].set_videos)
         self.pages[PAGE_EXTRACT].navigate.connect(self.go_to_page)
         # Cat frame xong -> chuyen dung loat anh vua cat sang buoc gan nhan
-        self.pages[PAGE_EXTRACT].batchReady.connect(self.pages[PAGE_AUTOLABEL].set_batch)
+        self.pages[PAGE_EXTRACT].batchReady.connect(
+            lambda b: self.pages[PAGE_AUTOLABEL].set_batch(b, auto_start=True)
+        )
         self.pages[PAGE_DATASET].navigate.connect(self.go_to_page)
 
         # goc duoi de keo doi kich thuoc
@@ -302,6 +304,7 @@ class MainWindow(QMainWindow):
     def _on_project_opened(self, repo) -> None:
         self._update_project_label()
         for key in (
+            PAGE_DASHBOARD,
             PAGE_IMPORT,
             PAGE_EXTRACT,
             PAGE_AUTOLABEL,
@@ -310,15 +313,23 @@ class MainWindow(QMainWindow):
             PAGE_STATS,
             PAGE_TRAIN,
         ):
-            page = self.pages[key]
-            if getattr(page, "_built", False):
-                page.refresh()
+            page = self.pages.get(key)
+            if page is not None:
+                if hasattr(page, "on_project_changed"):
+                    page.on_project_changed()
+                if getattr(page, "_built", False):
+                    page.refresh()
 
     def _on_project_closed(self) -> None:
         from app.i18n import tr
 
         self.title_bar.set_project("")
         self.sidebar.set_project(tr("main.no_project", "Chưa mở project"))
+        for key, page in self.pages.items():
+            if hasattr(page, "on_project_changed"):
+                page.on_project_changed()
+            if getattr(page, "_built", False):
+                page.refresh()
 
     def _update_project_label(self) -> None:
         from app.i18n import tr

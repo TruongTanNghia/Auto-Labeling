@@ -435,8 +435,17 @@ class ExtractPage(BasePage):
         return scroll
 
     # ================================================================ LOGIC ==
+    def _reset_preview(self) -> None:
+        if hasattr(self, "preview_label"):
+            self.preview_label.clear()
+            self.preview_label.setText(tr("extract.no_frame_yet", "Chưa có frame nào"))
+
     def set_videos(self, paths: list[str]) -> None:
         self.videos = list(paths)
+        self._reset_preview()
+        if hasattr(self, "next_step_card"):
+            self.next_step_card.setVisible(False)
+        self._last_batch = []
         self.refresh()
 
     def _pick_video(self) -> None:
@@ -604,7 +613,8 @@ class ExtractPage(BasePage):
             on_stage=self.progress.set_stage,
             on_log=self._append_log,
             on_done=self._on_done,
-            on_fail=lambda _m: self.start_btn.setEnabled(True),
+            on_fail=self._on_extract_failed,
+            on_cancelled=self._on_extract_cancelled,
         )
 
     def _append_log(self, text: str) -> None:
@@ -686,6 +696,31 @@ class ExtractPage(BasePage):
             ),
             "info",
         )
+
+    def _on_extract_cancelled(self) -> None:
+        self.start_btn.setEnabled(True)
+        self.progress.finish(tr("extract.cancelled", "Đã dừng cắt frame"))
+        self.toast(tr("extract.cancelled_toast", "Đã dừng cắt frame an toàn."), "info")
+
+    def _on_extract_failed(self, msg: str) -> None:
+        self.start_btn.setEnabled(True)
+        self.progress.finish(tr("extract.failed", "Cắt frame thất bại"))
+
+    def on_project_changed(self) -> None:
+        self.videos = []
+        self._last_batch = []
+        if hasattr(self, "log_view"):
+            self.log_view.clear()
+        if hasattr(self, "next_step_card"):
+            self.next_step_card.setVisible(False)
+        self._reset_preview()
+        if hasattr(self, "video_info"):
+            self._update_video_info()
+            self._update_estimate()
+        if hasattr(self, "start_btn"):
+            self.start_btn.setEnabled(True)
+        if hasattr(self, "progress"):
+            self.progress.reset()
 
     def refresh(self) -> None:
         if hasattr(self, "video_info"):

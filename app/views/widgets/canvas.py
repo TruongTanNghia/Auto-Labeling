@@ -629,7 +629,7 @@ class AnnotationCanvas(QWidget):
                 p.drawEllipse(sp, r, r)
 
         # nhan
-        if self.style.show_labels:
+        if self.style.show_labels or self.style.show_confidence:
             self._draw_label(p, ann, poly, color)
 
     def _draw_keypoints(self, p: QPainter, ann: Annotation, color: QColor) -> None:
@@ -646,10 +646,18 @@ class AnnotationCanvas(QWidget):
             p.drawEllipse(sp, 3.0, 3.0)
 
     def _draw_label(self, p: QPainter, ann: Annotation, poly: QPolygonF, color: QColor) -> None:
-        name = ann.class_name or self.class_names.get(ann.class_id, "?")
-        text = name
-        if self.style.show_confidence and ann.confidence < 1.0:
-            text += f" {ann.confidence:.2f}"
+        parts: list[str] = []
+        if self.style.show_labels:
+            name = ann.class_name or self.class_names.get(ann.class_id, "?")
+            parts.append(name)
+        if self.style.show_confidence and ann.confidence is not None:
+            if ann.confidence < 1.0:
+                parts.append(f"{ann.confidence:.2f}")
+            elif not self.style.show_labels:
+                parts.append(f"{ann.confidence:.2f}")
+        if not parts:
+            return
+        text = " ".join(parts)
         f = QFont("Segoe UI", 8)
         f.setBold(True)
         p.setFont(f)

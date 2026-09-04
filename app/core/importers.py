@@ -327,71 +327,78 @@ class DatasetImporter:
             for done, (img_id_coco, im_meta) in enumerate(img_info.items(), start=1):
                 if self._cancelled:
                     return
-                img_path = _find_coco_image(im_meta["file_name"], jf.parent, root)
-                if img_path is None:
-                    msg = f"Khong tim thay anh: {im_meta['file_name']}"
-                    result.warnings.append(msg)
-                    _log(f"[CANH BAO] {msg}")
-                    result.n_skipped += 1
-                    if progress_cb:
-                        progress_cb(done, total_imgs, im_meta["file_name"])
-                    continue
-
-                dest = self._resolve_dest(img_path)
-                w = im_meta.get("width", 0) or _image_size(dest)[0]
-                h = im_meta.get("height", 0) or _image_size(dest)[1]
-
-                anns: list[Annotation] = []
-                for raw in ann_by_img.get(img_id_coco, []):
-                    class_id = cat_map.get(raw.get("category_id", -1))
-                    if class_id is None:
+                try:
+                    file_name = str(im_meta.get("file_name", ""))
+                    if not file_name:
                         continue
-                    bbox_raw = raw.get("bbox", [])  # [x, y, w, h] COCO format
-                    if len(bbox_raw) == 4:
-                        x1 = float(bbox_raw[0])
-                        y1 = float(bbox_raw[1])
-                        x2 = x1 + float(bbox_raw[2])
-                        y2 = y1 + float(bbox_raw[3])
-                    else:
-                        x1 = y1 = x2 = y2 = 0.0
+                    img_path = _find_coco_image(file_name, jf.parent, root)
+                    if img_path is None:
+                        msg = f"Khong tim thay anh: {file_name}"
+                        result.warnings.append(msg)
+                        _log(f"[CANH BAO] {msg}")
+                        result.n_skipped += 1
+                        if progress_cb:
+                            progress_cb(done, total_imgs, file_name)
+                        continue
 
-                    segs = raw.get("segmentation", [])
-                    poly: list[float] = []
-                    if isinstance(segs, list) and segs and isinstance(segs[0], list):
-                        # lay polygon lon nhat
-                        poly = [float(v) for v in max(segs, key=len)]
+                    dest = self._resolve_dest(img_path)
+                    w = im_meta.get("width", 0) or _image_size(dest)[0]
+                    h = im_meta.get("height", 0) or _image_size(dest)[1]
 
-                    if len(poly) >= 6:
-                        a = Annotation(
-                            image_id=0,
-                            class_id=class_id,
-                            shape=SHAPE_POLYGON,
-                            polygon=poly,
-                            bbox=[x1, y1, x2, y2],
-                            confidence=float(raw.get("score", 1.0)),
-                            status=ANN_AUTO,
-                            source=self.cfg.source_tag,
-                        )
-                        a.recompute()
-                    else:
-                        a = Annotation(
-                            image_id=0,
-                            class_id=class_id,
-                            shape=SHAPE_BBOX,
-                            bbox=[x1, y1, x2, y2],
-                            confidence=float(raw.get("score", 1.0)),
-                            area=max(0.0, (x2 - x1) * (y2 - y1)),
-                            status=ANN_AUTO,
-                            source=self.cfg.source_tag,
-                        )
-                    anns.append(a)
+                    anns: list[Annotation] = []
+                    for raw in ann_by_img.get(img_id_coco, []):
+                        class_id = cat_map.get(raw.get("category_id", -1))
+                        if class_id is None:
+                            continue
+                        bbox_raw = raw.get("bbox", [])  # [x, y, w, h] COCO format
+                        if len(bbox_raw) == 4:
+                            x1 = float(bbox_raw[0])
+                            y1 = float(bbox_raw[1])
+                            x2 = x1 + float(bbox_raw[2])
+                            y2 = y1 + float(bbox_raw[3])
+                        else:
+                            x1 = y1 = x2 = y2 = 0.0
 
-                img_id = self._write_image(dest, w, h, anns, result)
-                if img_id:
-                    result.n_images += 1
-                    result.n_annotations += len(anns)
+                        segs = raw.get("segmentation", [])
+                        poly: list[float] = []
+                        if isinstance(segs, list) and segs and isinstance(segs[0], list):
+                            # lay polygon lon nhat
+                            poly = [float(v) for v in max(segs, key=len)]
+
+                        if len(poly) >= 6:
+                            a = Annotation(
+                                image_id=0,
+                                class_id=class_id,
+                                shape=SHAPE_POLYGON,
+                                polygon=poly,
+                                bbox=[x1, y1, x2, y2],
+                                confidence=float(raw.get("score", 1.0)),
+                                status=ANN_AUTO,
+                                source=self.cfg.source_tag,
+                            )
+                            a.recompute()
+                        else:
+                            a = Annotation(
+                                image_id=0,
+                                class_id=class_id,
+                                shape=SHAPE_BBOX,
+                                bbox=[x1, y1, x2, y2],
+                                confidence=float(raw.get("score", 1.0)),
+                                area=max(0.0, (x2 - x1) * (y2 - y1)),
+                                status=ANN_AUTO,
+                                source=self.cfg.source_tag,
+                            )
+                        anns.append(a)
+
+                    img_id = self._write_image(dest, w, h, anns, result)
+                    if img_id:
+                        result.n_images += 1
+                        result.n_annotations += len(anns)
+                except Exception as exc:
+                    _log(f"[CANH BAO] Loi xu ly anh COCO: {exc}")
+                    result.n_skipped += 1
                 if progress_cb:
-                    progress_cb(done, total_imgs, im_meta["file_name"])
+                    progress_cb(done, total_imgs, str(im_meta.get("file_name", "")))
 
     # ------------------------------------------------------------ phu tro ---
     def _ensure_class(self, name: str, result: ImportResult):
@@ -406,7 +413,10 @@ class DatasetImporter:
     def _resolve_dest(self, src: Path) -> Path:
         """Sao chep anh vao project neu can, tra ve duong dan cuoi cung."""
         if self.cfg.copy_images:
-            return self.repo.copy_into_project(src, "images")
+            try:
+                return self.repo.copy_into_project(src, "images")
+            except Exception:
+                return src
         return src
 
     def _write_image(

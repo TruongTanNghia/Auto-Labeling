@@ -19,6 +19,7 @@ class BaseWorker(QThread):
     finished_ok = Signal(object)  # ket qua
     failed = Signal(str)  # thong bao loi
     stage = Signal(str)  # ten giai doan hien tai
+    cancelled_done = Signal()  # phat khi tac vu da dung an toan sau khi huy
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -50,11 +51,16 @@ class BaseWorker(QThread):
             self.result = self.execute()
             if not self._cancelled:
                 self.finished_ok.emit(self.result)
+            else:
+                self.cancelled_done.emit()
         except Exception as exc:  # pragma: no cover
             if not self._cancelled:
                 log.exception("Worker %s loi", self.__class__.__name__)
                 self.failed.emit(f"{type(exc).__name__}: {exc}")
                 self.message.emit(traceback.format_exc(limit=4))
+            else:
+                log.info("Worker %s da dung an toan sau khi huy.", self.__class__.__name__)
+                self.cancelled_done.emit()
 
     def execute(self):
         """Lop con cai dat phan viec thuc te."""

@@ -112,15 +112,15 @@ QPushButton:pressed { background: @border@; }
 QPushButton:disabled { background: @surface_alt@; color: @text_mute@; border-color: @border@; }
 
 QPushButton#Primary {
-    background: @accent@; color: #FFFFFF; border: 1px solid @accent@;
+    background: @accent@; color: @primary_text@; border: 1px solid @accent@;
 }
 QPushButton#Primary:hover { background: @accent_hi@; border-color: @accent_hi@; }
 QPushButton#Primary:pressed { background: @accent_dim@; }
 QPushButton#Primary:disabled { background: @surface_alt@; color: @text_mute@; border-color: @border@; }
 
-QPushButton#Success { background: @success@; color: #FFFFFF; border: 1px solid @success@; }
+QPushButton#Success { background: @success@; color: @primary_text@; border: 1px solid @success@; }
 QPushButton#Success:hover { opacity: 0.9; }
-QPushButton#Danger { background: @danger@; color: #FFFFFF; border: 1px solid @danger@; }
+QPushButton#Danger { background: @danger@; color: @primary_text@; border: 1px solid @danger@; }
 QPushButton#Danger:hover { opacity: 0.9; }
 QPushButton#Warning { background: @warning@; color: #FFFFFF; border: 1px solid @warning@; }
 
@@ -169,6 +169,12 @@ QPushButton#SubTab {
 }
 QPushButton#SubTab:hover { background: @surface_hi@; color: @text@; }
 QPushButton#SubTab:checked { background: @accent_soft@; color: @accent@; }
+
+QPushButton#GalleryThumb {
+    background: @surface_alt@; border: 1px solid @border@; border-radius: 6px;
+    padding: 2px; min-width: 60px; max-width: 60px; min-height: 60px; max-height: 60px;
+}
+QPushButton#GalleryThumb:hover { border-color: @accent@; background: @surface_hi@; }
 
 /* ============================================================ INPUT === */
 QLineEdit, QPlainTextEdit, QTextEdit, QSpinBox, QDoubleSpinBox, QComboBox {
@@ -449,6 +455,10 @@ def build_stylesheet(accent: str | None = None, theme_name: str | None = None) -
             _asset(f"chev_down_{resolved}.png", "chevron_down", colors["text_dim"], 12, 2.6),
         )
     )
+    # Add primary text color - white for dark mode, dark text for light mode
+    primary_text_color = "#FFFFFF" if resolved == "Dark" else colors["text"]
+    colors["primary_text"] = primary_text_color
+    
     for key, val in colors.items():
         qss = qss.replace(f"@{key}@", val)
     # Dọn sạch token còn sót (nếu có)

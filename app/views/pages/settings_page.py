@@ -1089,6 +1089,77 @@ class SettingsPage(BasePage):
         self.ctrl.refresh_settings()
         self.toast(tr("settings.saved_toast"), "success")
 
+    def _load_from_cfg(self) -> None:
+        # General
+        g = cfg.get_section("general")
+        lang = g.get("language", "vi")
+        idx = self.lang_combo.findData(lang)
+        if idx >= 0:
+            self.lang_combo.setCurrentIndex(idx)
+
+        theme = g.get("theme", "Dark")
+        idx = self.theme_combo.findData(theme)
+        if idx >= 0:
+            self.theme_combo.setCurrentIndex(idx)
+
+        self._set_accent(g.get("accent", COLORS["accent"]))
+        self.projects_edit.setText(g.get("projects_dir", ""))
+        self.autosave_spin.setValue(int(g.get("autosave_minutes", 5)))
+
+        exp_fmt = g.get("default_export_format", "yolo_seg")
+        idx = self.export_combo.findData(exp_fmt)
+        if idx >= 0:
+            self.export_combo.setCurrentIndex(idx)
+
+        self.confirm_toggle.setChecked(bool(g.get("confirm_on_exit", True)))
+        self.reopen_toggle.setChecked(bool(g.get("reopen_last_project", True)))
+
+        # Model
+        m = cfg.get_section("model")
+        task = m.get("task", "segment")
+        idx = self.m_task.findData(task)
+        if idx >= 0:
+            self.m_task.setCurrentIndex(idx)
+        w_val = m.get("weights", "yolo11m-seg.pt")
+        self.m_weights.setText(w_val)
+        idx = self.m_preset_combo.findData(w_val)
+        if idx >= 0:
+            self.m_preset_combo.setCurrentIndex(idx)
+        self.m_custom.setText(m.get("custom_weights", ""))
+        dev = m.get("device", "auto")
+        idx = self.m_device.findData(dev)
+        if idx >= 0:
+            self.m_device.setCurrentIndex(idx)
+        self.m_imgsz.setValue(int(m.get("imgsz", 640)))
+        self.m_half.setChecked(bool(m.get("half", False)))
+
+        # Inference
+        inf = cfg.get_section("inference")
+        self.i_conf.setValue(float(inf.get("confidence", 0.45)))
+        self.i_iou.setValue(float(inf.get("iou", 0.50)))
+        self.i_review.setValue(float(inf.get("review_threshold", 0.60)))
+        self.i_low.setValue(float(inf.get("low_conf_threshold", 0.35)))
+        self.i_maxdet.setValue(int(inf.get("max_det", 1000)))
+        self.i_simplify.setValue(float(inf.get("polygon_simplify", 0.0025)))
+        self.i_minarea.setValue(int(inf.get("min_area_px", 24)))
+        self.i_retina.setChecked(bool(inf.get("retina_masks", True)))
+        self.i_agnostic.setChecked(bool(inf.get("agnostic_nms", False)))
+        self.i_overwrite.setChecked(bool(inf.get("overwrite_existing", True)))
+
+        # Annotation
+        ann = cfg.get_section("annotation")
+        self.a_conf.setChecked(bool(ann.get("show_confidence", True)))
+        self.a_color.setChecked(bool(ann.get("show_class_color", True)))
+        self.a_labels.setChecked(bool(ann.get("show_labels", True)))
+        self.a_select.setChecked(bool(ann.get("auto_select_new", True)))
+        self.a_brush.setValue(int(ann.get("brush_size", 20)))
+        self.a_opacity.setValue(float(ann.get("fill_opacity", 0.35)))
+        self.a_line.setValue(int(ann.get("line_width", 2)))
+        self.a_vertex.setValue(int(ann.get("vertex_size", 6)))
+
+        # Plugins
+        self._refresh_plugins()
+
     def _reset(self) -> None:
         if (
             QMessageBox.question(
@@ -1100,13 +1171,25 @@ class SettingsPage(BasePage):
         ):
             return
         cfg.reset()
+        self._load_from_cfg()
+
+        from app.i18n import set_language
+        from app.theme.style import apply_theme
+
+        new_lang = cfg.get("general.language", "vi")
+        new_theme = cfg.get("general.theme", "Dark")
+        new_accent = cfg.get("general.accent", COLORS["accent"])
+        set_language(new_lang)
+        apply_theme(None, new_theme, new_accent)
+        self.ctrl.refresh_settings()
+
         self.toast(
-            tr("settings.reset_toast", "Đã khôi phục mặc định. Khởi động lại để áp dụng đầy đủ."),
-            "info",
+            tr("settings.reset_toast", "Đã khôi phục mặc định toàn bộ cài đặt."),
+            "success",
         )
 
     def refresh(self) -> None:
-        self._refresh_plugins()
+        self._load_from_cfg()
 
 
 def _open_folder(path) -> None:

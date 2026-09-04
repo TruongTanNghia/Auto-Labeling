@@ -71,10 +71,10 @@ class ThumbnailLoader(QThread):
 
 # ============================================================== DELEGATES ===
 class _CompactDelegate(QStyledItemDelegate):
-    """Mot dong: dot trang thai + ten file + so doi tuong."""
+    """Mot dong: dot trang thai + ten file + chu trang thai o duoi."""
 
     def sizeHint(self, option, index) -> QSize:  # noqa: D102
-        return QSize(120, 30)
+        return QSize(120, 38)
 
     def paint(self, painter: QPainter, option, index) -> None:  # noqa: D102
         painter.save()
@@ -98,22 +98,19 @@ class _CompactDelegate(QStyledItemDelegate):
         class_color = index.data(ROLE_CLASS_COLOR)
         status = index.data(ROLE_STATUS) or IMG_UNLABELED
         n = index.data(ROLE_NOBJ) or 0
-        if not selected and (n == 0 or status == IMG_UNLABELED or not class_color):
-            color = COLORS["text_mute"]
-        elif class_color:
-            color = class_color
-        else:
-            _, color = get_image_status_label().get(status, ("", COLORS["text_mute"]))
+        status_text, status_color = get_image_status_label().get(status, ("", COLORS["text_mute"]))
+        dot_color = status_color if status != IMG_UNLABELED else (class_color or COLORS["text_mute"])
 
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor(color))
-        cy = r.center().y()
-        painter.drawEllipse(r.left() + 12, cy - 3, 7, 7)
+        painter.setBrush(QColor(dot_color))
+        cy = r.top() + 14
+        painter.drawEllipse(r.left() + 10, cy - 3, 7, 7)
 
+        # Dong 1: Ten file
         name = index.data(Qt.DisplayRole) or ""
-        painter.setPen(QPen(QColor(COLORS["text"] if selected else COLORS["text"])))
+        painter.setPen(QPen(QColor(COLORS["text"])))
         painter.setFont(QFont("Segoe UI", 9))
-        text_rect = QRect(r.left() + 26, r.top(), r.width() - 76, r.height())
+        text_rect = QRect(r.left() + 22, r.top() + 3, r.width() - 68, 16)
         fm = painter.fontMetrics()
         painter.drawText(
             text_rect,
@@ -121,8 +118,15 @@ class _CompactDelegate(QStyledItemDelegate):
             fm.elidedText(str(name), Qt.ElideMiddle, text_rect.width()),
         )
 
+        # Dong 2: Chu trang thai o duoi
+        painter.setPen(QPen(QColor(status_color)))
+        painter.setFont(QFont("Segoe UI", 7.5))
+        sub_rect = QRect(r.left() + 22, r.top() + 19, r.width() - 68, 14)
+        painter.drawText(sub_rect, Qt.AlignVCenter | Qt.AlignLeft, status_text)
+
         if n is not None:
             painter.setPen(QPen(QColor(COLORS["accent_hi"] if selected else COLORS["text_dim"])))
+            painter.setFont(QFont("Segoe UI", 8.5))
             painter.drawText(
                 QRect(r.right() - 46, r.top(), 32, r.height()),
                 Qt.AlignVCenter | Qt.AlignRight,
@@ -134,14 +138,14 @@ class _CompactDelegate(QStyledItemDelegate):
 
 
 class _GalleryDelegate(QStyledItemDelegate):
-    """O luoi: thumbnail + vien mau trang thai + ten file."""
+    """O luoi: thumbnail + vien mau trang thai + ten file + chu trang thai o duoi."""
 
     def __init__(self, cell: int = 148, parent=None) -> None:
         super().__init__(parent)
         self.cell = cell
 
     def sizeHint(self, option, index) -> QSize:  # noqa: D102
-        return QSize(self.cell, self.cell + 24)
+        return QSize(self.cell, self.cell + 38)
 
     def paint(self, painter: QPainter, option, index) -> None:  # noqa: D102
         from PySide6.QtWidgets import QStyle
@@ -156,16 +160,18 @@ class _GalleryDelegate(QStyledItemDelegate):
         class_color = index.data(ROLE_CLASS_COLOR)
         status = index.data(ROLE_STATUS) or IMG_UNLABELED
         n = index.data(ROLE_NOBJ) or 0
+        status_text, status_color = get_image_status_label().get(status, ("", COLORS["text_mute"]))
+
         if not selected and (n == 0 or status == IMG_UNLABELED or not class_color):
             color = COLORS["text_mute"]
         elif class_color:
             color = class_color
         else:
-            _, color = get_image_status_label().get(status, ("", COLORS["text_mute"]))
+            color = status_color
 
         pad = 5
         img_box = QRect(
-            r.left() + pad, r.top() + pad, r.width() - pad * 2, r.height() - pad * 2 - 20
+            r.left() + pad, r.top() + pad, r.width() - pad * 2, r.height() - pad * 2 - 34
         )
         painter.setBrush(QColor(COLORS["bg"]))
         painter.setPen(Qt.NoPen)
@@ -194,7 +200,7 @@ class _GalleryDelegate(QStyledItemDelegate):
         painter.setPen(QPen(pen_color, 2 if selected else 1))
         painter.drawRoundedRect(img_box, 8, 8)
 
-        # dai mau trang thai o goc tren
+        # dai mau trang thai o goc tren (phong cach cu)
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(color))
         painter.drawRoundedRect(QRect(img_box.left() + 6, img_box.top() + 6, 22, 5), 3, 3)
@@ -208,15 +214,22 @@ class _GalleryDelegate(QStyledItemDelegate):
             painter.setFont(QFont("Segoe UI", 7))
             painter.drawText(badge, Qt.AlignCenter, str(n))
 
+        # Dong 1: Ten file
         painter.setPen(QPen(QColor(COLORS["text"] if selected else COLORS["text_dim"])))
         painter.setFont(QFont("Segoe UI", 8))
-        name_rect = QRect(r.left() + 4, img_box.bottom() + 3, r.width() - 8, 17)
+        name_rect = QRect(r.left() + 4, img_box.bottom() + 3, r.width() - 8, 15)
         fm = painter.fontMetrics()
         painter.drawText(
             name_rect,
             Qt.AlignCenter,
             fm.elidedText(str(index.data(Qt.DisplayRole) or ""), Qt.ElideMiddle, name_rect.width()),
         )
+
+        # Dong 2: Chu trang thai o duoi
+        painter.setPen(QPen(QColor(status_color)))
+        painter.setFont(QFont("Segoe UI", 7.5))
+        status_rect = QRect(r.left() + 4, img_box.bottom() + 18, r.width() - 8, 14)
+        painter.drawText(status_rect, Qt.AlignCenter, status_text)
         painter.restore()
 
 
@@ -348,7 +361,8 @@ class ImageGallery(QListWidget):
         self.verticalScrollBar().valueChanged.connect(self._scroll_timer.start)
 
     # ---------------------------------------------------------------- API ---
-    def set_images(self, records: list[ImageRecord]) -> None:
+    def set_images(self, records: list[ImageRecord], keep_selection: bool = True) -> None:
+        prev_selected = set(self.selected_ids()) if keep_selection else set()
         self._loader.clear()
         self.blockSignals(True)
         self.clear()
@@ -361,7 +375,7 @@ class ImageGallery(QListWidget):
             item.setData(ROLE_PATH, rec.path)
             item.setData(ROLE_NOBJ, rec.n_objects)
             item.setData(ROLE_DUP, rec.is_duplicate)
-            item.setSizeHint(QSize(self._cell, self._cell + 24))
+            item.setSizeHint(QSize(self._cell, self._cell + 38))
             obj_str = tr("image_list.objects_unit", "{count} đối tượng", count=rec.n_objects)
             status_str = tr(f"status.{rec.status}", rec.status)
             item.setToolTip(
@@ -372,15 +386,27 @@ class ImageGallery(QListWidget):
             self.addItem(item)
             self._by_path[rec.path] = item
             self._by_id[rec.id] = item
+            if rec.id in prev_selected:
+                item.setSelected(True)
         self.blockSignals(False)
+        self.selectionIds.emit(self.selected_ids())
         QTimer.singleShot(30, self._request_visible)
+
+    def select_ids(self, ids: list[int]) -> None:
+        id_set = set(ids)
+        self.blockSignals(True)
+        for i in range(self.count()):
+            item = self.item(i)
+            item.setSelected(int(item.data(ROLE_ID)) in id_set)
+        self.blockSignals(False)
+        self.selectionIds.emit(self.selected_ids())
 
     def set_cell_size(self, cell: int) -> None:
         self._cell = cell
         self.setItemDelegate(_GalleryDelegate(cell, self))
         self.setIconSize(QSize(cell - 12, cell - 12))
         for i in range(self.count()):
-            self.item(i).setSizeHint(QSize(cell, cell + 24))
+            self.item(i).setSizeHint(QSize(cell, cell + 38))
         self._request_visible()
 
     def selected_ids(self) -> list[int]:

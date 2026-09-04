@@ -375,6 +375,15 @@ class TrainPage(BasePage):
         if self.ctrl.is_running("train"):
             self.toast(tr("train.running", "Đang huấn luyện, vui lòng đợi."), "warning")
             return
+        if self.ctrl.is_running("autolabel"):
+            self.toast(
+                tr(
+                    "train.autolabel_conflict",
+                    "Đang có tiến trình gán nhãn tự động chạy. Vui lòng dừng hoặc đợi hoàn tất trước khi huấn luyện.",
+                ),
+                "warning",
+            )
+            return
         info = self.repo.refresh_stats()
         if info.n_labeled < 2:
             self.toast(
@@ -435,12 +444,39 @@ class TrainPage(BasePage):
             on_log=self._log,
             on_done=self._on_done,
             on_fail=self._on_fail,
+            on_cancelled=self._on_train_cancelled,
         )
 
     def stop(self) -> None:
         self.stop_btn.setEnabled(False)
+        if not self.ctrl.is_running("train"):
+            self._timer.stop()
+            self.progress_info.set_value(tr("train.status", "Trạng thái"), "Đã dừng")
+            self.start_btn.setEnabled(True)
+            return
         self.ctrl.cancel("train")
         self.progress_info.set_value(tr("train.status", "Trạng thái"), "Đang dừng …")
+        QTimer.singleShot(3500, self._check_cancel_timeout)
+
+    def _check_cancel_timeout(self) -> None:
+        if not self.ctrl.is_running("train"):
+            self._on_train_cancelled()
+        elif (
+            hasattr(self, "progress_info")
+            and self.progress_info.get_value(tr("train.status", "Trạng thái")) == "Đang dừng …"
+        ):
+            w = self.ctrl.worker("train")
+            if w and w.isRunning():
+                w.stop_and_wait(1000)
+            self._on_train_cancelled()
+
+    def _on_train_cancelled(self) -> None:
+        self._timer.stop()
+        self.start_btn.setEnabled(True)
+        self.stop_btn.setEnabled(False)
+        self.progress_info.set_value(tr("train.status", "Trạng thái"), "Đã dừng")
+        self.toast(tr("trainer.stopped_halfway", "Đã dừng giữa chừng."), "warning")
+        self.refresh()
 
     # ---------------------------------------------------------- cap nhat UI --
     def _on_progress(self, cur: int, total: int, msg: str) -> None:

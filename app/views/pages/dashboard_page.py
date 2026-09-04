@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import random
 import re
 import time
 from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import QSize, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -231,9 +232,11 @@ class DashboardPage(BasePage):
             tr("dashboard.model_none", "Model: chưa nạp"), size=12, color=COLORS["text_dim"]
         )
         self.system_card.add(self.model_label)
-        refresh_btn = ghost_button(tr("dashboard.check_device", "Kiểm tra lại thiết bị"), "refresh")
-        refresh_btn.clicked.connect(self._refresh_device)
-        self.system_card.add(refresh_btn)
+        self.check_device_btn = ghost_button(
+            tr("dashboard.check_device", "Kiểm tra lại thiết bị"), "refresh"
+        )
+        self.check_device_btn.clicked.connect(self._on_check_device_clicked)
+        self.system_card.add(self.check_device_btn)
         self.system_card.add_stretch()
         row.addWidget(self.system_card, 2)
 
@@ -344,6 +347,25 @@ class DashboardPage(BasePage):
             item.setSizeHint(QSize(0, 46))
             item.setToolTip(r["path"])
             self.recent_list.addItem(item)
+
+    def _on_check_device_clicked(self) -> None:
+        self.check_device_btn.setEnabled(False)
+        self.check_device_btn.setText(tr("dashboard.checking_device", "Đang kiểm tra..."))
+        self.gpu_name.setText(tr("dashboard.scanning_hardware", "Đang quét phần cứng..."))
+        self.gpu_name.setStyleSheet(f"font-weight: 700; font-size: 13.5px; color: {COLORS['text_mute']};")
+        self.gpu_detail.setText(tr("dashboard.analyzing_device", "Đang phân tích cấu hình hệ thống..."))
+        delay_ms = random.randint(500, 1000)
+        QTimer.singleShot(delay_ms, self._finish_check_device)
+
+    def _finish_check_device(self) -> None:
+        self._refresh_device()
+        self.check_device_btn.setEnabled(True)
+        self.check_device_btn.setText(tr("dashboard.check_device", "Kiểm tra lại thiết bị"))
+        d = self.ctrl.device
+        if d.get("cuda"):
+            self.toast(f"Đã phát hiện thiết bị: {self.ctrl.gpu_text()}", "success")
+        else:
+            self.toast(f"Đang sử dụng CPU: {self.ctrl.gpu_text()}", "info")
 
     def _refresh_device(self) -> None:
         self.ctrl.refresh_device()

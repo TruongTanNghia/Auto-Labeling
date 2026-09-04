@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QSize, Qt, Signal
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtGui import QImage, QPixmap, QIcon
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QPushButton,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -62,6 +63,9 @@ class ImportPage(BasePage):
         self.videos: list[str] = []
         self.image_files: list[str] = []
         self._current_info: VideoInfo | None = None
+        self._ds_dir: str = ""
+        self.ctrl.projectOpened.connect(lambda *_: self.on_project_changed())
+        self.ctrl.projectClosed.connect(self.on_project_changed)
 
     # ================================================================ BUILD ==
     def build(self) -> None:
@@ -159,6 +163,27 @@ class ImportPage(BasePage):
         self.preview_card.add(self.info_grid)
         lay.addWidget(self.preview_card, 1)
 
+        # --- Gallery ảnh trong folder ---
+        self.gallery_card = Card(tr("import.gallery_card", "Danh sách ảnh"), "", "image")
+        self.gallery_scroll = QScrollArea()
+        self.gallery_scroll.setWidgetResizable(True)
+        self.gallery_scroll.setFrameShape(QFrame.NoFrame)
+        self.gallery_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.gallery_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.gallery_scroll.setFixedHeight(92)
+        self.gallery_scroll.setStyleSheet(
+            "QScrollArea { background: transparent; border: 1px solid @border@; border-radius: 8px; }"
+            .replace("@border@", COLORS["border"])
+        )
+        self.gallery_widget = QWidget()
+        self.gallery_layout = QHBoxLayout(self.gallery_widget)
+        self.gallery_layout.setContentsMargins(6, 4, 6, 6)
+        self.gallery_layout.setSpacing(6)
+        self.gallery_scroll.setWidget(self.gallery_widget)
+        self.gallery_card.add(self.gallery_scroll)
+        self.gallery_card.setVisible(False)  # Ẩn ban đầu
+        lay.addWidget(self.gallery_card, 0)
+
         # --- Bước tiếp theo ---
         action_card = Card(tr("import.next_steps", "Bước tiếp theo"), "", "bolt")
         self.status_label = label("", size=12.5, color=COLORS["text_dim"], wrap=True)
@@ -202,6 +227,15 @@ class ImportPage(BasePage):
             opt.addLayout(r)
         action_card.add(opt)
         lay.addWidget(action_card)
+
+        # --- Section divider ---
+        lay.addSpacing(8)
+        lay.addWidget(hline())
+        lay.addWidget(label(
+            tr("import.alternative_workflow", "HOẶC: Nhập dataset có sẵn nhãn"),
+            size=11, color=COLORS["text_mute"], bold=False
+        ))
+        lay.addSpacing(4)
 
         # --- Nhập dataset có nhãn ---
         lay.addWidget(self._build_dataset_import_card())
@@ -257,7 +291,7 @@ class ImportPage(BasePage):
 
         # Nút hành động
         btn_row = QHBoxLayout()
-        self._ds_preview_btn = ghost_button(tr("import.dataset_preview", "Xem trước"), "eye")
+        self._ds_preview_btn = ghost_button(tr("import.dataset_preview_detailed", "Kiểm tra dữ liệu"), "eye")
         self._ds_preview_btn.clicked.connect(self._preview_dataset)
         self._ds_import_btn = primary_button(
             tr("import.dataset_import", "Nhập vào project"), "import"
@@ -410,7 +444,9 @@ class ImportPage(BasePage):
 
         folders: dict[str, int] = {}
         for p in new:
-            folders[str(Path(p).parent)] = folders.get(str(Path(p).parent), 0) + 1
+            # Normalize folder path để so sánh chính xác sau này
+            folder_path = str(Path(p).resolve().parent)
+            folders[folder_path] = folders.get(folder_path, 0) + 1
         existing = {
             self.source_list.item(i).data(ROLE_VALUE)
             for i in range(self.source_list.count())
@@ -419,7 +455,8 @@ class ImportPage(BasePage):
         for folder, _n in folders.items():
             if folder in existing:
                 continue
-            total = sum(1 for p in self.image_files if str(Path(p).parent) == folder)
+            # Count files with normalized path
+            total = sum(1 for p in self.image_files if str(Path(p).resolve().parent) == folder)
             item = QListWidgetItem(
                 f"{Path(folder).name}\n{tr('import.images_count_unit', '{count} ảnh', count=total)}  ·  {folder}"
             )
@@ -445,20 +482,42 @@ class ImportPage(BasePage):
             if kind == "video" and value in self.videos:
                 self.videos.remove(value)
             elif kind == "folder":
-                self.image_files = [p for p in self.image_files if str(Path(p).parent) != value]
+                norm_val = str(Path(value).resolve())
+                self.image_files = [
+                    p for p in self.image_files
+                    if str(Path(p).resolve().parent) != norm_val and str(Path(p).parent) != value
+                ]
             self.source_list.takeItem(self.source_list.row(item))
-        self._update_counts()
+        if self.source_list.count() == 0:
+            self._clear_all()
+        else:
+            self._update_counts()
 
     def _clear_all(self) -> None:
         self.source_list.clear()
         self.videos.clear()
         self.image_files.clear()
+        self._current_info = None
         self._update_counts()
         self.preview_label.setPixmap(QPixmap())
         self.preview_label.setText(
             tr("import.preview_hint", "Chọn một mục ở bên trái để xem trước")
         )
         self.info_grid.set_pairs([])
+        if hasattr(self, "gallery_layout"):
+            while self.gallery_layout.count():
+                item = self.gallery_layout.takeAt(0)
+                w = item.widget()
+                if w is not None:
+                    w.deleteLater()
+        if hasattr(self, "gallery_card"):
+            self.gallery_card.setVisible(False)
+        self._ds_dir = ""
+        if hasattr(self, "_ds_path_edit"):
+            self._ds_path_edit.clear()
+        if hasattr(self, "_ds_preview_label"):
+            self._ds_preview_label.setText("")
+            self._ds_preview_label.setVisible(False)
 
     # ======================================================== TRANG THAI UI ==
     def _update_counts(self) -> None:
@@ -543,6 +602,7 @@ class ImportPage(BasePage):
     def _preview_video(self, path: str) -> None:
         info = probe_video(path)
         self._current_info = info
+        self.gallery_card.setVisible(False)  # Ẩn gallery khi preview video
         if info is None:
             self.preview_label.setPixmap(QPixmap())
             self.preview_label.setText(tr("import.cannot_open_video", "Không mở được video này"))
@@ -562,11 +622,29 @@ class ImportPage(BasePage):
         )
 
     def _preview_folder(self, folder: str) -> None:
-        files = [p for p in self.image_files if str(Path(p).parent) == folder]
+        # Normalize folder path để so sánh đúng
+        normalized_folder = str(Path(folder).resolve())
+        files = [
+            p for p in self.image_files 
+            if str(Path(p).resolve().parent) == normalized_folder
+        ]
         self._current_info = None
-        pm = QPixmap(files[0]) if files else QPixmap()
-        if files:
+        
+        # Thử load ảnh, nếu ảnh đầu fail thì thử ảnh tiếp theo
+        pm = QPixmap()
+        for f in files:
+            pm = QPixmap(f)
+            if not pm.isNull():
+                break
+        
+        # Luôn gọi _set_preview để hiển thị preview hoặc lỗi
+        if files or not pm.isNull():
             self._set_preview(pm)
+        else:
+            # Không có file ảnh nào
+            self.preview_label.setPixmap(QPixmap())
+            self.preview_label.setText(tr("import.no_images_in_folder", "Thư mục không có ảnh hợp lệ"))
+        
         sample = files[:400]
         total_size = 0
         for f in sample:
@@ -586,6 +664,9 @@ class ImportPage(BasePage):
                 (tr("import.est_size", "Dung lượng (ước tính)"), human_size(est)),
             ]
         )
+        
+        # Populate gallery với thumbnails
+        self._populate_gallery(files)
 
     def _set_preview(self, pm: QPixmap) -> None:
         if pm.isNull():
@@ -600,6 +681,62 @@ class ImportPage(BasePage):
                 Qt.SmoothTransformation,
             )
         )
+
+    def _populate_gallery(self, files: list[str]) -> None:
+        """Populate gallery với thumbnails từ danh sách ảnh."""
+        # Clear gallery
+        while self.gallery_layout.count():
+            item = self.gallery_layout.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.deleteLater()
+        
+        if not files:
+            self.gallery_card.setVisible(False)
+            return
+        
+        self.gallery_card.setVisible(True)
+        
+        # Thêm thumbnail cho mỗi ảnh (giới hạn 50 ảnh đầu để không quá chậm)
+        for i, fpath in enumerate(files[:50]):
+            thumb = self._create_thumbnail_btn(fpath, i)
+            self.gallery_layout.addWidget(thumb)
+        
+        if len(files) > 50:
+            label_txt = label(
+                f"+{len(files) - 50}...",
+                size=10,
+                color=COLORS["text_mute"],
+            )
+            label_txt.setAlignment(Qt.AlignCenter)
+            label_txt.setFixedHeight(60)
+            self.gallery_layout.addWidget(label_txt)
+
+        self.gallery_layout.addStretch(1)
+
+    def _create_thumbnail_btn(self, fpath: str, index: int) -> QPushButton:
+        """Tạo thumbnail button cho một ảnh."""
+        btn = QPushButton()
+        btn.setObjectName("GalleryThumb")
+        btn.setFixedSize(60, 60)
+        btn.setCursor(Qt.PointingHandCursor)
+
+        # Load thumbnail
+        pm = QPixmap(fpath)
+        if not pm.isNull():
+            thumb = pm.scaled(54, 54, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            btn.setIcon(QIcon(thumb))
+            btn.setIconSize(QSize(54, 54))
+
+        btn.setToolTip(Path(fpath).name)
+        btn.clicked.connect(lambda checked=False, p=fpath: self._preview_single_image(p))
+
+        return btn
+
+    def _preview_single_image(self, fpath: str) -> None:
+        """Preview một ảnh đơn lẻ từ gallery."""
+        pm = QPixmap(fpath)
+        self._set_preview(pm)
 
     # ============================================================== IMPORT ==
     def import_images(self) -> None:
@@ -705,13 +842,15 @@ class ImportPage(BasePage):
         self._ds_preview_label.setVisible(True)
 
     def _import_dataset(self) -> None:
+        if self.ctrl.is_running("dataset_import"):
+            self.toast(tr("import.loading_wait", "Đang nạp ảnh, vui lòng đợi."), "warning")
+            return
         if not self._ds_dir:
             self.toast(tr("import.dataset_no_dir", "Hãy chọn thư mục dataset trước."), "warning")
             return
+        self._ds_import_btn.setEnabled(False)
         if not self._ensure_project():
-            return
-        if self.ctrl.is_running("dataset_import"):
-            self.toast(tr("import.loading_wait", "Đang nạp ảnh, vui lòng đợi."), "warning")
+            self._ds_import_btn.setEnabled(True)
             return
 
         fmt = self._ds_fmt_combo.currentData()
@@ -728,15 +867,21 @@ class ImportPage(BasePage):
                 fmt=self._ds_fmt_combo.currentText(),
             )
         )
-        self._ds_import_btn.setEnabled(False)
         self.ctrl.run_worker(
             "dataset_import",
             worker,
             on_progress=self.progress.set_progress,
             on_stage=self.progress.set_stage,
             on_done=self._on_dataset_import_done,
-            on_fail=lambda _m: self._ds_import_btn.setEnabled(True),
+            on_fail=self._on_dataset_import_failed,
+            on_cancelled=self._on_dataset_import_failed,
         )
+
+    def _on_dataset_import_failed(self, msg: str = "") -> None:
+        self._ds_import_btn.setEnabled(True)
+        self.progress.finish(tr("import.dataset_failed", "Nhập dataset thất bại"))
+        if msg:
+            self.toast(msg, "error")
 
     def _on_dataset_import_done(self, result) -> None:
         self._ds_import_btn.setEnabled(True)
@@ -755,6 +900,14 @@ class ImportPage(BasePage):
         self.toast(msg, "success")
         self.ctrl.notify_images_changed()
         self.ctrl.notify_classes_changed()
+
+    def on_project_changed(self) -> None:
+        self.videos.clear()
+        self.image_files.clear()
+        self._current_info = None
+        self._ds_dir = ""
+        if self._built:
+            self._clear_all()
 
     def refresh(self) -> None:
         self._update_counts()

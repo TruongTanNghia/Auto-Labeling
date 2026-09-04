@@ -73,8 +73,8 @@ class DatasetPage(BasePage):
         row.addWidget(self._build_side(), 3)
         self.add(row, 1)
 
-        self.ctrl.imagesChanged.connect(self.refresh)
-        self.ctrl.classesChanged.connect(self.refresh)
+        self.ctrl.imagesChanged.connect(self._on_images_changed)
+        self.ctrl.classesChanged.connect(self._on_images_changed)
 
     def _build_stats(self) -> None:
         row = QHBoxLayout()
@@ -173,6 +173,7 @@ class DatasetPage(BasePage):
         self.delete_btn = danger_button(tr("dataset.delete", "Xoá"), "trash")
         self.delete_btn.clicked.connect(self._delete_selected)
         for b in (self.approve_btn, self.review_btn, self.delete_btn):
+            b.setVisible(False)
             actions.addWidget(b)
         card.add(actions)
         return card
@@ -235,26 +236,48 @@ class DatasetPage(BasePage):
             b.setChecked(k == key)
         self.refresh()
 
+    def on_hide(self) -> None:
+        super().on_hide()
+        if hasattr(self, "gallery"):
+            self._saved_selection = self.gallery.selected_ids()
+
+    def on_project_changed(self) -> None:
+        self._saved_selection = []
+        self._filter = "all"
+        if hasattr(self, "search"):
+            self.search.clear()
+
+    def on_show(self) -> None:
+        super().on_show()
+        if getattr(self, "_needs_refresh", False):
+            self.refresh()
+        elif getattr(self, "_saved_selection", None):
+            self.gallery.select_ids(self._saved_selection)
+
+    def _on_images_changed(self) -> None:
+        if not self.isVisible():
+            self._needs_refresh = True
+            return
+        self.refresh()
+
     def refresh(self) -> None:
         repo = self.repo
         if repo is None:
             return
-        info = repo.refresh_stats()
-        counts = repo.status_counts()
-        self.stat_total.set_value(f"{info.n_images:,}")
-        self.stat_labeled.set_value(f"{info.n_labeled:,}")
-        self.stat_unlabeled.set_value(f"{counts.get(IMG_UNLABELED, 0):,}")
-        self.stat_objects.set_value(f"{info.n_objects:,}")
-        self.stat_classes.set_value(info.n_classes)
-        self.stat_dup.set_value(f"{repo.duplicate_count():,}")
+        self._needs_refresh = False
+        self._update_stats_only()
 
+        prev_sel = self.gallery.selected_ids() or getattr(self, "_saved_selection", [])
         self._images = self._filtered_images()
-        self.gallery.set_images(self._images)
+        self.gallery.set_images(self._images, keep_selection=False)
+        if prev_sel:
+            self.gallery.select_ids(prev_sel)
 
         stats = repo.class_stats()
         self.class_bar.set_data(
             [Series(s["name"], s["objects"], s["color"]) for s in stats if s["objects"]]
         )
+        info = repo.info
         self.class_donut.set_data(
             [Series(s["name"], s["images"], s["color"]) for s in stats if s["images"]],
             f"{info.n_images:,}",
@@ -271,6 +294,21 @@ class DatasetPage(BasePage):
             self.class_table.setItem(r, 3, QTableWidgetItem(f"{s['masks']:,}"))
             self.class_table.setItem(r, 4, QTableWidgetItem(f"{int(s['avg_area']):,} px²"))
             self.class_table.setItem(r, 5, QTableWidgetItem(f"{s['coverage'] * 100:.1f}%"))
+
+        self._on_selection(self.gallery.selected_ids())
+
+    def _update_stats_only(self) -> None:
+        repo = self.repo
+        if repo is None:
+            return
+        info = repo.refresh_stats()
+        counts = repo.status_counts()
+        self.stat_total.set_value(f"{info.n_images:,}")
+        self.stat_labeled.set_value(f"{info.n_labeled:,}")
+        self.stat_unlabeled.set_value(f"{counts.get(IMG_UNLABELED, 0):,}")
+        self.stat_objects.set_value(f"{info.n_objects:,}")
+        self.stat_classes.set_value(info.n_classes)
+        self.stat_dup.set_value(f"{repo.duplicate_count():,}")
 
     def _filtered_images(self) -> list:
         if not self.repo:
@@ -295,26 +333,40 @@ class DatasetPage(BasePage):
         return imgs
 
     def _on_selection(self, ids: list[int]) -> None:
-        if not ids:
+        has_sel = bool(ids)
+        if not has_sel:
             self.sel_label.setText(tr("dataset.no_images_selected", "Chưa chọn ảnh nào"))
         else:
             self.sel_label.setText(
                 tr("dataset.selected_count", "Đang chọn {count} ảnh", count=f"{len(ids):,}")
             )
+        if hasattr(self, "approve_btn"):
+            for b in (self.approve_btn, self.review_btn, self.delete_btn):
+                b.setVisible(has_sel)
 
     def _open_in_editor(self, image_id: int) -> None:
         self.ctrl.set_current_image(image_id)
         self.navigate.emit(PAGE_EDITOR)
 
-    # ============================================================== ACTIONS ==
     def _mark_status(self, status: str) -> None:
         ids = self.gallery.selected_ids()
         if not ids:
             self.toast("Hãy chọn ảnh trước.", "warning")
             return
-        for i in ids:
-            self.repo.update_image_status(i, status)
-        self.refresh()
+        if status == IMG_APPROVED:
+            for i in ids:
+                self.repo.approve_image(i)
+        else:
+            self.repo.set_images_status(ids, status)
+
+        if self._filter in ("all", "labeled"):
+            for i in ids:
+                self.gallery.refresh_item(i, status=status)
+            self._update_stats_only()
+        else:
+            self.refresh()
+
+        self.toast(f"Đã cập nhật trạng thái {len(ids)} ảnh.", "success")
 
     def _delete_selected(self) -> None:
         ids = self.gallery.selected_ids()

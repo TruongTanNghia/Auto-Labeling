@@ -52,6 +52,7 @@ from app.views.widgets.canvas import (
     Navigator,
 )
 from app.views.widgets.common import (
+    Badge,
     Card,
     Field,
     IconButton,
@@ -159,6 +160,9 @@ class EditorPage(BasePage):
 
     # ================================================================ BUILD ==
     def build(self) -> None:
+        self.status_badge = Badge(tr("status.unlabeled", "Chưa gán nhãn"), COLORS["text_mute"])
+        self.header.add_action(self.status_badge)
+
         self.autolabel_btn = ghost_button(tr("editor.autolabel_this", "Gán nhãn ảnh này"), "wand")
         self.autolabel_btn.clicked.connect(self.auto_label_current)
         self.save_btn = ghost_button(tr("editor.save_shortcut", "Lưu  (Ctrl+S)"), "save")
@@ -223,7 +227,7 @@ class EditorPage(BasePage):
         filter_row.addWidget(self.delete_image_btn)
         img_card.add(filter_row)
 
-        self.image_list = ImageListPanel(multi=False)
+        self.image_list = ImageListPanel(multi=True)
         self.image_list.setContextMenuPolicy(Qt.CustomContextMenu)
         self.image_list.customContextMenuRequested.connect(self._image_menu)
         self.image_list.imageSelected.connect(self.load_image)
@@ -284,11 +288,14 @@ class EditorPage(BasePage):
         self.next_btn.clicked.connect(lambda: self.step_image(1))
         self.pos_label = label("0 / 0", bold=True, size=12.5)
         self.pos_label.setAlignment(Qt.AlignCenter)
+        self.bottom_status_badge = Badge(tr("status.unlabeled", "Chưa gán nhãn"), COLORS["text_mute"])
         self.status_label = label("", size=11.5, color=COLORS["text_mute"])
         bl.addWidget(self.prev_btn)
         bl.addWidget(self.pos_label)
         bl.addWidget(self.next_btn)
-        bl.addSpacing(14)
+        bl.addSpacing(6)
+        bl.addWidget(self.bottom_status_badge)
+        bl.addSpacing(8)
         bl.addWidget(self.status_label, 1)
         self.zoom_label = label("100%", size=11.5, color=COLORS["text_dim"])
         bl.addWidget(self.zoom_label)
@@ -629,12 +636,30 @@ class EditorPage(BasePage):
             self._confirm_delete_image(image_id, rec.filename)
         elif chosen == a_review:
             if self.repo:
-                self.repo.set_image_status(image_id, IMG_REVIEW)
-                self.refresh()
+                target_ids = self.image_list.selected_ids() or [image_id]
+                for iid in target_ids:
+                    self.repo.set_image_status(iid, IMG_REVIEW)
+                    self.image_list.update_item(iid, status=IMG_REVIEW)
+                    for r in self._images:
+                        if r.id == iid:
+                            r.status = IMG_REVIEW
+                            break
+                if self._image_id in target_ids:
+                    self._update_status_display(IMG_REVIEW)
+                self.ctrl.notify_images_changed()
         elif chosen == a_ok:
             if self.repo:
-                self.repo.set_image_status(image_id, IMG_APPROVED)
-                self.refresh()
+                target_ids = self.image_list.selected_ids() or [image_id]
+                for iid in target_ids:
+                    self.repo.approve_image(iid)
+                    self.image_list.update_item(iid, status=IMG_APPROVED)
+                    for r in self._images:
+                        if r.id == iid:
+                            r.status = IMG_APPROVED
+                            break
+                if self._image_id in target_ids:
+                    self._update_status_display(IMG_APPROVED)
+                self.ctrl.notify_images_changed()
 
     def _delete_current_image(self) -> None:
         if not self._image_id or not self.repo:
@@ -685,6 +710,19 @@ class EditorPage(BasePage):
         self.ctrl.notify_images_changed()
 
     # ================================================================= DATA ==
+    def on_project_changed(self) -> None:
+        self._image_id = 0
+        self._images = []
+        self._dirty = False
+        if hasattr(self, "canvas"):
+            self.canvas.load_image("")
+            self.canvas.annotations = []
+            self.canvas.update()
+        if hasattr(self, "object_list"):
+            self.object_list.clear()
+        if hasattr(self, "navigator"):
+            self.navigator.set_image(None)
+
     def refresh(self) -> None:
         if not self.repo:
             return
@@ -782,10 +820,25 @@ class EditorPage(BasePage):
 
         idx = next((i for i, r in enumerate(self._images) if r.id == image_id), -1)
         self.pos_label.setText(f"{idx + 1} / {len(self._images)}")
-        status_text, color = get_image_status_label().get(rec.status, ("", COLORS["text_mute"]))
+        self._update_status_display(rec.status)
+        status_text, _ = get_image_status_label().get(rec.status, ("", COLORS["text_mute"]))
         self.header.set_subtitle(
             f"{rec.filename}   •   {rec.width}x{rec.height}   •   {status_text}"
         )
+
+    def _update_status_display(self, status: str) -> None:
+        status_text, color = get_image_status_label().get(status, (status, COLORS["text_mute"]))
+        if hasattr(self, "status_badge"):
+            self.status_badge.setText(status_text)
+            self.status_badge.set_color(color)
+        if hasattr(self, "bottom_status_badge"):
+            self.bottom_status_badge.setText(status_text)
+            self.bottom_status_badge.set_color(color)
+        rec = self.repo.image(self._image_id) if self.repo and self._image_id else None
+        if rec and hasattr(self, "header"):
+            self.header.set_subtitle(
+                f"{rec.filename}   •   {rec.width}x{rec.height}   •   {status_text}"
+            )
 
     def _external_image_change(self, image_id: int) -> None:
         if image_id and image_id != self._image_id and self.isVisible():
@@ -812,12 +865,14 @@ class EditorPage(BasePage):
         class_color = ""
         if anns:
             class_color = self.canvas.class_colors.get(anns[0].class_id, "")
+        cur_status = self.repo.image(self._image_id).status
         self.image_list.update_item(
             self._image_id,
             n_objects=len(anns),
-            status=self.repo.image(self._image_id).status,
+            status=cur_status,
             class_color=class_color,
         )
+        self._update_status_display(cur_status)
         self.ctrl.notify_annotations_changed(self._image_id)
         if toast:
             self.toast(f"Đã lưu {len(anns)} đối tượng.", "success")
@@ -828,6 +883,11 @@ class EditorPage(BasePage):
         self.save_current()
         self.repo.approve_image(self._image_id)
         self.image_list.update_item(self._image_id, status=IMG_APPROVED)
+        for r in self._images:
+            if r.id == self._image_id:
+                r.status = IMG_APPROVED
+                break
+        self._update_status_display(IMG_APPROVED)
         self._set_status("Đã duyệt ảnh này")
         self.ctrl.notify_images_changed()
         self.step_image(1)
@@ -1180,13 +1240,58 @@ class EditorPage(BasePage):
             self.canvas.set_confidence_for_selected(value)
 
     def _set_ann_status(self, status: str) -> None:
-        if not self.canvas.selected:
+        if not self.repo or not self._image_id:
             return
-        for i in self.canvas.selected:
-            self.canvas.annotations[i].status = status
-        self._dirty = True
+
+        is_approved = (status == ANN_APPROVED or status == IMG_APPROVED)
+        img_status = IMG_APPROVED if is_approved else IMG_REVIEW
+        ann_status = ANN_APPROVED if is_approved else ANN_REVIEW
+
+        target_image_ids = self.image_list.selected_ids() or [self._image_id]
+        if self._image_id not in target_image_ids:
+            target_image_ids.append(self._image_id)
+
+        if self.canvas.selected:
+            for i in self.canvas.selected:
+                if 0 <= i < len(self.canvas.annotations):
+                    self.canvas.annotations[i].status = ann_status
+            self.save_current()
+            if is_approved:
+                self.repo.approve_image(self._image_id)
+            else:
+                self.repo.set_image_status(self._image_id, img_status)
+            self.image_list.update_item(self._image_id, status=img_status)
+            for r in self._images:
+                if r.id == self._image_id:
+                    r.status = img_status
+                    break
+            msg = f"Đã đánh dấu {len(self.canvas.selected)} đối tượng là {'Đã duyệt' if is_approved else 'Cần xem lại'}"
+        else:
+            for a in self.canvas.annotations:
+                a.status = ann_status
+            self.save_current()
+            for iid in target_image_ids:
+                if is_approved:
+                    self.repo.approve_image(iid)
+                else:
+                    self.repo.set_image_status(iid, img_status)
+                self.image_list.update_item(iid, status=img_status)
+                for r in self._images:
+                    if r.id == iid:
+                        r.status = img_status
+                        break
+            n_imgs = len(target_image_ids)
+            msg = (
+                f"Đã đánh dấu {n_imgs} ảnh là {'Đã duyệt' if is_approved else 'Cần xem lại'}"
+                if n_imgs > 1
+                else f"Đã đánh dấu ảnh là {'Đã duyệt' if is_approved else 'Cần xem lại'}"
+            )
+
+        self._update_status_display(img_status)
         self._refresh_object_list()
-        self._set_status("Đã đổi trạng thái đối tượng đang chọn")
+        self._set_status(msg)
+        self.toast(msg, "success")
+        self.ctrl.notify_images_changed()
 
     # =============================================================== CLASSES ==
     def _on_class_selected(self, cur, _prev) -> None:

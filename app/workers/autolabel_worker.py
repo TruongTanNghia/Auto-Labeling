@@ -218,15 +218,32 @@ class AutoLabelWorker(BaseWorker):
                 )
                 continue
 
+            if self.cancelled:
+                res.cancelled = True
+                break
+
             if plugin is not None:
                 dets = self._apply_plugin(plugin, rec.path, dets)
 
-            anns, stats = self._to_annotations(image_id, dets, class_lookup)
-            self.repo.replace_annotations(image_id, anns)
+            if self.cancelled:
+                res.cancelled = True
+                break
 
-            status = IMG_REVIEW if stats["need_review"] else IMG_AUTO
-            if anns:
-                self.repo.set_image_status(image_id, status)
+            try:
+                anns, stats = self._to_annotations(image_id, dets, class_lookup)
+                if self.repo:
+                    self.repo.replace_annotations(image_id, anns)
+
+                status = IMG_REVIEW if stats["need_review"] else IMG_AUTO
+                if anns and self.repo:
+                    self.repo.set_image_status(image_id, status)
+            except Exception as exc:
+                if self.cancelled:
+                    res.cancelled = True
+                    break
+                log.warning("Loi luu annotation id=%s: %s", image_id, exc)
+                continue
+
             res.n_images += 1
             res.n_objects += len(anns)
             res.n_review += 1 if stats["need_review"] else 0
@@ -249,28 +266,40 @@ class AutoLabelWorker(BaseWorker):
             self.emit_progress(i + 1, total, prog_text)
 
         res.elapsed = time.time() - t0
-        self.repo.refresh_stats()
-        self.repo.log_history(
-            "auto_label",
-            tr(
-                "history.auto_label",
-                "{images} ảnh, {objects} đối tượng",
-                images=res.n_images,
-                objects=res.n_objects,
-            ),
-        )
-        self.repo.touch()
-        self.emit_log(
-            tr(
-                "worker.done_log",
-                "Xong: {images} ảnh | {objects} đối tượng | cần review: {review} | không có đối tượng: {empty} | {fps:.1f} ảnh/s",
-                images=res.n_images,
-                objects=res.n_objects,
-                review=res.n_review,
-                empty=res.n_empty,
-                fps=res.fps,
-            )
-        )
+        if not self.cancelled and self.repo:
+            try:
+                self.repo.refresh_stats()
+                self.repo.log_history(
+                    "auto_label",
+                    tr(
+                        "history.auto_label",
+                        "{images} ảnh, {objects} đối tượng",
+                        images=res.n_images,
+                        objects=res.n_objects,
+                    ),
+                )
+                self.repo.touch()
+                self.emit_log(
+                    tr(
+                        "worker.done_log",
+                        "Xong: {images} ảnh | {objects} đối tượng | cần review: {review} | không có đối tượng: {empty} | {fps:.1f} ảnh/s",
+                        images=res.n_images,
+                        objects=res.n_objects,
+                        review=res.n_review,
+                        empty=res.n_empty,
+                        fps=res.fps,
+                    )
+                )
+            except Exception:
+                pass
+        elif self.cancelled:
+            if self.repo and res.n_images > 0:
+                try:
+                    self.repo.refresh_stats()
+                    self.repo.touch()
+                except Exception:
+                    pass
+            self.emit_log(tr("worker.autolabel_cancelled_log", "Đã dừng gán nhãn theo yêu cầu."))
         return res
 
     # ------------------------------------------------------------- helper ---

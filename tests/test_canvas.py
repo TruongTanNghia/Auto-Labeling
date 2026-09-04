@@ -66,3 +66,20 @@ def test_canvas_operations(qapp, repo: ProjectRepository):
     cv.fit_to_view()
     cv.zoom_by(1.4)
     assert cv.viewport_image_rect().width() > 0
+
+
+def test_canvas_label_confidence_independence(qapp, repo: ProjectRepository):
+    cv = AnnotationCanvas()
+    im = repo.images()[0]
+    cv.load_image(im.path, repo.annotations(im.id))
+    cv.set_classes(repo.classes())
+
+    # Test toggles
+    cv.set_style(show_labels=False, show_confidence=True)
+    assert cv.style.show_labels is False
+    assert cv.style.show_confidence is True
+
+    cv.set_style(show_labels=True, show_confidence=False)
+    assert cv.style.show_labels is True
+    assert cv.style.show_confidence is False
+

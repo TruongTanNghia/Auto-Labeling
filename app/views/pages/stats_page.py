@@ -66,7 +66,7 @@ class StatsPage(BasePage):
     # ================================================================ BUILD ==
     def build(self) -> None:
         self.refresh_btn = ghost_button(tr("stats.refresh", "Làm mới"), "refresh")
-        self.refresh_btn.clicked.connect(self.refresh)
+        self.refresh_btn.clicked.connect(self._on_manual_refresh)
         self.export_btn = primary_button(tr("stats.export_dataset", "Xuất dataset"), "download")
         self.export_btn.clicked.connect(lambda: self._select_tab("export"))
         self.header.add_action(self.refresh_btn)
@@ -81,7 +81,8 @@ class StatsPage(BasePage):
         self.progress = ProgressPanel()
         self.progress.cancelled.connect(lambda: self.ctrl.cancel("export"))
         self.add(self.progress)
-        self.ctrl.imagesChanged.connect(self.refresh)
+        self.ctrl.imagesChanged.connect(self._on_images_changed)
+        self.ctrl.classesChanged.connect(self._on_images_changed)
 
     def _build_tabs(self) -> QWidget:
         wrap = QWidget()
@@ -553,10 +554,26 @@ class StatsPage(BasePage):
             self.out_edit.setText(d)
 
     # =============================================================== REFRESH ==
+    def on_show(self) -> None:
+        super().on_show()
+        if getattr(self, "_needs_refresh", False):
+            self.refresh()
+
+    def _on_images_changed(self) -> None:
+        if not self.isVisible():
+            self._needs_refresh = True
+            return
+        self.refresh()
+
+    def _on_manual_refresh(self) -> None:
+        self.refresh()
+        self.toast(tr("stats.refreshed", "Đã làm mới dữ liệu thống kê."), "success")
+
     def refresh(self) -> None:
         repo = self.repo
         if repo is None:
             return
+        self._needs_refresh = False
         info = repo.refresh_stats()
         stats = repo.class_stats()
         counts = repo.status_counts()

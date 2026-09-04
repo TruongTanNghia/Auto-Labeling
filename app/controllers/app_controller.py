@@ -240,10 +240,10 @@ class AppController(QObject):
         on_progress=None,
         on_log=None,
         on_stage=None,
+        on_cancelled=None,
     ) -> BaseWorker | None:
         """Chay worker, dam bao moi 'key' chi co mot tac vu tai mot thoi diem."""
-        old = self._workers.get(key)
-        if old is not None and old.isRunning():
+        if self.is_running(key):
             self.statusMessage.emit("Tac vu truoc do van dang chay.", "warning")
             return None
 
@@ -255,47 +255,119 @@ class AppController(QObject):
         if on_stage:
             worker.stage.connect(on_stage)
 
+        _notified = False
+
         def _done(result):
+            nonlocal _notified
+            _notified = True
             self._workers.pop(key, None)
             self.busyChanged.emit(bool(self.busy))
             if on_done:
                 on_done(result)
 
         def _fail(msg):
+            nonlocal _notified
+            _notified = True
             self._workers.pop(key, None)
             self.busyChanged.emit(bool(self.busy))
             self.statusMessage.emit(msg, "error")
             if on_fail:
                 on_fail(msg)
 
+        def _cancelled():
+            nonlocal _notified
+            _notified = True
+            self._workers.pop(key, None)
+            self.busyChanged.emit(bool(self.busy))
+            if on_cancelled:
+                on_cancelled()
+            elif on_done:
+                on_done(None)
+
+        def _cleanup(k=key):
+            nonlocal _notified
+            self._workers.pop(k, None)
+            self.busyChanged.emit(bool(self.busy))
+            if not _notified:
+                _notified = True
+                if getattr(worker, "cancelled", False):
+                    if on_cancelled:
+                        on_cancelled()
+                    elif on_done:
+                        on_done(None)
+
         worker.finished_ok.connect(_done)
         worker.failed.connect(_fail)
+        if hasattr(worker, "cancelled_done"):
+            worker.cancelled_done.connect(_cancelled)
+        worker.finished.connect(_cleanup)
         worker.finished.connect(worker.deleteLater)
         self.busyChanged.emit(True)
         worker.start()
         return worker
 
     def worker(self, key: str) -> BaseWorker | None:
-        return self._workers.get(key)
+        w = self._workers.get(key)
+        if w is None:
+            return None
+        try:
+            _ = w.isRunning()
+            return w
+        except (RuntimeError, ReferenceError):
+            self._workers.pop(key, None)
+            return None
+
+    def _clean_workers(self) -> None:
+        to_del = []
+        for k, w in list(self._workers.items()):
+            try:
+                if not w or not w.isRunning():
+                    to_del.append(k)
+            except (RuntimeError, ReferenceError):
+                to_del.append(k)
+        for k in to_del:
+            self._workers.pop(k, None)
 
     def is_running(self, key: str) -> bool:
         w = self._workers.get(key)
-        return bool(w and w.isRunning())
+        if w is None:
+            return False
+        try:
+            if not w.isFinished():
+                return True
+            self._workers.pop(key, None)
+            return False
+        except (RuntimeError, ReferenceError):
+            self._workers.pop(key, None)
+            return False
 
     @property
     def busy(self) -> bool:
-        return any(w.isRunning() for w in self._workers.values())
+        self._clean_workers()
+        for w in list(self._workers.values()):
+            try:
+                if w.isRunning():
+                    return True
+            except (RuntimeError, ReferenceError):
+                continue
+        return False
 
     def cancel(self, key: str) -> None:
         w = self._workers.get(key)
-        if w and w.isRunning():
-            w.cancel()
+        if w is None:
+            return
+        try:
+            if w.isRunning():
+                w.cancel()
+        except (RuntimeError, ReferenceError):
+            self._workers.pop(key, None)
 
     def cancel_all(self) -> None:
-        for w in list(self._workers.values()):
+        for k, w in list(self._workers.items()):
             try:
-                w.stop_and_wait(4000)
-            except Exception:
+                if w and w.isRunning():
+                    w.stop_and_wait(3000)
+            except (RuntimeError, ReferenceError, Exception):
                 pass
         self._workers.clear()
         self.busyChanged.emit(False)
