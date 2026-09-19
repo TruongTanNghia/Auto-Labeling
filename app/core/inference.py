@@ -834,7 +834,8 @@ class YoloEngine:
 
         for tile_idx, (x0, y0, x1, y1) in enumerate(tiles):
             if progress_cb:
-                progress_cb(tile_idx, total)
+                if progress_cb(tile_idx, total) is False:
+                    break
 
             tile_img = img_bgr[y0:y1, x0:x1]
             try:

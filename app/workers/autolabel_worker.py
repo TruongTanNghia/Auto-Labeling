@@ -99,6 +99,9 @@ class AutoLabelWorker(BaseWorker):
         # Bien theo doi tien do cat lat (cap nhat tu callback)
         self._tile_progress: tuple[int, int] = (0, 1)  # (hien tai, tong so o)
 
+    def on_cancel(self) -> None:
+        self._cancelled = True
+
     # -------------------------------------------------------------- chay ---
     def execute(self) -> AutoLabelResult:
         res = AutoLabelResult()
@@ -190,7 +193,9 @@ class AutoLabelWorker(BaseWorker):
                     )
                 elif self.cfg.sahi_enabled:
 
-                    def _tile_cb(tile_idx: int, total_tiles: int, _i=i, _rec=rec) -> None:
+                    def _tile_cb(tile_idx: int, total_tiles: int, _i=i, _rec=rec) -> bool:
+                        if self.cancelled:
+                            return False
                         self._tile_progress = (tile_idx, max(1, total_tiles))
                         # Phat tien do: moi anh chiem mot doan, trong do tung o la mot buoc nho
                         frac = tile_idx / max(1, total_tiles)
@@ -206,6 +211,7 @@ class AutoLabelWorker(BaseWorker):
                                 total_tiles=total_tiles,
                             ),
                         )
+                        return True
 
                     dets = self.engine.slice_predict(rec.path, self.cfg, progress_cb=_tile_cb)
                 else:

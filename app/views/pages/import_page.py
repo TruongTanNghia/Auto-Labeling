@@ -114,6 +114,7 @@ class ImportPage(BasePage):
         self.source_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.source_list.setMinimumHeight(280)
         self.source_list.currentItemChanged.connect(self._on_source_changed)
+        self.source_list.itemSelectionChanged.connect(self._update_counts)
         card.add(self.source_list, 1)
 
         btn_row = QHBoxLayout()
@@ -406,27 +407,55 @@ class ImportPage(BasePage):
             return
         self.add_images([str(p) for p in found])
 
+    def _selected_videos(self) -> list[str]:
+        items = self.source_list.selectedItems()
+        return [item.data(ROLE_VALUE) for item in items if item.data(ROLE_KIND) == "video"]
+
+    def _selected_images(self) -> list[str]:
+        items = self.source_list.selectedItems()
+        sel_folders = {
+            str(Path(item.data(ROLE_VALUE)).resolve())
+            for item in items
+            if item.data(ROLE_KIND) == "folder"
+        }
+        if not sel_folders:
+            return []
+        return [
+            p
+            for p in self.image_files
+            if str(Path(p).resolve().parent) in sel_folders or str(Path(p).parent) in sel_folders
+        ]
+
     def add_videos(self, paths) -> None:
         added = 0
+        new_items = []
         for p in paths:
-            if p in self.videos:
+            norm_p = str(Path(p).resolve())
+            if norm_p in self.videos:
                 continue
-            self.videos.append(p)
-            info = probe_video(p)
+            self.videos.append(norm_p)
+            info = probe_video(norm_p)
             sub = (
                 f"{info.resolution}  ·  {info.fps:g} fps  ·  "
                 f"{human_duration(info.duration)}  ·  {human_size(info.size_bytes)}"
                 if info
                 else tr("import.unreadable_video", "Không đọc được video này")
             )
-            item = QListWidgetItem(f"{Path(p).name}\n{sub}")
+            item = QListWidgetItem(f"{Path(norm_p).name}\n{sub}")
             item.setIcon(icons.icon("video", COLORS["accent_hi"], 20))
             item.setData(ROLE_KIND, "video")
-            item.setData(ROLE_VALUE, p)
+            item.setData(ROLE_VALUE, norm_p)
             item.setSizeHint(QSize(0, 52))
-            item.setToolTip(p)
+            item.setToolTip(norm_p)
             self.source_list.addItem(item)
+            new_items.append(item)
             added += 1
+
+        if new_items:
+            self.source_list.setCurrentItem(new_items[-1])
+            for it in new_items:
+                it.setSelected(True)
+
         self._update_counts()
         if added:
             self.toast(
@@ -437,7 +466,6 @@ class ImportPage(BasePage):
                 ),
                 "success",
             )
-            self.source_list.setCurrentRow(self.source_list.count() - 1)
 
     def add_images(self, paths) -> None:
         new = [p for p in paths if p not in self.image_files]
@@ -451,7 +479,6 @@ class ImportPage(BasePage):
 
         folders: dict[str, int] = {}
         for p in new:
-            # Normalize folder path để so sánh chính xác sau này
             folder_path = str(Path(p).resolve().parent)
             folders[folder_path] = folders.get(folder_path, 0) + 1
         existing = {
@@ -459,10 +486,10 @@ class ImportPage(BasePage):
             for i in range(self.source_list.count())
             if self.source_list.item(i).data(ROLE_KIND) == "folder"
         }
+        new_items = []
         for folder, _n in folders.items():
             if folder in existing:
                 continue
-            # Count files with normalized path
             total = sum(1 for p in self.image_files if str(Path(p).resolve().parent) == folder)
             item = QListWidgetItem(
                 f"{Path(folder).name}\n{tr('import.images_count_unit', '{count} ảnh', count=total)}  ·  {folder}"
@@ -473,6 +500,13 @@ class ImportPage(BasePage):
             item.setSizeHint(QSize(0, 52))
             item.setToolTip(folder)
             self.source_list.addItem(item)
+            new_items.append(item)
+
+        if new_items:
+            self.source_list.setCurrentItem(new_items[-1])
+            for it in new_items:
+                it.setSelected(True)
+
         self._update_counts()
         self.toast(tr("import.added_images", "Đã thêm {count} ảnh.", count=len(new)), "success")
 
@@ -486,8 +520,11 @@ class ImportPage(BasePage):
             return
         for item in items:
             kind, value = item.data(ROLE_KIND), item.data(ROLE_VALUE)
-            if kind == "video" and value in self.videos:
-                self.videos.remove(value)
+            if kind == "video":
+                norm_val = str(Path(value).resolve())
+                self.videos = [
+                    v for v in self.videos if str(Path(v).resolve()) != norm_val and v != value
+                ]
             elif kind == "folder":
                 norm_val = str(Path(value).resolve())
                 self.image_files = [
@@ -499,6 +536,9 @@ class ImportPage(BasePage):
         if self.source_list.count() == 0:
             self._clear_all()
         else:
+            if not self.source_list.selectedItems() and self.source_list.count() > 0:
+                self.source_list.item(0).setSelected(True)
+                self.source_list.setCurrentRow(0)
             self._update_counts()
 
     def _clear_all(self) -> None:
@@ -529,44 +569,92 @@ class ImportPage(BasePage):
 
     # ======================================================== TRANG THAI UI ==
     def _update_counts(self) -> None:
-        n_v, n_i = len(self.videos), len(self.image_files)
+        total_v, total_i = len(self.videos), len(self.image_files)
+        sel_v_list = self._selected_videos()
+        sel_i_list = self._selected_images()
+        n_v = len(sel_v_list)
+        n_i = len(sel_i_list)
+
         parts = []
-        if n_v:
-            parts.append(tr("import.v_count", "{count} video", count=n_v))
-        if n_i:
-            parts.append(tr("import.i_count", "{count} ảnh", count=f"{n_i:,}"))
+        if total_v:
+            if n_v == total_v:
+                parts.append(tr("import.v_count", "{count} video", count=total_v))
+            else:
+                parts.append(
+                    tr(
+                        "import.v_selected_count",
+                        "Đã chọn {sel}/{total} video",
+                        sel=n_v,
+                        total=total_v,
+                    )
+                )
+        if total_i:
+            if n_i == total_i:
+                parts.append(tr("import.i_count", "{count} ảnh", count=f"{total_i:,}"))
+            else:
+                parts.append(
+                    tr(
+                        "import.i_selected_count",
+                        "Đã chọn {sel}/{total} ảnh",
+                        sel=f"{n_i:,}",
+                        total=f"{total_i:,}",
+                    )
+                )
         self.count_label.setText(
             "  ·  ".join(parts) if parts else tr("import.count_empty", "Chưa có gì")
         )
-        self.drop_hint.setVisible(not parts)
+        self.drop_hint.setVisible(not total_v and not total_i)
 
         has_project = self.ctrl.has_project
-        self.import_images_btn.setVisible(bool(n_i))
-        self.to_extract_btn.setVisible(bool(n_v))
+        self.import_images_btn.setVisible(bool(total_i))
+        self.to_extract_btn.setVisible(bool(total_v))
         self.import_images_btn.setEnabled(bool(n_i))
         self.to_extract_btn.setEnabled(bool(n_v))
 
-        # Giải thích rõ bước tiếp theo - đây là chỗ người dùng hay mắc kẹt
-        if not n_v and not n_i:
+        # Giải thích rõ bước tiếp theo
+        if not total_v and not total_i:
             msg = tr(
                 "import.msg_empty",
                 "Chưa chọn gì. Dùng nút <b>Thêm video</b> / <b>Thêm thư mục ảnh</b> "
                 "ở trên, hoặc kéo thả file vào cửa sổ.",
             )
+        elif not n_v and not n_i:
+            msg = tr(
+                "import.msg_none_selected",
+                "Chưa chọn video hoặc ảnh nào trong danh sách. Hãy chọn ít nhất một mục để tiếp tục.",
+            )
         elif n_v and not n_i:
-            msg = tr(
-                "import.msg_only_video",
-                "Đã chọn <b>{count} video</b>. Video <u>không</u> nạp thẳng vào project "
-                "— phải cắt thành ảnh trước. Bấm <b>Cắt frame từ video</b> để sang bước đó.",
-                count=n_v,
-            )
+            if n_v == total_v:
+                msg = tr(
+                    "import.msg_only_video",
+                    "Đã chọn <b>{count} video</b>. Video <u>không</u> nạp thẳng vào project "
+                    "— phải cắt thành ảnh trước. Bấm <b>Cắt frame từ video</b> để sang bước đó.",
+                    count=n_v,
+                )
+            else:
+                msg = tr(
+                    "import.msg_partial_video",
+                    "Đã chọn <b>{count} video</b> (trong tổng số {total} video). Video <u>không</u> nạp thẳng vào project "
+                    "— phải cắt thành ảnh trước. Bấm <b>Cắt frame từ video</b> để sang bước đó.",
+                    count=n_v,
+                    total=total_v,
+                )
         elif n_i and not n_v:
-            msg = tr(
-                "import.msg_only_images",
-                "Đã chọn <b>{count} ảnh</b>. Bấm <b>Nạp ảnh vào project</b> để đưa "
-                "vào project và bắt đầu gán nhãn.",
-                count=f"{n_i:,}",
-            )
+            if n_i == total_i:
+                msg = tr(
+                    "import.msg_only_images",
+                    "Đã chọn <b>{count} ảnh</b>. Bấm <b>Nạp ảnh vào project</b> để đưa "
+                    "vào project và bắt đầu gán nhãn.",
+                    count=f"{n_i:,}",
+                )
+            else:
+                msg = tr(
+                    "import.msg_partial_images",
+                    "Đã chọn <b>{count} ảnh</b> (trong tổng số {total} ảnh). Bấm <b>Nạp ảnh vào project</b> để đưa "
+                    "vào project và bắt đầu gán nhãn.",
+                    count=f"{n_i:,}",
+                    total=f"{total_i:,}",
+                )
         else:
             msg = tr(
                 "import.msg_mixed",
@@ -585,13 +673,14 @@ class ImportPage(BasePage):
         self.status_label.setText(msg)
 
     def _go_extract(self) -> None:
-        if not self.videos:
+        sel_v = self._selected_videos()
+        if not sel_v:
             return
         if not self._ensure_project():
             return
         # Sang trang trước để trang đó kịp dựng giao diện, rồi mới đẩy dữ liệu
         self.navigate.emit(PAGE_EXTRACT)
-        self.videosSelected.emit(list(self.videos))
+        self.videosSelected.emit(sel_v)
         self.toast(tr("import.moved_to_extract", "Đã chuyển video sang trang cắt frame."), "info")
 
     def _ensure_project(self) -> bool:
@@ -747,7 +836,8 @@ class ImportPage(BasePage):
 
     # ============================================================== IMPORT ==
     def import_images(self) -> None:
-        if not self.image_files:
+        sel_i = self._selected_images()
+        if not sel_i:
             return
         if not self._ensure_project():
             return
@@ -763,7 +853,7 @@ class ImportPage(BasePage):
 
         worker = ScanFolderWorker(
             self.ctrl.repo,
-            list(self.image_files),
+            list(sel_i),
             ecfg,
             copy_into_project=self.copy_toggle.isChecked(),
         )
@@ -771,7 +861,7 @@ class ImportPage(BasePage):
             tr(
                 "import.loading_progress",
                 "Đang nạp {count} ảnh vào project ...",
-                count=f"{len(self.image_files):,}",
+                count=f"{len(sel_i):,}",
             )
         )
         self.import_images_btn.setEnabled(False)

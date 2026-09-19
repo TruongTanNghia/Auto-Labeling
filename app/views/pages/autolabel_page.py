@@ -222,7 +222,7 @@ class AutoLabelPage(BasePage):
         self.add(row, 1)
 
         self.progress = ProgressPanel()
-        self.progress.cancelled.connect(lambda: self.ctrl.cancel("autolabel"))
+        self.progress.cancelled.connect(self.cancel)
         self.add(self.progress)
 
         self.ctrl.imagesChanged.connect(self.refresh)
@@ -720,6 +720,13 @@ class AutoLabelPage(BasePage):
             return custom
         return self.weights_combo.currentData() or "yolo11m-seg.pt"
 
+    def cancel(self) -> None:
+        self._pending_start = False
+        if self.ctrl.is_running("model"):
+            self.ctrl.cancel("model")
+        if self.ctrl.is_running("autolabel"):
+            self.ctrl.cancel("autolabel")
+
     def load_model(self) -> None:
         if self.ctrl.is_running("model"):
             return
@@ -742,13 +749,19 @@ class AutoLabelPage(BasePage):
         self.load_model_btn.setEnabled(False)
 
         worker = ModelLoadWorker(self.ctrl.engine, weights, task, device)
-        self.ctrl.run_worker(
+        started = self.ctrl.run_worker(
             "model",
             worker,
             on_log=self._append_log,
             on_done=self._on_model_loaded,
             on_fail=self._on_model_failed,
+            on_cancelled=self._on_model_cancelled,
         )
+        if not started:
+            self.load_model_btn.setEnabled(True)
+            self.start_btn.setEnabled(True)
+            self.progress.reset()
+            self._pending_start = False
 
     def _on_model_loaded(self, engine) -> None:
         self.load_model_btn.setEnabled(True)
@@ -773,10 +786,22 @@ class AutoLabelPage(BasePage):
     def _on_model_failed(self, msg: str) -> None:
         self.load_model_btn.setEnabled(True)
         self.start_btn.setEnabled(True)
-        self.progress.finish(tr("autolabel.model_load_failed", "Nạp model thất bại"))
+        self.progress.reset()
         self._pending_start = False
         self.model_status.setText(tr("autolabel.model_load_failed", "Nạp model thất bại"))
         self.model_status.setStyleSheet(f"font-size: 11.5px; color: {COLORS['danger']};")
+
+    def _on_model_cancelled(self) -> None:
+        self.load_model_btn.setEnabled(True)
+        self.start_btn.setEnabled(True)
+        self.progress.reset()
+        self._pending_start = False
+        if self.ctrl.engine.loaded:
+            self.model_status.setText(self.ctrl.engine.describe())
+            self.model_status.setStyleSheet(f"font-size: 11.5px; color: {COLORS['success']};")
+        else:
+            self.model_status.setText(tr("autolabel.model_cancelled", "Đã hủy nạp model"))
+            self.model_status.setStyleSheet(f"font-size: 11.5px; color: {COLORS['text_mute']};")
 
     # ================================================================== RUN ===
     def start(self) -> None:
@@ -871,7 +896,7 @@ class AutoLabelPage(BasePage):
         )
         worker.preview.connect(self.preview.set_result)
         worker.image_done.connect(self._on_image_done)
-        self.ctrl.run_worker(
+        started = self.ctrl.run_worker(
             "autolabel",
             worker,
             on_progress=self.progress.set_progress,
@@ -881,6 +906,9 @@ class AutoLabelPage(BasePage):
             on_fail=self._on_autolabel_failed,
             on_cancelled=self._on_autolabel_cancelled,
         )
+        if not started:
+            self.start_btn.setEnabled(True)
+            self.progress.reset()
 
     def _on_image_done(self, image_id: int, n_objects: int, max_conf: float) -> None:
         status = IMG_REVIEW if max_conf < self.review_slider.value() else "auto"
@@ -926,7 +954,7 @@ class AutoLabelPage(BasePage):
 
     def _on_autolabel_cancelled(self) -> None:
         self.start_btn.setEnabled(True)
-        self.progress.finish(tr("autolabel.cancelled", "Đã dừng gán nhãn"))
+        self.progress.reset()
         if hasattr(self, "batch_hint"):
             self.batch_hint.setVisible(False)
         self.toast(tr("autolabel.cancelled_toast", "Đã dừng gán nhãn an toàn."), "info")
@@ -935,7 +963,7 @@ class AutoLabelPage(BasePage):
 
     def _on_autolabel_failed(self, msg: str) -> None:
         self.start_btn.setEnabled(True)
-        self.progress.finish(tr("autolabel.failed", "Gán nhãn thất bại"))
+        self.progress.reset()
         self.refresh()
 
     def _append_log(self, text: str) -> None:
@@ -994,6 +1022,7 @@ class AutoLabelPage(BasePage):
 
     # =============================================================== REFRESH ==
     def on_project_changed(self) -> None:
+        self._pending_start = False
         if hasattr(self, "preview"):
             self.preview.clear()
         if hasattr(self, "log_view"):
@@ -1005,6 +1034,14 @@ class AutoLabelPage(BasePage):
             self.start_btn.setEnabled(True)
         if hasattr(self, "progress"):
             self.progress.reset()
+
+    def on_show(self) -> None:
+        super().on_show()
+        if hasattr(self, "start_btn"):
+            is_busy = self.ctrl.is_running("autolabel") or self.ctrl.is_running("model")
+            self.start_btn.setEnabled(not is_busy)
+            if not is_busy and hasattr(self, "progress") and not self.progress.isHidden():
+                self.progress.reset()
 
     def refresh(self) -> None:
         if not self.repo:

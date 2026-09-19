@@ -69,6 +69,8 @@ class ExtractPage(BasePage):
         self.videos: list[str] = []
         self._mode: str = cfg.get("extract.mode", MODE_EVERY_N_SECONDS)
         self._last_batch: list[int] = []
+        self._extracted_videos: list[str] = []
+        self._extracted_config_sig: tuple | None = None
 
     # ================================================================ BUILD ==
     def build(self) -> None:
@@ -342,8 +344,24 @@ class ExtractPage(BasePage):
             self.max_frames_spin,
             self.start_time,
             self.end_time,
+            self.motion_slider,
+            self.scene_slider,
+            self.phash_spin,
+            self.ssim_slider,
+            self.blur_spin,
+            self.dark_spin,
+            self.quality_slider,
+            self.resize_spin,
         ):
-            w.valueChanged.connect(self._update_estimate)
+            w.valueChanged.connect(self._on_config_changed)
+
+        for t in (self.dedup_toggle, self.blur_toggle, self.dark_toggle):
+            t.toggled.connect(self._on_config_changed)
+
+        for c in (self.dedup_method, self.format_combo):
+            c.currentIndexChanged.connect(self._on_config_changed)
+
+        self.out_edit.textChanged.connect(self._on_config_changed)
         return area
 
     def _toggle_row(self, text: str, toggle: ToggleSwitch, hint: str = "") -> QWidget:
@@ -446,6 +464,7 @@ class ExtractPage(BasePage):
         if hasattr(self, "next_step_card"):
             self.next_step_card.setVisible(False)
         self._last_batch = []
+        self._update_start_btn_state()
         self.refresh()
 
     def _pick_video(self) -> None:
@@ -472,6 +491,7 @@ class ExtractPage(BasePage):
         self.f_n_seconds.setVisible(self._mode == MODE_EVERY_N_SECONDS)
         self.f_motion.setVisible(self._mode == MODE_ADAPTIVE_MOTION)
         self.f_scene.setVisible(self._mode == MODE_SCENE_DETECT)
+        self._on_config_changed()
 
     def _update_video_info(self) -> None:
         if not self.videos:
@@ -557,6 +577,52 @@ class ExtractPage(BasePage):
         c.lowlight_threshold = self.dark_spin.value()
         return c
 
+    def _config_signature(self) -> tuple:
+        if not hasattr(self, "n_frames_spin"):
+            return ()
+        c = self.collect_config()
+        return (
+            c.mode,
+            c.every_n_frames,
+            c.every_n_seconds,
+            c.motion_threshold,
+            c.scene_threshold,
+            c.max_frames,
+            c.start_time,
+            c.end_time,
+            c.resize_long_side,
+            c.image_format,
+            c.jpeg_quality,
+            c.remove_similar,
+            c.similarity_method,
+            c.phash_distance,
+            c.ssim_threshold,
+            c.blur_detection,
+            c.blur_threshold,
+            c.lowlight_filter,
+            c.lowlight_threshold,
+            self.out_edit.text().strip() if hasattr(self, "out_edit") else "",
+        )
+
+    def _update_start_btn_state(self) -> None:
+        if not hasattr(self, "start_btn"):
+            return
+        if self.ctrl.is_running("extract"):
+            self.start_btn.setEnabled(False)
+            return
+        if self._extracted_config_sig is not None:
+            same_video = (self.videos == self._extracted_videos)
+            same_config = (self._config_signature() == self._extracted_config_sig)
+            if same_video and same_config:
+                self.start_btn.setEnabled(False)
+                return
+        self.start_btn.setEnabled(True)
+
+    def _on_config_changed(self, *_args) -> None:
+        if hasattr(self, "estimate_label"):
+            self._update_estimate()
+        self._update_start_btn_state()
+
     def save_config(self) -> None:
         c = self.collect_config()
         cfg.update_section(
@@ -634,10 +700,13 @@ class ExtractPage(BasePage):
         )
 
     def _on_done(self, result) -> None:
-        self.start_btn.setEnabled(True)
         self.progress.finish(tr("extract.done", "Cắt frame hoàn tất"))
         if result is None:
+            self._update_start_btn_state()
             return
+        self._extracted_videos = list(self.videos)
+        self._extracted_config_sig = self._config_signature()
+        self._update_start_btn_state()
         self._append_log(
             tr(
                 "extract.done_result_fmt",
@@ -698,17 +767,21 @@ class ExtractPage(BasePage):
         )
 
     def _on_extract_cancelled(self) -> None:
-        self.start_btn.setEnabled(True)
+        self._extracted_config_sig = None
+        self._update_start_btn_state()
         self.progress.finish(tr("extract.cancelled", "Đã dừng cắt frame"))
         self.toast(tr("extract.cancelled_toast", "Đã dừng cắt frame an toàn."), "info")
 
     def _on_extract_failed(self, msg: str) -> None:
-        self.start_btn.setEnabled(True)
+        self._extracted_config_sig = None
+        self._update_start_btn_state()
         self.progress.finish(tr("extract.failed", "Cắt frame thất bại"))
 
     def on_project_changed(self) -> None:
         self.videos = []
         self._last_batch = []
+        self._extracted_videos = []
+        self._extracted_config_sig = None
         if hasattr(self, "log_view"):
             self.log_view.clear()
         if hasattr(self, "next_step_card"):
@@ -718,7 +791,7 @@ class ExtractPage(BasePage):
             self._update_video_info()
             self._update_estimate()
         if hasattr(self, "start_btn"):
-            self.start_btn.setEnabled(True)
+            self._update_start_btn_state()
         if hasattr(self, "progress"):
             self.progress.reset()
 
@@ -726,3 +799,4 @@ class ExtractPage(BasePage):
         if hasattr(self, "video_info"):
             self._update_video_info()
             self._update_estimate()
+        self._update_start_btn_state()

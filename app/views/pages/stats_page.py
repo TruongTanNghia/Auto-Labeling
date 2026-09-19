@@ -68,7 +68,7 @@ class StatsPage(BasePage):
         self.refresh_btn = ghost_button(tr("stats.refresh", "Làm mới"), "refresh")
         self.refresh_btn.clicked.connect(self._on_manual_refresh)
         self.export_btn = primary_button(tr("stats.export_dataset", "Xuất dataset"), "download")
-        self.export_btn.clicked.connect(lambda: self._select_tab("export"))
+        self.export_btn.clicked.connect(self._on_header_export_clicked)
         self.header.add_action(self.refresh_btn)
         self.header.add_action(self.export_btn)
 
@@ -532,6 +532,11 @@ class StatsPage(BasePage):
         return self._scroll(w)
 
     # ================================================================ LOGIC ==
+    def _on_header_export_clicked(self) -> None:
+        if self._tab != "export":
+            self._select_tab("export")
+        self.run_export()
+
     def _select_tab(self, key: str) -> None:
         self._tab = key
         for k, b in self.tab_buttons.items():
@@ -556,6 +561,9 @@ class StatsPage(BasePage):
     # =============================================================== REFRESH ==
     def on_show(self) -> None:
         super().on_show()
+        is_exporting = self.ctrl.is_running("export")
+        self.run_export_btn.setEnabled(not is_exporting)
+        self.export_btn.setEnabled(not is_exporting)
         if getattr(self, "_needs_refresh", False):
             self.refresh()
 
@@ -566,6 +574,9 @@ class StatsPage(BasePage):
         self.refresh()
 
     def _on_manual_refresh(self) -> None:
+        if not self.repo:
+            self.toast(tr("main.no_project", "Chưa mở project nào"), "warning")
+            return
         self.refresh()
         self.toast(tr("stats.refreshed", "Đã làm mới dữ liệu thống kê."), "success")
 
@@ -684,6 +695,13 @@ class StatsPage(BasePage):
     # ================================================================ EXPORT ==
     def run_export(self) -> None:
         if not self.repo:
+            self.toast(tr("main.no_project", "Chưa mở project nào"), "warning")
+            return
+        if self.repo.count_images() == 0:
+            self.toast(
+                tr("exporter.no_images_error", "Không có ảnh nào thoả điều kiện để xuất."),
+                "warning",
+            )
             return
         if self.ctrl.is_running("export"):
             self.toast(tr("stats.exporting_wait", "Đang xuất, vui lòng đợi."), "warning")
@@ -711,16 +729,22 @@ class StatsPage(BasePage):
         self.export_log.clear()
         self.progress.start(tr("stats.exporting_progress", "Đang xuất dataset …"))
         self.run_export_btn.setEnabled(False)
+        self.export_btn.setEnabled(False)
         worker = ExportWorker(self.repo, ecfg)
-        self.ctrl.run_worker(
+        started = self.ctrl.run_worker(
             "export",
             worker,
             on_progress=self.progress.set_progress,
             on_stage=self.progress.set_stage,
             on_log=self._log,
             on_done=self._on_export_done,
-            on_fail=lambda _m: self.run_export_btn.setEnabled(True),
+            on_fail=self._on_export_fail,
+            on_cancelled=self._on_export_cancelled,
         )
+        if not started:
+            self.run_export_btn.setEnabled(True)
+            self.export_btn.setEnabled(True)
+            self.progress.reset()
 
     def _log(self, text: str) -> None:
         self.export_log.appendPlainText(text)
@@ -728,6 +752,7 @@ class StatsPage(BasePage):
 
     def _on_export_done(self, result) -> None:
         self.run_export_btn.setEnabled(True)
+        self.export_btn.setEnabled(True)
         self.progress.finish(tr("stats.export_done", "Xuất dataset hoàn tất"))
         if result is None:
             return
@@ -745,6 +770,16 @@ class StatsPage(BasePage):
             ),
             "success",
         )
+
+    def _on_export_fail(self, _msg: str) -> None:
+        self.run_export_btn.setEnabled(True)
+        self.export_btn.setEnabled(True)
+        self.progress.reset()
+
+    def _on_export_cancelled(self) -> None:
+        self.run_export_btn.setEnabled(True)
+        self.export_btn.setEnabled(True)
+        self.progress.reset()
 
     def _open_result(self) -> None:
         path = getattr(self, "_result_dir", "")
