@@ -618,8 +618,8 @@ class ExtractPage(BasePage):
         if self._extracted_config_sig is not None:
             cur_v = [str(Path(v).resolve()) for v in self.videos]
             ext_v = [str(Path(v).resolve()) for v in self._extracted_videos]
-            same_video = (cur_v == ext_v)
-            same_config = (self._config_signature() == self._extracted_config_sig)
+            same_video = cur_v == ext_v
+            same_config = self._config_signature() == self._extracted_config_sig
             if same_video and same_config:
                 self.start_btn.setEnabled(False)
                 return

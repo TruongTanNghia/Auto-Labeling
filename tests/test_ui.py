@@ -513,6 +513,7 @@ def test_stats_page_buttons(qapp, sample_data, tmp_path):
 def test_extract_mode_changes_update_estimate(qapp, sample_data):
     _, video = sample_data
     from app.config import cfg
+
     old_reopen = cfg.get("general.reopen_last_project", True)
     cfg.set("general.reopen_last_project", False)
     ctrl = AppController()
@@ -577,6 +578,7 @@ def test_extract_mode_changes_update_estimate(qapp, sample_data):
 def test_extract_start_btn_disabled_after_success_until_change(qapp, sample_data, tmp_dir: Path):
     img_dir, video = sample_data
     from app.config import cfg
+
     old_reopen = cfg.get("general.reopen_last_project", True)
     cfg.set("general.reopen_last_project", False)
     ctrl = AppController()
@@ -711,7 +713,3 @@ def test_import_page_selected_videos_count(qapp, sample_data, tmp_dir: Path):
         ctrl.shutdown()
         win.deleteLater()
         qapp.processEvents()
-
-
-
-
