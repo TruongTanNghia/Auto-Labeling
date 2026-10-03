@@ -453,9 +453,16 @@ class ImportPage(BasePage):
 
         if new_items:
             self.source_list.setCurrentItem(new_items[-1])
-            for it in new_items:
-                it.setSelected(True)
+            for i in range(self.source_list.count()):
+                it = self.source_list.item(i)
+                if it.data(ROLE_KIND) == "video":
+                    it.setSelected(True)
 
+        self.videos = [
+            self.source_list.item(i).data(ROLE_VALUE)
+            for i in range(self.source_list.count())
+            if self.source_list.item(i).data(ROLE_KIND) == "video"
+        ]
         self._update_counts()
         if added:
             self.toast(
@@ -569,7 +576,12 @@ class ImportPage(BasePage):
 
     # ======================================================== TRANG THAI UI ==
     def _update_counts(self) -> None:
-        total_v, total_i = len(self.videos), len(self.image_files)
+        total_v = sum(
+            1
+            for i in range(self.source_list.count())
+            if self.source_list.item(i).data(ROLE_KIND) == "video"
+        )
+        total_i = len(self.image_files)
         sel_v_list = self._selected_videos()
         sel_i_list = self._selected_images()
         n_v = len(sel_v_list)
@@ -577,7 +589,7 @@ class ImportPage(BasePage):
 
         parts = []
         if total_v:
-            if n_v == total_v:
+            if n_v == total_v and total_v == 1:
                 parts.append(tr("import.v_count", "{count} video", count=total_v))
             else:
                 parts.append(

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
@@ -459,7 +461,7 @@ class ExtractPage(BasePage):
             self.preview_label.setText(tr("extract.no_frame_yet", "Chưa có frame nào"))
 
     def set_videos(self, paths: list[str]) -> None:
-        self.videos = list(paths)
+        self.videos = [str(Path(p).resolve()) for p in paths if p]
         self._reset_preview()
         if hasattr(self, "next_step_card"):
             self.next_step_card.setVisible(False)
@@ -610,8 +612,13 @@ class ExtractPage(BasePage):
         if self.ctrl.is_running("extract"):
             self.start_btn.setEnabled(False)
             return
+        if not self.videos:
+            self.start_btn.setEnabled(False)
+            return
         if self._extracted_config_sig is not None:
-            same_video = (self.videos == self._extracted_videos)
+            cur_v = [str(Path(v).resolve()) for v in self.videos]
+            ext_v = [str(Path(v).resolve()) for v in self._extracted_videos]
+            same_video = (cur_v == ext_v)
             same_config = (self._config_signature() == self._extracted_config_sig)
             if same_video and same_config:
                 self.start_btn.setEnabled(False)
@@ -704,7 +711,7 @@ class ExtractPage(BasePage):
         if result is None:
             self._update_start_btn_state()
             return
-        self._extracted_videos = list(self.videos)
+        self._extracted_videos = [str(Path(v).resolve()) for v in self.videos]
         self._extracted_config_sig = self._config_signature()
         self._update_start_btn_state()
         self._append_log(
@@ -767,12 +774,14 @@ class ExtractPage(BasePage):
         )
 
     def _on_extract_cancelled(self) -> None:
+        self._extracted_videos = []
         self._extracted_config_sig = None
         self._update_start_btn_state()
         self.progress.finish(tr("extract.cancelled", "Đã dừng cắt frame"))
         self.toast(tr("extract.cancelled_toast", "Đã dừng cắt frame an toàn."), "info")
 
     def _on_extract_failed(self, msg: str) -> None:
+        self._extracted_videos = []
         self._extracted_config_sig = None
         self._update_start_btn_state()
         self.progress.finish(tr("extract.failed", "Cắt frame thất bại"))
